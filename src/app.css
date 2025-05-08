@@ -1,1 +1,23 @@
+/* Import Barlow font from Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme {
+  /* Primary Palette */
+  --color-yale-blue: #00356b;
+  --color-medium-blue: #286dc0;
+  --color-light-blue: #63aaff;
+  --color-icy-blue: #c4ddfc;
+
+  /* Secondary Palette */
+  --color-yale-silver: #dddddd;
+  --color-yale-green: #00c288;
+  --color-yale-lime: #d6ef4a;
+  --color-yale-orange: #f38d00;
+  --color-yale-purple: #7634a6;
+  --color-yale-red: #f65568;
+
+  /* Typography */
+  --font-sans: "Barlow", Calibri, system-ui, ui-sans-serif, sans-serif;
+  --font-serif: "Times New Roman", Times, Georgia, ui-serif, serif;
+}
