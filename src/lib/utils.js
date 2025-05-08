@@ -15,11 +15,7 @@ export function topoToGeo(topoData, options = {}) {
     throw new Error("Invalid TopoJSON: missing objects property");
   }
 
-  const {
-    objectName = null,
-    extractAll = false,
-    includeProperties = true,
-  } = options;
+  const { objectName = null, extractAll = false, includeProperties = true } = options;
 
   // If objectName is specified, use it
   if (objectName && topoData.objects[objectName]) {
@@ -143,8 +139,7 @@ function hslToRgb(h, s, l, a = 255) {
 
   const k = (n) => (n + h / 30) % 12;
   const a1 = s * Math.min(l, 1 - l);
-  const f = (n) =>
-    l - a1 * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const f = (n) => l - a1 * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
 
   // Convert to RGB (0-255)
   const r = Math.round(255 * f(0));
@@ -171,9 +166,7 @@ function cssColorNameToRgb(colorName) {
   document.body.removeChild(temp);
 
   // Parse RGB values from "rgb(r, g, b)" or "rgba(r, g, b, a)" string
-  const match = computedColor.match(
-    /rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/
-  );
+  const match = computedColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
   if (!match) throw new Error(`Could not parse color: ${computedColor}`);
 
   const r = parseInt(match[1], 10);
@@ -218,9 +211,7 @@ function parseColorString(colorStr) {
 
   // Handle hsl/hsla colors
   if (colorStr.startsWith("hsl")) {
-    const match = colorStr.match(
-      /hsla?\((\d+), (\d+)%, (\d+)%(?:, ([\d.]+))?\)/
-    );
+    const match = colorStr.match(/hsla?\((\d+), (\d+)%, (\d+)%(?:, ([\d.]+))?\)/);
     if (!match) throw new Error(`Invalid hsl/hsla color format: ${colorStr}`);
 
     const h = parseInt(match[1], 10);

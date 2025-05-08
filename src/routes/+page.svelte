@@ -37,9 +37,7 @@
 
       getFillColor: (d) => {
         const countyData = realData.get(d.id);
-        return countyData
-          ? toDeckGLColor(colorScale(countyData[colorKey]))
-          : toDeckGLColor("#ccc");
+        return countyData ? toDeckGLColor(colorScale(countyData[colorKey])) : toDeckGLColor("#ccc");
       },
       // line styles
       getLineColor: [234, 234, 234, 255],
