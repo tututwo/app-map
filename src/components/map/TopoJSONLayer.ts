@@ -45,9 +45,7 @@ export default class TopoJSONLayer extends CompositeLayer<TopoJSONLayerProps> {
 
     if (typeof data === "string") {
       // Data is a URL (synchronous data not supported in this case)
-      throw new Error(
-        "String URLs are not supported for data prop in TopoJSONLayer."
-      );
+      throw new Error("String URLs are not supported for data prop in TopoJSONLayer.");
     } else {
       // Data is an object (TopoJSON)
       topojsonData = data;
@@ -56,10 +54,7 @@ export default class TopoJSONLayer extends CompositeLayer<TopoJSONLayerProps> {
     // Convert TopoJSON to GeoJSON synchronously
     const geojsonFeatures = [];
     for (const key in topojsonData.objects) {
-      const geojsonObject = topojsonFeature(
-        topojsonData,
-        topojsonData.objects[key]
-      );
+      const geojsonObject = topojsonFeature(topojsonData, topojsonData.objects[key]);
 
       if (this.isFeatureCollection(geojsonObject)) {
         for (let i = 0; i < geojsonObject.features.length; i++) {
@@ -114,10 +109,7 @@ export default class TopoJSONLayer extends CompositeLayer<TopoJSONLayerProps> {
     );
   }
 
-  getPickingInfo({ info, sourceLayer }: { 
-    info: any; 
-    sourceLayer: any; 
-  }) {
+  getPickingInfo({ info, sourceLayer }: { info: any; sourceLayer: any }) {
     // Map the picked object back to the original data
     if (info.object && info.object.__source) {
       info.object = info.object.__source.object;
