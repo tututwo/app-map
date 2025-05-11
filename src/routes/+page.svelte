@@ -1,101 +1,53 @@
-<script>
-  import { onMount } from "svelte";
-  import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
+<script lang="ts">
+import { onMount } from "svelte";
+import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
-  import MapLibreMap from "../components/map/maplibre-map.svelte";
+import MapLibreMap from "$components/map/maplibre-map.svelte";
+import LocationInput from "$components/LocationInput.svelte";
+import Sidebar from "$components/Sidebar.svelte";
+import Tooltip from "$components/Tooltip.svelte";
+import { dataFilters } from "$lib/filters.svelte.js";
 
-  // State management using Svelte 5 runes
-  let selectedMetric = $state("Number of closed church");
-  let timeRange = $state({ from: 2003, to: 2011 });
-  let selectedLocation = $state("All locations");
-  let highlightedGroup = $state(null);
+// State management using Svelte 5 runes
+let selectedMetric = $state(dataFilters.metrics[0].label);
+let timeRange = $state({ from: 2003, to: 2011 });
+let selectedLocation = $state("All locations");
+let highlightedGroup = $state<string | null>(null);
 
-  // Data ranges for the legend with corrected colors and widths
-  const dataRanges = [
-    { label: "1-12", color: "#cfe2f3", width: "70px" },
-    { label: "13-24", color: "#9fc5e8", width: "90px" },
-    { label: "25-36", color: "#6fa8dc", width: "90px" },
-    { label: "37-48", color: "#b4a7d6", width: "90px" },
-    { label: "49-60", color: "#d5a6bd", width: "80px" },
-  ];
+// Data ranges for the legend with corrected colors and widths
+const dataRanges = [
+  { label: "1-12", color: "#cfe2f3", width: "70px" },
+  { label: "13-24", color: "#9fc5e8", width: "90px" },
+  { label: "25-36", color: "#6fa8dc", width: "90px" },
+  { label: "37-48", color: "#b4a7d6", width: "90px" },
+  { label: "49-60", color: "#d5a6bd", width: "80px" },
+];
 
-  // Event handlers
-  function handleLocationChange(e) {
-    selectedLocation = e.target.value;
-  }
+// Event handlers
+function handleLocationChange(e: { target: { value: string } }) {
+  selectedLocation = e.target.value;
+}
 
-  function highlightGroup(range) {
-    highlightedGroup = range;
-  }
+function highlightGroup(range: string) {
+  highlightedGroup = range;
+}
 
-  // Initialize any components on mount
-  onMount(() => {
-    // This would initialize charts, maps, etc.
-    console.log("Dashboard mounted");
-  });
+// Initialize any components on mount
+onMount(() => {
+  // This would initialize charts, maps, etc.
+  console.log("Dashboard mounted");
+});
 </script>
 
 <div class="flex h-screen">
-  <!-- Improved Sidebar with updated width logic -->
-  <aside class="flex w-[max(250px,min(15vw,250px))] flex-col bg-[#002654] text-white">
-    <div class="flex h-full flex-col p-6">
-      <!-- Yale Logo -->
-      <div class="mb-14">
-        <h1 class="text-4xl font-normal tracking-wide">Yale</h1>
-      </div>
-
-      <!-- Main Title -->
-      <div class="mb-14">
-        <h2 class="text-[32px] font-bold leading-tight">
-          Closed<br />Churches<br />in the US
-        </h2>
-      </div>
-
-      <!-- Location Section -->
-      <div class="mb-auto">
-        <h3 class="mb-2 text-lg font-normal">Location of interest</h3>
-        <p class="mb-3 text-[15px] font-light leading-snug opacity-90">
-          Input name or zipcode of a location, leave it blank for the entire country
-        </p>
-
-        <input
-          type="text"
-          placeholder="All locations"
-          value={selectedLocation}
-          oninput={handleLocationChange}
-          class="w-full rounded border-none bg-white p-2.5 text-[15px] text-gray-500 shadow-sm"
-        />
-      </div>
-
-      <!-- About Section -->
-      <div class="mt-auto">
-        <h3 class="mb-2 text-lg font-normal">About this project</h3>
-        <p class="mb-6 text-[15px] font-light leading-snug opacity-90">
-          This project is a collaboration between Yale Center for Geospatial Solutions and Yale
-          School of Public Health.
-        </p>
-
-        <!-- Divider -->
-        <div class="mb-6 h-px w-full bg-white/30"></div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-4">
-          <button
-            class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
-          >
-            <ArrowRight color="white" strokeWidth={1.5} />
-            Share to social media
-          </button>
-          <button
-            class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
-          >
-            <Download size={24} strokeWidth={1.5} color="white" />
-            Download data
-          </button>
-        </div>
-      </div>
-    </div>
-  </aside>
+  <!-- Use the Sidebar component -->
+  <Sidebar>
+    <LocationInput
+      class="text-gray-800 shadow-sm"
+      value={dataFilters.county}
+      onSelect={(geoid) => dataFilters.setCounty(geoid)}
+    />
+  </Sidebar>
 
   <!-- Main Content -->
   <main class="flex h-screen flex-1 flex-col overflow-hidden p-5">
@@ -133,56 +85,30 @@
           <div class="mb-2 grid grid-cols-2 gap-4">
             <!-- Radio buttons for metrics -->
             <section aria-label="Metrics" class="flex flex-col gap-2.5">
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Number of closed church"
-                    checked={selectedMetric === "Number of closed church"}
-                    onchange={() => (selectedMetric = "Number of closed church")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Number of closed church
-              </label>
-
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Density of closed church: per 100k population"
-                    checked={selectedMetric === "Density of closed church: per 100k population"}
-                    onchange={() =>
-                      (selectedMetric = "Density of closed church: per 100k population")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Density of closed church: per 100k population
-                <span
-                  class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-xs"
-                  ><CircleHelp color="black" strokeWidth={1} /></span
-                >
-              </label>
-
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Density of closed church: per sqkm"
-                    checked={selectedMetric === "Density of closed church: per sqkm"}
-                    onchange={() => (selectedMetric = "Density of closed church: per sqkm")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Density of closed church: per sqkm
-                <span
-                  class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-xs"
-                  ><CircleHelp color="black" strokeWidth={1} /></span
-                >
-              </label>
+              {#each dataFilters.metrics as metric}
+                <label class="flex cursor-pointer items-center gap-2 text-sm select-none">
+                  <div class="relative flex items-center">
+                    <input
+                      type="radio"
+                      name="metric"
+                      value={metric.value}
+                      checked={dataFilters.metric === metric.value}
+                      onchange={() => dataFilters.setMetric(metric.value)}
+                      class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
+                    />
+                  </div>
+                  {metric.label}
+                  {#if metric.description}
+                    <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
+                      <span
+                        class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-xs"
+                      >
+                        <CircleHelp fill="var(--color-icy-blue)" strokeWidth={1.5} />
+                      </span>
+                    </Tooltip>
+                  {/if}
+                </label>
+              {/each}
             </section>
 
             <!-- Improved Legend section to match reference image -->
