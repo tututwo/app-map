@@ -1,14 +1,17 @@
-<script>
+<script lang="ts">
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
-import MapLibreMap from "../components/map/maplibre-map.svelte";
+import MapLibreMap from "$components/map/maplibre-map.svelte";
+import LocationInput from "$components/LocationInput.svelte";
+import Sidebar from "$components/Sidebar.svelte";
+import { dataFilters } from "$lib/filters.svelte.js";
 
 // State management using Svelte 5 runes
 let selectedMetric = $state("Number of closed church");
 let timeRange = $state({ from: 2003, to: 2011 });
 let selectedLocation = $state("All locations");
-let highlightedGroup = $state(null);
+let highlightedGroup = $state<string | null>(null);
 
 // Data ranges for the legend with corrected colors and widths
 const dataRanges = [
@@ -20,11 +23,11 @@ const dataRanges = [
 ];
 
 // Event handlers
-function handleLocationChange(e) {
+function handleLocationChange(e: { target: { value: string } }) {
   selectedLocation = e.target.value;
 }
 
-function highlightGroup(range) {
+function highlightGroup(range: string) {
   highlightedGroup = range;
 }
 
@@ -36,66 +39,14 @@ onMount(() => {
 </script>
 
 <div class="flex h-screen">
-  <!-- Improved Sidebar with updated width logic -->
-  <aside class="flex w-[max(250px,min(15vw,250px))] flex-col bg-[#002654] text-white">
-    <div class="flex h-full flex-col p-6">
-      <!-- Yale Logo -->
-      <div class="mb-14">
-        <h1 class="text-4xl font-normal tracking-wide">Yale</h1>
-      </div>
-
-      <!-- Main Title -->
-      <div class="mb-14">
-        <h2 class="text-[32px] leading-tight font-bold">
-          Closed<br />Churches<br />in the US
-        </h2>
-      </div>
-
-      <!-- Location Section -->
-      <div class="mb-auto">
-        <h3 class="mb-2 text-lg font-normal">Location of interest</h3>
-        <p class="mb-3 text-[15px] leading-snug font-light opacity-90">
-          Input name or zipcode of a location, leave it blank for the entire country
-        </p>
-
-        <input
-          type="text"
-          placeholder="All locations"
-          value={selectedLocation}
-          oninput={handleLocationChange}
-          class="w-full rounded border-none bg-white p-2.5 text-[15px] text-gray-500 shadow-sm"
-        />
-      </div>
-
-      <!-- About Section -->
-      <div class="mt-auto">
-        <h3 class="mb-2 text-lg font-normal">About this project</h3>
-        <p class="mb-6 text-[15px] leading-snug font-light opacity-90">
-          This project is a collaboration between Yale Center for Geospatial Solutions and Yale
-          School of Public Health.
-        </p>
-
-        <!-- Divider -->
-        <div class="mb-6 h-px w-full bg-white/30"></div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-4">
-          <button
-            class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
-          >
-            <ArrowRight color="white" strokeWidth={1.5} />
-            Share to social media
-          </button>
-          <button
-            class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
-          >
-            <Download size={24} strokeWidth={1.5} color="white" />
-            Download data
-          </button>
-        </div>
-      </div>
-    </div>
-  </aside>
+  <!-- Use the Sidebar component -->
+  <Sidebar>
+    <LocationInput
+      class="text-gray-800 shadow-sm"
+      value={dataFilters.county}
+      onSelect={(geoid) => dataFilters.setCounty(geoid)}
+    />
+  </Sidebar>
 
   <!-- Main Content -->
   <main class="flex h-screen flex-1 flex-col overflow-hidden p-5">
