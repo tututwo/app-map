@@ -11,16 +11,29 @@ class DataFilters {
   quantile = $state(0);
   /** 0: Number of closed church, 1: Density of closed church: per 100k population, 2: Density of closed church: per sqkm */
   metric = $state(0);
+  metrics = [
+    { label: "Number of closed church", description: "", value: 0 },
+    {
+      label: "Density of closed church: per 100k population",
+      description: "Density of closed church: per 100k population",
+      value: 1,
+    },
+    {
+      label: "Density of closed church: per sqkm",
+      description: "Density of closed church: per sqkm",
+      value: 2,
+    },
+  ] as { label: string; description: string; value: 0 | 1 | 2 }[];
 
-  setCounty(county: string) {
+  setCounty = (county: string) => {
     this.county = county;
-  }
+  };
 
-  clearCounty() {
+  clearCounty = () => {
     this.county = "";
-  }
+  };
 
-  setYearRange(start: number, end: number) {
+  setYearRange = (start: number, end: number) => {
     // make sure the start year is less than the end year
     if (start > end) {
       [start, end] = [end, start];
@@ -31,20 +44,20 @@ class DataFilters {
     }
     this.yearStart = start;
     this.yearEnd = end;
-  }
+  };
 
-  clearYearRange() {
+  clearYearRange = () => {
     this.yearStart = 0;
     this.yearEnd = 0;
-  }
+  };
 
-  setMetric(metric: 0 | 1 | 2) {
+  setMetric = (metric: 0 | 1 | 2) => {
     this.metric = metric;
-  }
+  };
 
-  setQuantile(quantile: 0 | 1 | 2 | 3 | 4 | 5) {
+  setQuantile = (quantile: 0 | 1 | 2 | 3 | 4 | 5) => {
     this.quantile = quantile;
-  }
+  };
 }
 
 export const dataFilters = new DataFilters();

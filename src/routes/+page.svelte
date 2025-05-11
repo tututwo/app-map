@@ -5,10 +5,11 @@ import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 import LocationInput from "$components/LocationInput.svelte";
 import Sidebar from "$components/Sidebar.svelte";
+import Tooltip from "$components/Tooltip.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
 
 // State management using Svelte 5 runes
-let selectedMetric = $state("Number of closed church");
+let selectedMetric = $state(dataFilters.metrics[0].label);
 let timeRange = $state({ from: 2003, to: 2011 });
 let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
@@ -84,56 +85,30 @@ onMount(() => {
           <div class="mb-2 grid grid-cols-2 gap-4">
             <!-- Radio buttons for metrics -->
             <section aria-label="Metrics" class="flex flex-col gap-2.5">
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Number of closed church"
-                    checked={selectedMetric === "Number of closed church"}
-                    onchange={() => (selectedMetric = "Number of closed church")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Number of closed church
-              </label>
-
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Density of closed church: per 100k population"
-                    checked={selectedMetric === "Density of closed church: per 100k population"}
-                    onchange={() =>
-                      (selectedMetric = "Density of closed church: per 100k population")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Density of closed church: per 100k population
-                <span
-                  class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-xs"
-                  ><CircleHelp color="black" strokeWidth={1} /></span
-                >
-              </label>
-
-              <label class="flex items-center gap-2 text-sm">
-                <div class="relative flex items-center">
-                  <input
-                    type="radio"
-                    name="metric"
-                    value="Density of closed church: per sqkm"
-                    checked={selectedMetric === "Density of closed church: per sqkm"}
-                    onchange={() => (selectedMetric = "Density of closed church: per sqkm")}
-                    class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                  />
-                </div>
-                Density of closed church: per sqkm
-                <span
-                  class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-gray-200 text-xs"
-                  ><CircleHelp color="black" strokeWidth={1} /></span
-                >
-              </label>
+              {#each dataFilters.metrics as metric}
+                <label class="flex cursor-pointer items-center gap-2 text-sm select-none">
+                  <div class="relative flex items-center">
+                    <input
+                      type="radio"
+                      name="metric"
+                      value={metric.value}
+                      checked={dataFilters.metric === metric.value}
+                      onchange={() => dataFilters.setMetric(metric.value)}
+                      class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
+                    />
+                  </div>
+                  {metric.label}
+                  {#if metric.description}
+                    <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
+                      <span
+                        class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-xs"
+                      >
+                        <CircleHelp fill="var(--color-icy-blue)" strokeWidth={1.5} />
+                      </span>
+                    </Tooltip>
+                  {/if}
+                </label>
+              {/each}
             </section>
 
             <!-- Improved Legend section to match reference image -->
