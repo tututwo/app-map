@@ -5,8 +5,8 @@ import { ArrowRight, Download } from "lucide-svelte";
 let { children } = $props();
 </script>
 
-<aside class="bg-yale-blue flex w-[max(250px,min(15vw,250px))] flex-col text-white">
-  <div class="flex h-full flex-col p-6">
+<aside class="bg-yale-blue flex w-[max(280px,min(18vw,280px))] flex-col text-white">
+  <div class="flex h-full flex-col pl-8 pr-6 py-10">
     <!-- Yale Logo -->
     <div class="mb-14">
       <h1 class="font-serif text-4xl tracking-wide">Yale</h1>

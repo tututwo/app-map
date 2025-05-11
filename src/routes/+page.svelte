@@ -51,7 +51,9 @@ onMount(() => {
 
   <!-- Main Content -->
   <main class="flex h-screen flex-1 flex-col overflow-hidden p-5">
-    <!-- Line chart section - 1/5 of height -->
+    <!-- ------------------------------------------------------------------ -->
+    <!-- Line chart section -->
+    <!-- ------------------------------------------------------------------ -->
     <section aria-label="Line chart" class="mb-5 h-[20vh] rounded border border-gray-200">
       <header class="flex items-center justify-between border-b border-gray-200 px-5 py-2.5">
         <h2 class="text-base">
@@ -65,6 +67,7 @@ onMount(() => {
           width="100%"
           height="204"
           frameborder="0"
+          title="Line chart"
           src="https://observablehq.com/embed/22aee85e25bfbf51?cells=chart"
         ></iframe>
       </div>
@@ -72,7 +75,11 @@ onMount(() => {
 
     <!-- Controls and charts section - takes remaining height -->
     <div class="grid flex-1 grid-cols-[2fr_1fr] gap-5">
-      <!-- Left column - controls and map -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- Map, controls, and legend section -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- ------------------------------------------------------------------ -->
       <div class="flex h-full flex-col">
         <!-- Time range and controls -->
         <div class="mb-5">
@@ -83,7 +90,9 @@ onMount(() => {
 
           <!-- Controls grid with radio buttons and legend -->
           <div class="mb-2 grid grid-cols-2 gap-4">
-            <!-- Radio buttons for metrics -->
+            <!-- ------------------------------------------------------------------ -->
+            <!-- Metric Buttons -->
+            <!-- ------------------------------------------------------------------ -->
             <section aria-label="Metrics" class="flex flex-col gap-2.5">
               {#each dataFilters.metrics as metric}
                 <label class="flex cursor-pointer items-center gap-2 text-sm select-none">
@@ -111,14 +120,16 @@ onMount(() => {
               {/each}
             </section>
 
-            <!-- Improved Legend section to match reference image -->
+            <!-- ------------------------------------------------------------------ -->
+            <!-- Legend section -->
+            <!-- ------------------------------------------------------------------ -->
             <section aria-label="Legend" class="flex flex-col">
               <div class="mb-1">
                 <h4 class="mb-1 text-sm">Number of closed church</h4>
                 <div class="flex justify-between">
                   {#each dataRanges as range}
                     <button
-                      style="background-color: {range.color}; width: {range.width};"
+                      style="background-color: {range.color};"
                       class="flex h-8 w-16 cursor-pointer items-center justify-center text-sm"
                       onclick={() => highlightGroup(range.label)}
                       class:ring-2={highlightedGroup === range.label}
@@ -139,8 +150,9 @@ onMount(() => {
             </section>
           </div>
         </div>
-
-        <!-- Map section - takes all remaining height -->
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Map section -->
+        <!-- ------------------------------------------------------------------ -->
         <section
           aria-label="Map"
           class="flex flex-1 items-center justify-center rounded border border-gray-200"
@@ -149,9 +161,15 @@ onMount(() => {
         </section>
       </div>
 
-      <!-- Right column - stacked bar and small line charts -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- Stacked bar and small line charts -->
+      <!-- ------------------------------------------------------------------ -->
+      <!-- ------------------------------------------------------------------ -->
       <div class="flex h-full flex-col">
-        <!-- Stacked bar chart -->
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Stacked bar chart section -->
+        <!-- ------------------------------------------------------------------ -->
         <section
           aria-label="Stacked bar chart"
           class="mb-5 flex min-h-[185px] items-center justify-center rounded border border-gray-200"
@@ -159,7 +177,9 @@ onMount(() => {
           <h1 class="text-4xl text-black opacity-80">stacked bar</h1>
         </section>
 
-        <!-- Small line charts - fixed height container with scrolling -->
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Small line charts section -->
+        <!-- ------------------------------------------------------------------ -->
         <div class="relative h-[calc(100%-185px-1.25rem)]">
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
