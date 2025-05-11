@@ -12,7 +12,7 @@ import real_data from "../../data/real_data.csv";
 import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 
 // COMPONENTS
-import TopoJSONLayer from "../../components/map/TopoJSONLayer";
+import TopoJSONLayer from "./TopoJSONLayer";
 import { GeoJsonLayer } from "@deck.gl/layers";
 import * as topojson from "topojson-client";
 
@@ -52,9 +52,9 @@ let layers = $state([
 </script>
 
 <MapLibre
-  class="h-[100vh] min-h-[300px]"
+  class="h-full min-h-[300px] w-full"
   style="https://geoserveis.icgc.cat/contextmaps/icgc_delimitacio_gris.json"
-  zoom={5}
+  zoom={3.5}
   pitch={0}
   minZoom={2}
   bearing={0}

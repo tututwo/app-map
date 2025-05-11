@@ -1,6 +1,9 @@
 <script>
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
+
+import MapLibreMap from "../components/map/maplibre-map.svelte";
+
 // State management using Svelte 5 runes
 let selectedMetric = $state("Number of closed church");
 let timeRange = $state({ from: 2003, to: 2011 });
@@ -106,7 +109,12 @@ onMount(() => {
         <span class="text-xs text-gray-500">Data source: research center data port</span>
       </header>
       <div class="flex h-[calc(20vh-50px)] items-center justify-center">
-        <h1 class="text-5xl text-black opacity-80">Line chart</h1>
+        <iframe
+          width="100%"
+          height="204"
+          frameborder="0"
+          src="https://observablehq.com/embed/22aee85e25bfbf51?cells=chart"
+        ></iframe>
       </div>
     </section>
 
@@ -211,7 +219,7 @@ onMount(() => {
           aria-label="Map"
           class="flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <h1 class="text-5xl text-black opacity-80">Map</h1>
+          <MapLibreMap />
         </section>
       </div>
 
@@ -234,35 +242,65 @@ onMount(() => {
               aria-label="Small line chart 1"
               class="mb-5 flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <h1 class="text-2xl text-black opacity-80">small line chart 1</h1>
+              <iframe
+                width="100%"
+                height="100%"
+                frameborder="0"
+                title="Small line chart 1"
+                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
+              ></iframe>
             </section>
 
             <section
               aria-label="Small line chart 2"
               class="mb-5 flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <h1 class="text-2xl text-black opacity-80">small line chart 2</h1>
+              <iframe
+                width="100%"
+                height="100%"
+                frameborder="0"
+                title="Small line chart 1"
+                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
+              ></iframe>
             </section>
 
             <section
               aria-label="Small line chart 3"
               class="mb-5 flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <h1 class="text-2xl text-black opacity-80">small line chart 3</h1>
+              <iframe
+                width="100%"
+                height="100%"
+                frameborder="0"
+                title="Small line chart 1"
+                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
+              ></iframe>
             </section>
 
             <section
               aria-label="Small line chart 4"
               class="mb-5 flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <h1 class="text-2xl text-black opacity-80">small line chart 4</h1>
+              <iframe
+                width="100%"
+                height="100%"
+                frameborder="0"
+                title="Small line chart 1"
+                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
+              ></iframe>
             </section>
 
             <section
               aria-label="Small line chart 5"
               class="flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <h1 class="text-2xl text-black opacity-80">small line chart 5</h1>
+              <iframe
+                width="100%"
+                height="100%"
+                frameborder="0"
+                title="Small line chart 1"
+                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
+              ></iframe>
             </section>
           </div>
         </div>
@@ -270,29 +308,3 @@ onMount(() => {
     </div>
   </main>
 </div>
-
-<!-- Add Tailwind directives for custom styling -->
-<style global>
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-</style>
