@@ -2,11 +2,17 @@
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
-import MapLibreMap from "$components/map/maplibre-map.svelte";
+// UI
 import LocationInput from "$components/LocationInput.svelte";
 import Sidebar from "$components/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
+
+// Line Chart
+import LineChart from "$components/lineChartSmall/lineChart.svelte";
+
+// Map
+import MapLibreMap from "$components/map/maplibre-map.svelte";
 
 // State management using Svelte 5 runes
 let selectedMetric = $state(dataFilters.metrics[0].label);
@@ -188,13 +194,7 @@ onMount(() => {
               aria-label="Small line chart 1"
               class="mb-5 flex h-[150px] items-center justify-center rounded border border-gray-200"
             >
-              <iframe
-                width="100%"
-                height="100%"
-                frameborder="0"
-                title="Small line chart 1"
-                src="https://observablehq.com/embed/3b899a04e91b1f7a@364?cells=chart"
-              ></iframe>
+              <LineChart />
             </section>
 
             <section
