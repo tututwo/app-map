@@ -10,7 +10,7 @@ import { dataFilters } from "$lib/filters.svelte.js";
 
 // Line Chart
 import LineChart from "$components/lineChartSmall/lineChart.svelte";
-
+import LineChartBrush from "$components/lineChartBrush/lineChart.svelte";
 // Map
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 
@@ -61,21 +61,15 @@ onMount(() => {
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
     <section aria-label="Line chart" class="mb-5 h-[20vh] rounded border border-gray-200">
-      <header class="flex items-center justify-between border-b border-gray-200 px-5 py-2.5">
-        <h2 class="text-base">
+      <header class="mb-8">
+        <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
           <span class="font-bold">all locations</span> over time
-        </h2>
-        <span class="text-xs text-gray-500">Data source: research center data port</span>
+        </h1>
+        <p class="text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
       <div class="flex h-[calc(20vh-50px)] items-center justify-center">
-        <iframe
-          width="100%"
-          height="204"
-          frameborder="0"
-          title="Line chart"
-          src="https://observablehq.com/embed/22aee85e25bfbf51?cells=chart"
-        ></iframe>
+        <LineChartBrush />
       </div>
     </section>
 
