@@ -7,8 +7,6 @@ class DataFilters {
   yearEnd = $state(0);
   /** minimum year range span */
   minYearRangeSpan = $state(4);
-  /** percentile, 0: null; 1: 0-20, 2: 20-40, 3: 40-60, 4: 60-80, 5: 80-100 */
-  quantile = $state(0);
   /** 0: Number of closed church, 1: Density of closed church: per 100k population, 2: Density of closed church: per sqkm */
   metric = $state(0);
   metrics = [
@@ -53,10 +51,6 @@ class DataFilters {
 
   setMetric = (metric: 0 | 1 | 2) => {
     this.metric = metric;
-  };
-
-  setQuantile = (quantile: 0 | 1 | 2 | 3 | 4 | 5) => {
-    this.quantile = quantile;
   };
 }
 
