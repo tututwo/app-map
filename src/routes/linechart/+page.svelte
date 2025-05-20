@@ -6,7 +6,7 @@ import { untrack } from "svelte";
 import { fly, scale } from "svelte/transition";
 import { elasticOut } from "svelte/easing";
 import { Button } from "bits-ui";
-
+import Figure from "$components/Figure.svelte";
 // Data points
 let data = [
   { date: "2001-01-01T00:00:00.000Z", close: 70 },

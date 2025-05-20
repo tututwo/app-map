@@ -1,27 +1,16 @@
 type DataPoint = {
   /** Geographic identifier */
   geoid: string;
-  /** State */
-  state: string;
-  /** Area size */
-  tarea: number;
-  /** Spatial level of the data */
-  spatial_level: string;
-  /** Year */
+  /** Each year within the selected year range */
   year: number;
   /** Number of church closings */
   close: number;
   /** Persistence of institutions */
   persistence: number;
-  /** Rate of church closings per 100,000 population */
-  close_r_100k: number;
-  /** Rate of church closings per square kilometer */
-  close_r_sqkm: number;
-  /** Persistence rate per 100,000 population */
-  persistence_r_100k: number;
-  /** Persistence rate per square kilometer */
-  persistence_r_sqkm: number;
+  /** Number of new churches */
+  new: number;
 
+  // Social Determints and Demographic data for each year within the selected year range
   /** Number of individuals with median income */
   n_medincome: number;
   /** Total population */
