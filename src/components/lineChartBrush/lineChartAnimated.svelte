@@ -4,7 +4,13 @@ import * as d3 from "d3";
 import { untrack, getContext } from "svelte";
 import { scale } from "svelte/transition";
 import { elasticOut } from "svelte/easing";
-import { browser } from "$app/environment";
+import gsap from "gsap";
+import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+
+// Register GSAP plugin
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(MorphSVGPlugin);
+}
 
 // Get responsive dimensions from Figure context
 const figure = getContext("Figure");
@@ -23,37 +29,40 @@ let {
   circleRadius = 6,
   circleHoverRadius = 8,
   gridLineColor = "hsla(0, 0%, 80%, 1)",
-  // New props for enhanced control
-  xTickPosition = "top", // "top" | "bottom" | "both" | "none"
-  yTickPosition = "left", // "left" | "right" | "both" | "none"
+  xTickPosition = "top",
+  yTickPosition = "left",
   showXGridlines = true,
   showYGridlines = true,
   showChartBorder = true,
-  xTickCount = null, // null = auto, or specific number
+  xTickCount = null,
   yTickCount = 5,
   tickLength = 6,
   tickOffset = 20,
-  enableBrushing = true, // New prop to enable/disable brushing
+  enableBrushing = true,
+  // Animation props
+  enableAnimation = true,
+  animationDuration = 1,
+  animationEase = "power2.inOut",
+  staggerDelay = 0.02,
 } = $props();
 
 // State variables
 let activePoint = $state(null);
 let hoveredPoint = $state(null);
-
-// Current brush selection (in date values)
 let brushSelection = $state(enableBrushing ? initialBrushSelection : null);
+let brushPixelPositions = $state({ left: 0, right: 0, width: 0 });
 
-// Calculated pixel positions for the brushed area
-let brushPixelPositions = $state({
-  left: 0,
-  right: 0,
-  width: 0,
-});
-
-// References to DOM elements
+// References
 let brushGroupEl = $state(null);
 let chartEl = $state(null);
 let svgContainer = $state(null);
+let pathElement = $state(null);
+let circleContainer = $state(null);
+
+// Animation state
+let previousData = null;
+let animationTimeline = null;
+let isFirstRender = true;
 
 // Format data with $derived
 const formattedData = $derived(
@@ -64,11 +73,11 @@ const formattedData = $derived(
   }))
 );
 
-// Calculate chart dimensions - now responsive!
+// Calculate chart dimensions
 const innerWidth = $derived(width - margin.left - margin.right);
 const innerHeight = $derived(height - margin.top - margin.bottom);
 
-// Create scales using D3
+// Create scales
 const xScale = $derived(
   d3
     .scaleTime()
@@ -91,18 +100,145 @@ const linePath = $derived(
     .y((d) => yScale(d.close))(formattedData)
 );
 
-// Generate tick values for axes
+// Generate tick values
 const xTicks = $derived(
   xTickCount ? xScale.ticks(xTickCount) : xScale.ticks(Math.min(formattedData.length, 13))
 );
 const yTicks = $derived(yScale.ticks(yTickCount));
+
+// Animation effect
+$effect(() => {
+  if (!enableAnimation || !pathElement || !circleContainer) return;
+
+  // Skip first render
+  if (isFirstRender) {
+    isFirstRender = false;
+    previousData = [...data];
+    return;
+  }
+
+  // Check if data changed
+  const dataChanged = JSON.stringify(data) !== JSON.stringify(previousData);
+  if (!dataChanged) return;
+
+  untrack(() => {
+    animateTransition();
+  });
+});
+
+function animateTransition() {
+  // Kill any existing animations
+  if (animationTimeline) {
+    animationTimeline.kill();
+  }
+
+  // Create data maps
+  const oldDataMap = new Map(previousData.map((d) => [d.date, d]));
+  const newDataMap = new Map(data.map((d) => [d.date, d]));
+
+  // Get circles
+  const circles = circleContainer.querySelectorAll("circle");
+  const circleArray = Array.from(circles);
+
+  // Create timeline
+  animationTimeline = gsap.timeline({
+    onComplete: () => {
+      previousData = [...data];
+    },
+  });
+
+  // 1. Animate path morph
+  const oldPath = pathElement.getAttribute("d");
+  animationTimeline.to(
+    pathElement,
+    {
+      morphSVG: linePath,
+      duration: animationDuration,
+      ease: animationEase,
+    },
+    0
+  );
+
+  // 2. Handle exiting circles (drop animation)
+  previousData.forEach((oldPoint, index) => {
+    if (!newDataMap.has(oldPoint.date) && circles[index]) {
+      animationTimeline.to(
+        circles[index],
+        {
+          cy: innerHeight,
+          opacity: 0,
+          duration: animationDuration * 0.6,
+          ease: "power2.in",
+          onComplete: function () {
+            this.targets()[0].style.display = "none";
+          },
+        },
+        0
+      );
+    }
+  });
+
+  // 3. Handle persisting circles (move animation)
+  formattedData.forEach((point, newIndex) => {
+    const oldIndex = previousData.findIndex((d) => d.date === point.date);
+    if (oldIndex !== -1 && circles[oldIndex]) {
+      const circle = circles[oldIndex];
+      const newX = xScale(point.date);
+      const newY = yScale(point.close);
+
+      animationTimeline.to(
+        circle,
+        {
+          cx: newX,
+          cy: newY,
+          duration: animationDuration,
+          ease: animationEase,
+        },
+        0
+      );
+    }
+  });
+
+  // 4. Handle entering circles (rise animation)
+  formattedData.forEach((point, index) => {
+    if (!oldDataMap.has(point.date)) {
+      // Create new circle
+      setTimeout(() => {
+        const newCircles = circleContainer.querySelectorAll("circle");
+        const newCircle = newCircles[index];
+        if (newCircle) {
+          const targetY = yScale(point.close);
+
+          // Set initial position
+          gsap.set(newCircle, {
+            cy: innerHeight,
+            opacity: 0,
+          });
+
+          // Animate rise
+          animationTimeline.to(
+            newCircle,
+            {
+              cy: targetY,
+              opacity: 1,
+              duration: animationDuration * 0.8,
+              ease: "power2.out",
+              delay: index * staggerDelay,
+            },
+            animationDuration * 0.4
+          );
+        }
+      }, 50);
+    }
+  });
+}
 
 // Format functions
 function formatDate(date) {
   return date.getFullYear().toString();
 }
 
-// Handle mouse events for tooltips and hover effects
+// Mouse events
 function showTooltip(event, point) {
   activePoint = point;
   hoveredPoint = point;
@@ -113,7 +249,7 @@ function hideTooltip() {
   hoveredPoint = null;
 }
 
-// Create debounce function
+// Other helper functions remain the same...
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -123,11 +259,6 @@ function debounce(func, wait) {
   };
 }
 
-// Brush implementation
-let brush;
-let brushGroup;
-
-// Update brush pixel positions for animation
 function updateBrushPixelPositions() {
   if (brushSelection && svgContainer) {
     const leftPos = xScale(brushSelection[0]);
@@ -141,7 +272,24 @@ function updateBrushPixelPositions() {
   }
 }
 
-// D3 Brush effect
+function isPointOutsideSelection(point) {
+  return brushSelection && (point.date < brushSelection[0] || point.date > brushSelection[1]);
+}
+
+function animateYearPill(node, { duration = 300 }) {
+  return {
+    duration,
+    css: (t) => {
+      const eased = elasticOut(t);
+      return `transform: scale(${0.8 + 0.2 * eased}); opacity: ${t};`;
+    },
+  };
+}
+
+// Brush implementation (keeping your existing code)
+let brush;
+let brushGroup;
+
 $effect(() => {
   if (!enableBrushing || !brushGroupEl || !width || !height) return;
 
@@ -218,18 +366,14 @@ $effect(() => {
   brushGroup = d3.select(brushGroupEl);
   brushGroup.call(brush);
 
-  // Style D3 brush elements
   brushGroup.select(".selection").attr("fill", "transparent").attr("stroke", "none");
-
   brushGroup.select(".overlay").attr("fill", "transparent");
-
-  // Style brush handles
   brushGroup
     .selectAll(".handle")
     .attr("fill", "hsla(162, 100%, 38%, 1)")
     .attr("stroke", "white")
     .attr("stroke-width", 2)
-    .attr("rx", 2); // Rounded corners
+    .attr("rx", 2);
 
   if (brushSelection) {
     untrack(() => {
@@ -243,39 +387,20 @@ $effect(() => {
   };
 });
 
-// Update positions on resize
 $effect(() => {
   if (enableBrushing && chartEl && brushSelection && svgContainer) {
     updateBrushPixelPositions();
   }
 });
-
-function animateYearPill(node, { duration = 300 }) {
-  return {
-    duration,
-    css: (t) => {
-      const eased = elasticOut(t);
-      return `transform: scale(${0.8 + 0.2 * eased}); opacity: ${t};`;
-    },
-  };
-}
-
-// Helper function to determine if a point is outside the brush selection
-function isPointOutsideSelection(point) {
-  return brushSelection && (point.date < brushSelection[0] || point.date > brushSelection[1]);
-}
-
-// Add unique ID for this chart instance
 </script>
 
 <div class="relative h-full w-full" bind:this={svgContainer}>
   <svg {width} {height} class="h-full w-full">
-    <!-- Chart area with margin -->
     <g transform={`translate(${margin.left},${margin.top})`} bind:this={chartEl}>
-      <!-- Background color -->
+      <!-- Background -->
       <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
 
-      <!-- White selection rectangle (Svelte-controlled for visual appearance) -->
+      <!-- Selection rectangle -->
       {#if enableBrushing && brushSelection && brushPixelPositions.width > 0}
         <rect
           x={brushPixelPositions.left - margin.left}
@@ -292,7 +417,7 @@ function isPointOutsideSelection(point) {
         />
       {/if}
 
-      <!-- X-axis grid lines -->
+      <!-- Grid lines -->
       {#if showXGridlines}
         <g class="x-grid grid">
           {#each xTicks as tick}
@@ -309,7 +434,6 @@ function isPointOutsideSelection(point) {
         </g>
       {/if}
 
-      <!-- Y-axis grid lines -->
       {#if showYGridlines}
         <g class="y-grid grid">
           {#each yTicks as tick}
@@ -326,7 +450,7 @@ function isPointOutsideSelection(point) {
         </g>
       {/if}
 
-      <!-- Chart border (enclosing rectangle) -->
+      <!-- Chart border -->
       {#if showChartBorder}
         <rect
           x={0}
@@ -339,9 +463,8 @@ function isPointOutsideSelection(point) {
         />
       {/if}
 
-      <!-- X-axis ticks and labels -->
+      <!-- Axis ticks and labels (keeping your existing code) -->
       {#if xTickPosition !== "none"}
-        <!-- Top ticks -->
         {#if xTickPosition === "top" || xTickPosition === "both"}
           <g class="x-axis-top">
             {#each formattedData as point}
@@ -360,7 +483,6 @@ function isPointOutsideSelection(point) {
           </g>
         {/if}
 
-        <!-- Bottom ticks -->
         {#if xTickPosition === "bottom" || xTickPosition === "both"}
           <g class="x-axis-bottom">
             {#each formattedData as point}
@@ -380,9 +502,7 @@ function isPointOutsideSelection(point) {
         {/if}
       {/if}
 
-      <!-- Y-axis ticks and labels -->
       {#if yTickPosition !== "none"}
-        <!-- Left ticks -->
         {#if yTickPosition === "left" || yTickPosition === "both"}
           <g class="y-axis-left">
             {#each yTicks as tick}
@@ -401,7 +521,6 @@ function isPointOutsideSelection(point) {
           </g>
         {/if}
 
-        <!-- Right ticks -->
         {#if yTickPosition === "right" || yTickPosition === "both"}
           <g class="y-axis-right">
             {#each yTicks as tick}
@@ -423,6 +542,7 @@ function isPointOutsideSelection(point) {
 
       <!-- Line path -->
       <path
+        bind:this={pathElement}
         d={linePath}
         class="fill-none stroke-2"
         stroke={lineColor}
@@ -430,13 +550,13 @@ function isPointOutsideSelection(point) {
         stroke-linecap="round"
       />
 
-      <!-- D3 Brush container (rendered before circles so circles are on top) -->
+      <!-- Brush -->
       {#if enableBrushing}
         <g class="brush-group" bind:this={brushGroupEl}></g>
       {/if}
 
-      <!-- Data points (rendered after brush so they're on top) -->
-      <g class="data-points" style="pointer-events: all;">
+      <!-- Data points -->
+      <g class="data-points" bind:this={circleContainer} style="pointer-events: all;">
         {#each formattedData as point, i}
           <circle
             cx={xScale(point.date)}
@@ -466,20 +586,19 @@ function isPointOutsideSelection(point) {
     </g>
   </svg>
 
-  <!-- Enhanced Tooltip -->
+  <!-- Tooltip -->
   {#if activePoint}
     <div
       class="pointer-events-none absolute z-50 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
       style="
-        left: {xScale(activePoint.date) + margin.left - 30}px; 
-        top: {yScale(activePoint.close) + margin.top - 60}px;
-        transform: translateX(-50%);
-      "
+            left: {xScale(activePoint.date) + margin.left - 30}px; 
+            top: {yScale(activePoint.close) + margin.top - 60}px;
+            transform: translateX(-50%);
+          "
       transition:scale={{ duration: 150, start: 0.9 }}
     >
       <div class="font-medium">{activePoint.year}</div>
       <div class="text-gray-300">Value: {activePoint.close}</div>
-      <!-- Tooltip arrow -->
       <div
         class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-t-gray-900 border-r-transparent border-l-transparent"
       ></div>
@@ -515,5 +634,11 @@ function isPointOutsideSelection(point) {
 </div>
 
 <style>
-/* Remove the global fadeIn animation since we're using Svelte transitions */
+.animated-line-chart :global(path[d]) {
+  will-change: d;
+}
+
+.animated-line-chart :global(circle) {
+  will-change: transform, opacity, cx, cy;
+}
 </style>

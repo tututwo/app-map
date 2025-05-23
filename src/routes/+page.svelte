@@ -52,19 +52,19 @@ onMount(() => {
 
 // Data points
 const data = [
-  { date: "2001-01-01T00:00:00.000Z", close: 70 },
-  { date: "2003-01-01T00:00:00.000Z", close: 40 },
-  { date: "2005-01-01T00:00:00.000Z", close: 120 },
-  { date: "2007-01-01T00:00:00.000Z", close: 40 },
-  { date: "2009-01-01T00:00:00.000Z", close: 30 },
-  { date: "2011-01-01T00:00:00.000Z", close: 50 },
-  { date: "2013-01-01T00:00:00.000Z", close: 20 },
-  { date: "2015-01-01T00:00:00.000Z", close: 90 },
-  { date: "2017-01-01T00:00:00.000Z", close: 120 },
-  { date: "2019-01-01T00:00:00.000Z", close: 110 },
-  { date: "2021-01-01T00:00:00.000Z", close: 80 },
-  { date: "2023-01-01T00:00:00.000Z", close: 40 },
-  { date: "2025-01-01T00:00:00.000Z", close: 20 },
+  { date: "2001-01-01T00:00:00.000Z", close: 70, closed_per_100k: 0.2 },
+  { date: "2003-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
+  { date: "2005-01-01T00:00:00.000Z", close: 120, closed_per_100k: 0.3 },
+  { date: "2007-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
+  { date: "2009-01-01T00:00:00.000Z", close: 30, closed_per_100k: 0.05 },
+  { date: "2011-01-01T00:00:00.000Z", close: 50, closed_per_100k: 0.1 },
+  { date: "2013-01-01T00:00:00.000Z", close: 20, closed_per_100k: 0.05 },
+  { date: "2015-01-01T00:00:00.000Z", close: 90, closed_per_100k: 0.2 },
+  { date: "2017-01-01T00:00:00.000Z", close: 120, closed_per_100k: 0.3 },
+  { date: "2019-01-01T00:00:00.000Z", close: 110, closed_per_100k: 0.25 },
+  { date: "2021-01-01T00:00:00.000Z", close: 80, closed_per_100k: 0.2 },
+  { date: "2023-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
+  { date: "2025-01-01T00:00:00.000Z", close: 20, closed_per_100k: 0.05 },
 ];
 
 const initialBrushSelection = [

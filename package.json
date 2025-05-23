@@ -37,6 +37,7 @@
     "bits-ui": "^1.4.7",
     "d3": "^7.9.0",
     "fuse.js": "^7.1.0",
+    "gsap": "^3.13.0",
     "lodash-es": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "lucide-svelte": "^0.509.0",

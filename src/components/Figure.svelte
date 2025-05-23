@@ -61,11 +61,7 @@ function handleResizeEvent() {
 }
 </script>
 
-<figure
-  class="flex h-full w-full flex-col"
-  role="figure"
-  aria-labelledby={figcaption ? captionId : undefined}
->
+<figure class="flex h-full w-full flex-col" aria-labelledby={figcaption ? captionId : undefined}>
   <div
     class="h-full w-full flex-grow"
     bind:clientWidth={divClientWidth}
