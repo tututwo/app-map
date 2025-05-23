@@ -1,46 +1,44 @@
 <script>
 // @ts-nocheck
-
 import * as d3 from "d3";
-import { untrack } from "svelte";
-import { fly, scale } from "svelte/transition";
+import { untrack, getContext } from "svelte";
+import { scale } from "svelte/transition";
 import { elasticOut } from "svelte/easing";
-import { Button } from "bits-ui";
 
-// Data points
-let data = [
-  { date: "2001-01-01T00:00:00.000Z", close: 70 },
-  { date: "2003-01-01T00:00:00.000Z", close: 40 },
-  { date: "2005-01-01T00:00:00.000Z", close: 120 },
-  { date: "2007-01-01T00:00:00.000Z", close: 40 },
-  { date: "2009-01-01T00:00:00.000Z", close: 30 },
-  { date: "2011-01-01T00:00:00.000Z", close: 50 },
-  { date: "2013-01-01T00:00:00.000Z", close: 20 },
-  { date: "2015-01-01T00:00:00.000Z", close: 90 },
-  { date: "2017-01-01T00:00:00.000Z", close: 120 },
-  { date: "2019-01-01T00:00:00.000Z", close: 110 },
-  { date: "2021-01-01T00:00:00.000Z", close: 80 },
-  { date: "2023-01-01T00:00:00.000Z", close: 40 },
-  { date: "2025-01-01T00:00:00.000Z", close: 20 },
-];
+// Get responsive dimensions from Figure context
+const figure = getContext("Figure");
+const width = $derived(figure.getWidth());
+const height = $derived(figure.getHeight());
 
-// Use $props rune for component props
+// Component props
 let {
-  width = 1440,
-  height = 200,
+  data,
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
+  initialBrushSelection = null,
+  lineColor = "hsla(0, 0%, 53%, 1)",
+  circleColor = "hsla(211, 99%, 21%, 1)",
+  circleHoverColor = "hsla(211, 99%, 35%, 1)",
+  circleRadius = 6,
+  circleHoverRadius = 8,
+  gridLineColor = "hsla(0, 0%, 80%, 1)",
+  // New props for enhanced control
+  xTickPosition = "top", // "top" | "bottom" | "both" | "none"
+  yTickPosition = "left", // "left" | "right" | "both" | "none"
+  showXGridlines = true,
+  showYGridlines = true,
+  showChartBorder = true,
+  xTickCount = null, // null = auto, or specific number
+  yTickCount = 5,
+  tickLength = 6,
+  tickOffset = 20,
 } = $props();
 
 // State variables
 let activePoint = $state(null);
-let tooltipX = $state(0);
-let tooltipY = $state(0);
+let hoveredPoint = $state(null);
 
 // Current brush selection (in date values)
-let brushSelection = $state([
-  new Date("2003-01-01T00:00:00.000Z"),
-  new Date("2011-01-01T00:00:00.000Z"),
-]);
+let brushSelection = $state(initialBrushSelection);
 
 // Calculated pixel positions for the brushed area
 let brushPixelPositions = $state({
@@ -54,7 +52,7 @@ let brushGroupEl = $state(null);
 let chartEl = $state(null);
 let svgContainer = $state(null);
 
-// Format data with $derived (replaces $: from Svelte 4)
+// Format data with $derived
 const formattedData = $derived(
   data.map((d) => ({
     date: new Date(d.date),
@@ -63,7 +61,7 @@ const formattedData = $derived(
   }))
 );
 
-// Calculate chart dimensions
+// Calculate chart dimensions - now responsive!
 const innerWidth = $derived(width - margin.left - margin.right);
 const innerHeight = $derived(height - margin.top - margin.bottom);
 
@@ -91,31 +89,28 @@ const linePath = $derived(
 );
 
 // Generate tick values for axes
-const xTicks = $derived(xScale.ticks(13)); // Ensure we have a tick for each year
-const yTicks = $derived(yScale.ticks(5));
+const xTicks = $derived(
+  xTickCount ? xScale.ticks(xTickCount) : xScale.ticks(Math.min(formattedData.length, 13))
+);
+const yTicks = $derived(yScale.ticks(yTickCount));
 
-// Format date for display
+// Format functions
 function formatDate(date) {
   return date.getFullYear().toString();
 }
 
-// Format value (simple number)
-function formatValue(value) {
-  return value.toString();
-}
-
-// Handle mouse events for tooltips
+// Handle mouse events for tooltips and hover effects
 function showTooltip(event, point) {
   activePoint = point;
-  tooltipX = event.clientX + 10;
-  tooltipY = event.clientY - 10;
+  hoveredPoint = point;
 }
 
 function hideTooltip() {
   activePoint = null;
+  hoveredPoint = null;
 }
 
-// Create debounce function to limit update frequency
+// Create debounce function
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -125,7 +120,7 @@ function debounce(func, wait) {
   };
 }
 
-// Memoize the brush functionality
+// Brush implementation
 let brush;
 let brushGroup;
 
@@ -135,21 +130,17 @@ function updateBrushPixelPositions() {
     const leftPos = xScale(brushSelection[0]);
     const rightPos = xScale(brushSelection[1]);
 
-    const svgRect = svgContainer.getBoundingClientRect();
-
     brushPixelPositions = {
       left: leftPos + margin.left,
       right: rightPos + margin.left,
       width: rightPos - leftPos,
-      svgLeft: svgRect.left,
-      svgTop: svgRect.top,
     };
   }
 }
 
-// Improved brush implementation with performance optimization
+// D3 Brush effect
 $effect(() => {
-  if (!brushGroupEl) return;
+  if (!brushGroupEl || !width || !height) return;
 
   if (!brush) {
     const yearInterval = d3.timeYear;
@@ -205,7 +196,8 @@ $effect(() => {
         [0, 0],
         [innerWidth, innerHeight],
       ])
-      .on("brush", (event) => {
+      .handleSize(8)
+      .on("brush.move", (event) => {
         if (event.sourceEvent && event.sourceEvent.type === "brush") return;
         if (event.selection) {
           const [x0, x1] = event.selection;
@@ -213,8 +205,6 @@ $effect(() => {
             left: x0 + margin.left,
             right: x1 + margin.left,
             width: x1 - x0,
-            svgLeft: svgContainer?.getBoundingClientRect().left || 0,
-            svgTop: svgContainer?.getBoundingClientRect().top || 0,
           };
         }
         debouncedBrushMove(event.selection);
@@ -224,6 +214,19 @@ $effect(() => {
 
   brushGroup = d3.select(brushGroupEl);
   brushGroup.call(brush);
+
+  // Style D3 brush elements
+  brushGroup.select(".selection").attr("fill", "transparent").attr("stroke", "none");
+
+  brushGroup.select(".overlay").attr("fill", "transparent");
+
+  // Style brush handles
+  brushGroup
+    .selectAll(".handle")
+    .attr("fill", "hsla(162, 100%, 38%, 1)")
+    .attr("stroke", "white")
+    .attr("stroke-width", 2)
+    .attr("rx", 2); // Rounded corners
 
   if (brushSelection) {
     untrack(() => {
@@ -237,31 +240,12 @@ $effect(() => {
   };
 });
 
+// Update positions on resize
 $effect(() => {
   if (chartEl && brushSelection && svgContainer) {
     updateBrushPixelPositions();
-    const handleResize = () => updateBrushPixelPositions();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
   }
 });
-
-const filteredData = $derived(() => {
-  if (!brushSelection) return formattedData;
-  const [startDate, endDate] = brushSelection;
-  return formattedData.filter((d) => {
-    return d.date >= startDate && d.date <= endDate;
-  });
-});
-
-function clearBrush() {
-  if (brushGroupEl && brush) {
-    brushGroup.call(brush.move, null);
-    brushSelection = null;
-  }
-}
 
 function animateYearPill(node, { duration = 300 }) {
   return {
@@ -272,25 +256,39 @@ function animateYearPill(node, { duration = 300 }) {
     },
   };
 }
+
+// Helper function to determine if a point is outside the brush selection
+function isPointOutsideSelection(point) {
+  return brushSelection && (point.date < brushSelection[0] || point.date > brushSelection[1]);
+}
 </script>
 
-<div class="mx-auto max-w-7xl rounded-lg bg-white px-4 py-8 shadow-sm sm:px-6 lg:px-8">
-  <!-- <header class="mb-8">
-        <h1 class="mb-1 text-2xl font-medium text-gray-900">
-          Number of <span class="font-bold">closed churches</span> in
-          <span class="font-bold">all locations</span> over time
-        </h1>
-        <p class="text-right text-sm text-gray-500">Data source: research center data port</p>
-      </header> -->
+<div class="relative h-full w-full" bind:this={svgContainer}>
+  <svg {width} {height} class="h-full w-full">
+    <!-- Chart area with margin -->
+    <g transform={`translate(${margin.left},${margin.top})`} bind:this={chartEl}>
+      <!-- Background color -->
+      <rect x={0} y={0} width={innerWidth} height={innerHeight} class="fill-[#E9F6FF]" />
 
-  <div class="relative" bind:this={svgContainer}>
-    <svg {width} {height} class="h-auto w-full">
-      <!-- Chart area with margin -->
-      <g transform={`translate(${margin.left},${margin.top})`} bind:this={chartEl}>
-        <!-- Background color -->
-        <rect x={0} y={0} width={innerWidth} height={innerHeight} class="fill-blue-50/30" />
+      <!-- White selection rectangle (Svelte-controlled for visual appearance) -->
+      {#if brushSelection && brushPixelPositions.width > 0}
+        <rect
+          x={brushPixelPositions.left - margin.left}
+          y={0}
+          width={brushPixelPositions.width}
+          height={innerHeight}
+          class="fill-white"
+          pointer-events="none"
+          transition:scale={{
+            duration: 150,
+            start: 0.95,
+            easing: elasticOut,
+          }}
+        />
+      {/if}
 
-        <!-- X-axis grid lines -->
+      <!-- X-axis grid lines -->
+      {#if showXGridlines}
         <g class="x-grid grid">
           {#each xTicks as tick}
             <line
@@ -298,13 +296,16 @@ function animateYearPill(node, { duration = 300 }) {
               y1={0}
               x2={xScale(tick)}
               y2={innerHeight}
-              class="stroke-gray-200"
+              stroke={gridLineColor}
               stroke-width="1"
+              opacity="0.5"
             />
           {/each}
         </g>
+      {/if}
 
-        <!-- Y-axis grid lines -->
+      <!-- Y-axis grid lines -->
+      {#if showYGridlines}
         <g class="y-grid grid">
           {#each yTicks as tick}
             <line
@@ -312,176 +313,200 @@ function animateYearPill(node, { duration = 300 }) {
               y1={yScale(tick)}
               x2={innerWidth}
               y2={yScale(tick)}
-              class="stroke-gray-200"
+              stroke={gridLineColor}
               stroke-width="1"
+              opacity="0.5"
             />
           {/each}
         </g>
+      {/if}
 
-        <!-- Gray background for the brushed area -->
-        {#if brushSelection}
-          <rect
-            x={brushPixelPositions.left - margin.left}
-            y={0}
-            width={brushPixelPositions.width}
-            height={innerHeight}
-            class="fill-gray-300/0"
-            transition:scale={{
-              duration: 150,
-              opacity: 0.1,
-              start: 0.95,
-              easing: elasticOut,
-            }}
-          />
+      <!-- Chart border (enclosing rectangle) -->
+      {#if showChartBorder}
+        <rect
+          x={0}
+          y={0}
+          width={innerWidth}
+          height={innerHeight}
+          fill="none"
+          stroke={gridLineColor}
+          stroke-width="1.5"
+        />
+      {/if}
+
+      <!-- X-axis ticks and labels -->
+      {#if xTickPosition !== "none"}
+        <!-- Top ticks -->
+        {#if xTickPosition === "top" || xTickPosition === "both"}
+          <g class="x-axis-top">
+            {#each formattedData as point}
+              <g transform={`translate(${xScale(point.date)},0)`}>
+                <line y1={0} y2={-tickLength} stroke="currentColor" class="text-gray-400" />
+                <text
+                  y={-tickOffset}
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  class="fill-gray-600 text-xs font-medium"
+                >
+                  {point.year}
+                </text>
+              </g>
+            {/each}
+          </g>
         {/if}
 
-        <!-- X-axis -->
-        <line
-          x1={0}
-          y1={innerHeight}
-          x2={innerWidth}
-          y2={innerHeight}
-          class="stroke-gray-300"
-          stroke-width="1"
-        />
-
-        <!-- X-axis ticks and labels -->
-        {#each formattedData as point}
-          <g transform={`translate(${xScale(point.date)},${innerHeight})`}>
-            <line y2="6" class="stroke-gray-400" />
-            <text y="20" text-anchor="middle" class="fill-gray-600 text-xs">
-              {point.year}
-            </text>
+        <!-- Bottom ticks -->
+        {#if xTickPosition === "bottom" || xTickPosition === "both"}
+          <g class="x-axis-bottom">
+            {#each formattedData as point}
+              <g transform={`translate(${xScale(point.date)},${innerHeight})`}>
+                <line y1={0} y2={tickLength} stroke="currentColor" class="text-gray-400" />
+                <text
+                  y={tickOffset}
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  class="fill-gray-600 text-xs font-medium"
+                >
+                  {point.year}
+                </text>
+              </g>
+            {/each}
           </g>
-        {/each}
+        {/if}
+      {/if}
 
-        <!-- Y-axis -->
-        <line x1={0} y1={0} x2={0} y2={innerHeight} class="stroke-gray-300" stroke-width="1" />
-
-        <!-- Y-axis ticks and labels -->
-        {#each yTicks as tick}
-          <g transform={`translate(0,${yScale(tick)})`}>
-            <line x2="-6" class="stroke-gray-400" />
-            <text
-              x="-10"
-              text-anchor="end"
-              dominant-baseline="middle"
-              class="fill-gray-600 text-xs"
-            >
-              {tick}
-            </text>
+      <!-- Y-axis ticks and labels -->
+      {#if yTickPosition !== "none"}
+        <!-- Left ticks -->
+        {#if yTickPosition === "left" || yTickPosition === "both"}
+          <g class="y-axis-left">
+            {#each yTicks as tick}
+              <g transform={`translate(0,${yScale(tick)})`}>
+                <line x1={0} x2={-tickLength} stroke="currentColor" class="text-gray-400" />
+                <text
+                  x={-tickOffset}
+                  text-anchor="end"
+                  dominant-baseline="middle"
+                  class="fill-gray-600 text-xs font-medium"
+                >
+                  {tick}
+                </text>
+              </g>
+            {/each}
           </g>
-        {/each}
+        {/if}
 
-        <!-- Line path -->
-        <path
-          d={linePath}
-          class="fill-none stroke-blue-600 stroke-2"
-          stroke-linejoin="round"
-          stroke-linecap="round"
-        />
+        <!-- Right ticks -->
+        {#if yTickPosition === "right" || yTickPosition === "both"}
+          <g class="y-axis-right">
+            {#each yTicks as tick}
+              <g transform={`translate(${innerWidth},${yScale(tick)})`}>
+                <line x1={0} x2={tickLength} stroke="currentColor" class="text-gray-400" />
+                <text
+                  x={tickOffset}
+                  text-anchor="start"
+                  dominant-baseline="middle"
+                  class="fill-gray-600 text-xs font-medium"
+                >
+                  {tick}
+                </text>
+              </g>
+            {/each}
+          </g>
+        {/if}
+      {/if}
 
-        <!-- Data points -->
-        {#each formattedData as point}
+      <!-- Line path -->
+      <path
+        d={linePath}
+        class="fill-none stroke-2"
+        stroke={lineColor}
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+
+      <!-- D3 Brush container (rendered before circles so circles are on top) -->
+      <g class="brush-group" bind:this={brushGroupEl}></g>
+
+      <!-- Data points (rendered after brush so they're on top) -->
+      <g class="data-points" style="pointer-events: all;">
+        {#each formattedData as point, i}
           <circle
             cx={xScale(point.date)}
             cy={yScale(point.close)}
-            r="5"
-            class={brushSelection &&
-            (point.date < brushSelection[0] || point.date > brushSelection[1])
-              ? "cursor-pointer fill-blue-300/70 stroke-white stroke-[1.5px] transition-all duration-300 ease-in-out"
-              : "cursor-pointer fill-blue-600 stroke-white stroke-[1.5px] transition-all duration-300 ease-in-out"}
+            r={hoveredPoint === point ? circleHoverRadius : circleRadius}
+            fill={isPointOutsideSelection(point)
+              ? "hsla(211, 99%, 21%, 0.4)"
+              : hoveredPoint === point
+                ? circleHoverColor
+                : circleColor}
+            stroke="white"
+            stroke-width="2"
+            class="cursor-pointer transition-all duration-200 ease-out"
+            style="filter: {hoveredPoint === point
+              ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
+              : 'none'};"
+            role="button"
+            tabindex="0"
+            aria-label="Data point for {point.year}: {point.close}"
             onmouseenter={(e) => showTooltip(e, point)}
             onmouseleave={hideTooltip}
+            onfocus={(e) => showTooltip(e, point)}
+            onblur={hideTooltip}
           />
         {/each}
-
-        <!-- D3 Brush container -->
-        <g class="brush-group" bind:this={brushGroupEl}></g>
       </g>
-    </svg>
+    </g>
+  </svg>
 
-    <!-- Year range pills that match the design in the image (positioned at the bottom) -->
-    {#if brushSelection && brushPixelPositions.width > 0}
+  <!-- Enhanced Tooltip -->
+  {#if activePoint}
+    <div
+      class="pointer-events-none absolute z-50 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
+      style="
+        left: {xScale(activePoint.date) + margin.left - 30}px; 
+        top: {yScale(activePoint.close) + margin.top - 60}px;
+        transform: translateX(-50%);
+      "
+      transition:scale={{ duration: 150, start: 0.9 }}
+    >
+      <div class="font-medium">{activePoint.year}</div>
+      <div class="text-gray-300">Value: {activePoint.close}</div>
+      <!-- Tooltip arrow -->
       <div
-        class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs text-white"
-        style="left: {brushPixelPositions.left}px; top: {margin.top + innerHeight + 30}px;"
-        transition:animateYearPill
-      >
-        from {formatDate(brushSelection[0])}
-      </div>
-
-      <div
-        class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs text-white"
-        style="left: {brushPixelPositions.right}px; top: {margin.top + innerHeight + 30}px;"
-        transition:animateYearPill
-      >
-        to {formatDate(brushSelection[1])}
-      </div>
-
-      <div
-        class="absolute z-10 text-xs font-medium text-emerald-500"
-        style="left: {(brushPixelPositions.left + brushPixelPositions.right) /
-          2}px; top: {margin.top + innerHeight + 10}px; transform: translateX(-50%);"
-      >
-        Selected year range
-      </div>
-    {/if}
-  </div>
-
-  <!-- Slide to select instructions -->
-  {#if brushSelection}
-    <div class="mt-10 flex items-center justify-center gap-2 text-sm text-gray-600">
-      <svg
-        class="h-4 w-4 text-gray-400"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M12 4L10.59 5.41L16.17 11H4V13H16.17L10.59 18.59L12 20L20 12L12 4Z"
-          fill="currentColor"
-        />
-      </svg>
-      <span>Slide to select year range</span>
+        class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-t-gray-900 border-r-transparent border-l-transparent"
+      ></div>
     </div>
   {/if}
 
-  <!-- Tooltip -->
-  {#if activePoint}
+  <!-- Year range pills -->
+  {#if brushSelection && brushPixelPositions.width > 0}
     <div
-      class="pointer-events-none fixed z-50 rounded bg-gray-900 px-3 py-2 text-sm text-white shadow-lg"
-      style={`left: ${tooltipX}px; top: ${tooltipY}px; animation: fadeIn 0.15s ease-in-out;`}
+      class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
+      style="left: {brushPixelPositions.left}px; top: {margin.top + innerHeight + 20}px;"
+      transition:animateYearPill
     >
-      <div><strong>Year:</strong> {activePoint.year}</div>
-      <div><strong>Value:</strong> {activePoint.close}</div>
+      from <strong>{formatDate(brushSelection[0])}</strong>
+    </div>
+
+    <div
+      class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
+      style="left: {brushPixelPositions.right}px; top: {margin.top + innerHeight + 20}px;"
+      transition:animateYearPill
+    >
+      to <strong>{formatDate(brushSelection[1])}</strong>
+    </div>
+
+    <div
+      class="absolute z-10 text-xs font-medium text-emerald-500"
+      style="left: {(brushPixelPositions.left + brushPixelPositions.right) /
+        2}px; top: {margin.top + innerHeight + 10}px; transform: translateX(-50%);"
+    >
+      Selected year range
     </div>
   {/if}
 </div>
 
-<style global>
-/* D3 brush styles */
-.brush-group .selection {
-  fill: rgba(255, 255, 255, 0);
-  stroke: #10b981; /* Emerald-500 for brush handles */
-  stroke-width: 2;
-}
-
-.brush-group .handle {
-  fill: #10b981; /* Emerald-500 */
-  stroke: white;
-  stroke-width: 1;
-  cursor: ew-resize;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+<style>
+/* Remove the global fadeIn animation since we're using Svelte transitions */
 </style>

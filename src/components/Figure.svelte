@@ -3,15 +3,15 @@
 <script>
 import { setContext, onMount, tick } from "svelte";
 import { browser } from "$app/environment";
-import resize from "$lib/resize.js"; // Ensure this path is correct
+import resize from "$lib/resize.js";
 
-// Props, including 'children' and 'figcaption' which will be snippets
 let {
   debounce = 250,
   exclude = "height",
   custom: initialCustom = {},
-  children, // Default slot equivalent
-  figcaption, // Named slot 'figcaption' equivalent
+  children,
+  figcaption, // Named slot for figcaption
+  captionId = `figure-caption-${Math.random().toString(36).substring(2, 15)}`, // Unique ID for ARIA
 } = $props();
 
 // Base $state variables
@@ -25,6 +25,9 @@ let divClientHeight = $state(0);
 
 // $derived variable for DPR
 let dpr = $derived(browser ? Math.min(2, window.devicePixelRatio || 1) : 1);
+
+// $derived to check if we have valid dimensions
+const hasDimensions = $derived(figureWidth > 0 && figureHeight > 0);
 
 // Provide getter functions in the context for live values
 setContext("Figure", {
@@ -55,33 +58,41 @@ onMount(() => {
 // Event handler for the custom 'resize' event dispatched by the action
 function handleResizeEvent() {
   updateDimensionsFromBoundValues();
-} 
-
-
+}
 </script>
 
-<figure class="w-full h-full">
+<figure
+  class="flex h-full w-full flex-col"
+  role="figure"
+  aria-labelledby={figcaption ? captionId : undefined}
+>
   <div
-    class="w-full h-full"
+    class="h-full w-full flex-grow"
     bind:clientWidth={divClientWidth}
     bind:clientHeight={divClientHeight}
     use:resize={{ exclude, debounce }}
     onresize={handleResizeEvent}
   >
-    {#if children}
+    {#if hasDimensions && children}
       {@render children()}
+    {:else}
+      <div
+        class="flex h-full w-full items-center justify-center bg-gray-50"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="text-sm text-gray-400">Loading chart...</div>
+      </div>
     {/if}
   </div>
   {#if figcaption}
-    {@render figcaption?.()}
+    <figcaption id={captionId} class="mt-2 text-center text-sm text-gray-600">
+      {@render figcaption()}
+    </figcaption>
   {/if}
 </figure>
 
 <style>
-
-
-/* This global rule might need adjustment based on how snippets render,
-	   but the principle of positioning children of .figure-inner is likely the same. */
 :global(.figure-inner > *) {
   position: absolute;
   top: 0;
