@@ -225,6 +225,20 @@ $effect(() => {
   brushGroup = d3.select(brushGroupEl);
   brushGroup.call(brush);
 
+
+    // Style D3 brush elements
+    brushGroup.select(".selection")
+    .attr("fill", "transparent") // Make D3's own selection rect transparent
+    .attr("stroke", "none");
+
+  brushGroup.select(".overlay")
+    .attr("fill", "transparent"); 
+
+  // Style D3 brush handles (optional, but good for consistency)
+  brushGroup.selectAll(".handle")
+    .attr("fill", "#777") // A neutral color for handles
+    .attr("stroke", "white");
+
   if (brushSelection) {
     untrack(() => {
       brushGroup.call(brush.move, [xScale(brushSelection[0]), xScale(brushSelection[1])]);
@@ -288,7 +302,24 @@ function animateYearPill(node, { duration = 300 }) {
       <!-- Chart area with margin -->
       <g transform={`translate(${margin.left},${margin.top})`} bind:this={chartEl}>
         <!-- Background color -->
-        <rect x={0} y={0} width={innerWidth} height={innerHeight} class="fill-blue-50/30" />
+        <rect x={0} y={0} width={innerWidth} height={innerHeight} class="fill-[#E9F6FF]" />
+
+        <!-- White selection rectangle (Svelte-controlled for visual appearance) -->
+        {#if brushSelection && brushPixelPositions.width > 0}
+          <rect
+            x={brushPixelPositions.left - margin.left}
+            y={0}
+            width={brushPixelPositions.width}
+            height={innerHeight}
+            class="fill-white"
+            pointer-events="none" 
+            transition:scale={{ // Re-add transition if desired for this visual rect
+              duration: 150,
+              start: 0.95,
+              easing: elasticOut,
+            }}
+          />
+        {/if}
 
         <!-- X-axis grid lines -->
         <g class="x-grid grid">
@@ -317,23 +348,6 @@ function animateYearPill(node, { duration = 300 }) {
             />
           {/each}
         </g>
-
-        <!-- Gray background for the brushed area -->
-        {#if brushSelection}
-          <rect
-            x={brushPixelPositions.left - margin.left}
-            y={0}
-            width={brushPixelPositions.width}
-            height={innerHeight}
-            class="fill-gray-300/0"
-            transition:scale={{
-              duration: 150,
-              opacity: 0.1,
-              start: 0.95,
-              easing: elasticOut,
-            }}
-          />
-        {/if}
 
         <!-- X-axis -->
         <line
@@ -383,6 +397,7 @@ function animateYearPill(node, { duration = 300 }) {
 
         <!-- Data points -->
         {#each formattedData as point}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <circle
             cx={xScale(point.date)}
             cy={yScale(point.close)}
@@ -396,7 +411,7 @@ function animateYearPill(node, { duration = 300 }) {
           />
         {/each}
 
-        <!-- D3 Brush container -->
+        <!-- D3 Brush container (must be last for event handling overlay to be on top) -->
         <g class="brush-group" bind:this={brushGroupEl}></g>
       </g>
     </svg>
@@ -459,20 +474,8 @@ function animateYearPill(node, { duration = 300 }) {
   {/if}
 </div>
 
-<style global>
-/* D3 brush styles */
-.brush-group .selection {
-  fill: rgba(255, 255, 255, 0);
-  stroke: #10b981; /* Emerald-500 for brush handles */
-  stroke-width: 2;
-}
+<style >
 
-.brush-group .handle {
-  fill: #10b981; /* Emerald-500 */
-  stroke: white;
-  stroke-width: 1;
-  cursor: ew-resize;
-}
 
 @keyframes fadeIn {
   from {
