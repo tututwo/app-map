@@ -15,6 +15,7 @@ let {
   data,
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
   initialBrushSelection = null,
+  chartBackgroundColor = "hsla(206, 100%, 96%, 1)",
   lineColor = "hsla(0, 0%, 53%, 1)",
   circleColor = "hsla(211, 99%, 21%, 1)",
   circleHoverColor = "hsla(211, 99%, 35%, 1)",
@@ -31,6 +32,7 @@ let {
   yTickCount = 5,
   tickLength = 6,
   tickOffset = 20,
+  enableBrushing = true, // New prop to enable/disable brushing
 } = $props();
 
 // State variables
@@ -38,7 +40,7 @@ let activePoint = $state(null);
 let hoveredPoint = $state(null);
 
 // Current brush selection (in date values)
-let brushSelection = $state(initialBrushSelection);
+let brushSelection = $state(enableBrushing ? initialBrushSelection : null);
 
 // Calculated pixel positions for the brushed area
 let brushPixelPositions = $state({
@@ -140,7 +142,7 @@ function updateBrushPixelPositions() {
 
 // D3 Brush effect
 $effect(() => {
-  if (!brushGroupEl || !width || !height) return;
+  if (!enableBrushing || !brushGroupEl || !width || !height) return;
 
   if (!brush) {
     const yearInterval = d3.timeYear;
@@ -242,7 +244,7 @@ $effect(() => {
 
 // Update positions on resize
 $effect(() => {
-  if (chartEl && brushSelection && svgContainer) {
+  if (enableBrushing && chartEl && brushSelection && svgContainer) {
     updateBrushPixelPositions();
   }
 });
@@ -268,10 +270,10 @@ function isPointOutsideSelection(point) {
     <!-- Chart area with margin -->
     <g transform={`translate(${margin.left},${margin.top})`} bind:this={chartEl}>
       <!-- Background color -->
-      <rect x={0} y={0} width={innerWidth} height={innerHeight} class="fill-[#E9F6FF]" />
+      <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
 
       <!-- White selection rectangle (Svelte-controlled for visual appearance) -->
-      {#if brushSelection && brushPixelPositions.width > 0}
+      {#if enableBrushing && brushSelection && brushPixelPositions.width > 0}
         <rect
           x={brushPixelPositions.left - margin.left}
           y={0}
@@ -426,7 +428,9 @@ function isPointOutsideSelection(point) {
       />
 
       <!-- D3 Brush container (rendered before circles so circles are on top) -->
-      <g class="brush-group" bind:this={brushGroupEl}></g>
+      {#if enableBrushing}
+        <g class="brush-group" bind:this={brushGroupEl}></g>
+      {/if}
 
       <!-- Data points (rendered after brush so they're on top) -->
       <g class="data-points" style="pointer-events: all;">
@@ -435,7 +439,7 @@ function isPointOutsideSelection(point) {
             cx={xScale(point.date)}
             cy={yScale(point.close)}
             r={hoveredPoint === point ? circleHoverRadius : circleRadius}
-            fill={isPointOutsideSelection(point)
+            fill={enableBrushing && isPointOutsideSelection(point)
               ? "hsla(211, 99%, 21%, 0.4)"
               : hoveredPoint === point
                 ? circleHoverColor
@@ -480,7 +484,7 @@ function isPointOutsideSelection(point) {
   {/if}
 
   <!-- Year range pills -->
-  {#if brushSelection && brushPixelPositions.width > 0}
+  {#if enableBrushing && brushSelection && brushPixelPositions.width > 0}
     <div
       class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
       style="left: {brushPixelPositions.left}px; top: {margin.top + innerHeight + 20}px;"

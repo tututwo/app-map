@@ -35,7 +35,7 @@ const initialBrushSelection = [
   </header>
 
   <!-- Chart container with responsive dimensions -->
-  <div class="h-[500px] w-full">
+  <div class="h-[300px] w-full">
     <Figure>
       <LineChart
         {data}
@@ -46,8 +46,8 @@ const initialBrushSelection = [
         showXGridlines={true}
         showYGridlines={true}
         gridLineColor="hsla(0, 0%, 85%, 1)"
-        yTickCount={5}
-        circleRadius={10}
+        yTickCount={2}
+        circleRadius={8}
         circleHoverRadius={6}
         lineColor="hsla(0, 0%, 53%, 1)"
         circleColor="hsla(211, 98%, 21%, 1)"
