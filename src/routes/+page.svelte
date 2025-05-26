@@ -9,6 +9,9 @@ import Sidebar from "$components/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
 
+// UI components
+import { Button } from "bits-ui";
+
 import Figure from "$components/Figure.svelte";
 
 // Line Chart
@@ -27,11 +30,11 @@ let highlightedGroup = $state<string | null>(null);
 
 // Data ranges for the legend with corrected colors and widths
 const dataRanges = [
-  { label: "1-12", color: "#cfe2f3", width: "70px" },
-  { label: "13-24", color: "#9fc5e8", width: "90px" },
-  { label: "25-36", color: "#6fa8dc", width: "90px" },
-  { label: "37-48", color: "#b4a7d6", width: "90px" },
-  { label: "49-60", color: "#d5a6bd", width: "80px" },
+  { label: "1-12", color: "#E9F6FF", textColor: "black" },
+  { label: "13-24", color: "#BCDDF9", textColor: "black" },
+  { label: "25-36", color: "#88A5EA", textColor: "black" },
+  { label: "37-48", color: "#B389DD", textColor: "white" },
+  { label: "49-60", color: "#CA5D99", textColor: "white" },
 ];
 
 // Event handlers
@@ -138,13 +141,13 @@ const stackedBarData = $derived(datasets[currentDataset]);
   </Sidebar>
 
   <!-- Main Content -->
-  <main class="flex h-screen flex-1 flex-col overflow-hidden">
+  <main class="flex h-screen flex-1 flex-col overflow-hidden pb-2">
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
     <section
       aria-label="Line chart"
-      class="mb-5 h-[28vh] rounded border border-gray-200 px-5"
+      class="mb-5 h-[25vh] rounded border border-gray-200 px-5"
       style="background-color: #EAF6FF;"
     >
       <header class="flex w-full justify-between">
@@ -154,7 +157,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
         </h1>
         <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
-      <div class="w-fullitems-center flex h-[calc(28vh-50px)] justify-center">
+      <div class="w-fullitems-center flex h-[calc(25vh-50px)] justify-center">
         <Figure>
           <LineChart
             {data}
@@ -165,12 +168,12 @@ const stackedBarData = $derived(datasets[currentDataset]);
             showXGridlines={true}
             showYGridlines={true}
             gridLineColor="hsla(0, 0%, 85%, 1)"
-            yTickCount={5}
+            yTickCount={4}
             circleRadius={6}
             circleHoverRadius={9}
             lineColor="hsla(0, 0%, 53%, 1)"
             circleColor="hsla(211, 98%, 21%, 1)"
-            margin={{ top: 40, right: 10, bottom: 10, left: 50 }}
+            margin={{ top: 40, right: 10, bottom: 40, left: 50 }}
           />
 
           {#snippet figcaption()}
@@ -230,29 +233,33 @@ const stackedBarData = $derived(datasets[currentDataset]);
             <!-- ------------------------------------------------------------------ -->
             <!-- Legend section -->
             <!-- ------------------------------------------------------------------ -->
-            <section aria-label="Legend" class="flex flex-col">
-              <div class="mb-1">
-                <h4 class="mb-1 text-sm">Number of closed church</h4>
-                <div class="flex justify-between">
+            <!-- Legend section -->
+            <section aria-label="Legend" class="flex flex-col space-y-4">
+              <div>
+                <h4 class="mb-3 text-sm font-medium text-gray-800">Number of closed church</h4>
+                <div class="flex gap-2.5">
                   {#each dataRanges as range}
-                    <button
-                      style="background-color: {range.color};"
-                      class="flex h-8 w-16 cursor-pointer items-center justify-center text-sm"
+                    <Button.Root
+                      style="background-color: {range.color}; {highlightedGroup === range.label
+                        ? 'filter: brightness(0.95);'
+                        : ''}"
+                      class="relative flex h-11 min-w-[4rem] flex-1 items-center justify-center  text-sm  text-gray-700 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow {highlightedGroup ===
+                      range.label
+                        ? 'shadow-md ring-2 ring-gray-800 ring-offset-2'
+                        : ''}"
                       onclick={() => highlightGroup(range.label)}
-                      class:ring-2={highlightedGroup === range.label}
-                      class:ring-black={highlightedGroup === range.label}
                     >
-                      {range.label}
-                    </button>
+                      <span class="relative z-10" style="color: {range.textColor};"
+                        >{range.label}</span
+                      >
+                    </Button.Root>
                   {/each}
                 </div>
               </div>
 
-              <div class="mt-1 flex items-center justify-center text-xs">
-                <span class="mr-1 inline-flex items-center justify-center">
-                  <Pointer />
-                </span>
-                Select a group to highlight
+              <div class="flex items-center justify-center gap-2 pt-1">
+                <Pointer class="h-4 w-4 text-gray-500" strokeWidth={2} />
+                <span class="text-sm text-gray-600">Select a group to highlight</span>
               </div>
             </section>
           </div>
@@ -281,19 +288,19 @@ const stackedBarData = $derived(datasets[currentDataset]);
           aria-label="Stacked bar chart"
           class="mb-5 min-h-[300px] flex-col items-center justify-center rounded border border-gray-200"
         >
-          <div class="h-full w-full rounded-lg bg-white p-6 shadow-sm">
+          <div class="h-full w-full rounded-lg bg-white p-2 shadow-sm">
             <Figure visuallyHiddenCaption={false}>
               <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
                 margin={{ top: 10, right: 0, bottom: 0, left: 40 }}
                 colors={{
-                  negative: "hsla(211, 100%, 50%, 1)", // Bright blue
-                  neutral: "hsla(0, 0%, 85%, 1)", // Light gray
-                  positive: "hsla(145, 63%, 42%, 1)", // Green
+                  negative: "hsla(211, 98%, 21%, .9)", // Bright blue
+                  neutral: "hsla(0, 0%, 87%, .9)", // Light gray
+                  positive: "hsla(162, 100%, 38%, .9)", // Green
                 }}
                 hoverColors={{
-                  negative: "hsla(211, 100%, 40%, 1)",
+                  negative: "hsla(211, 98%, 21%, 1)",
                   neutral: "hsla(0, 0%, 75%, 1)",
                   positive: "hsla(145, 63%, 32%, 1)",
                 }}
@@ -302,7 +309,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
                 showYGridlines={true}
                 showXGridlines={false}
                 showChartBorder={true}
-                barPadding={0.5}
+                barPadding={0.3}
                 yTickCount={3}
                 animationDuration={350}
                 animationDelay={30}
@@ -329,14 +336,17 @@ const stackedBarData = $derived(datasets[currentDataset]);
         <!-- ------------------------------------------------------------------ -->
         <!-- Small line charts section -->
         <!-- ------------------------------------------------------------------ -->
-        <div class="relative h-[calc(100%)]">
+        <div class="relative h-[calc(100%)] p-2">
           <!-- Scrollable container -->
-          <div class="absolute inset-0 overflow-y-auto pr-1">
+          <div
+            class="absolute inset-0 overflow-y-auto pr-1"
+            style="background-color: hsla(0, 0%, 85%, .2);"
+          >
             <!-- Multiple small line charts to demonstrate scrolling -->
             {#each ["Persistance", "Trends of Education", "Home onwership rate", "Median Rent", "GDP"] as socialDeterminant, chartIndex}
               <section
                 aria-label={`Small line chart ${chartIndex}`}
-                class="flex h-[200px] items-center justify-center rounded border border-gray-200"
+                class="flex h-[200px] items-center justify-center border-gray-200"
               >
                 <Figure visuallyHiddenCaption={false}>
                   {#snippet figcaption()}

@@ -505,9 +505,9 @@ function isPointOutsideSelection(point) {
     </div>
 
     <div
-      class="absolute z-10 text-xs font-medium text-emerald-500"
+      class="absolute z-10 text-lg text-emerald-500"
       style="left: {(brushPixelPositions.left + brushPixelPositions.right) /
-        2}px; top: {margin.top + innerHeight + 10}px; transform: translateX(-50%);"
+        2}px; top: {margin.top + 10}px; transform: translateX(-50%);"
     >
       Selected year range
     </div>
