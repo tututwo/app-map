@@ -1,4 +1,4 @@
-type DataPoint = {
+export type DataPoint = {
   /** Geographic identifier */
   geoid: string;
   /** Each year within the selected year range */
@@ -57,16 +57,7 @@ type DataPoint = {
   d_pop_sqkm: number;
 };
 
-async function fetchChartsData(from: number, to: number, geoid?: string) {
-  const resp = await fetch("charts_data_url", {
-    body: JSON.stringify({ from, to, geoid }),
-  });
-
-  const array_for_year_range: DataPoint[] = await resp.json();
-  console.log(array_for_year_range);
-}
-
-type CountyDataPoint = {
+export type CountyDataPoint = {
   geoid: string;
   /** Number of church closings */
   close: number;
@@ -75,15 +66,3 @@ type CountyDataPoint = {
   /** Rate of church closings per square kilometer */
   close_r_sqkm: number;
 };
-
-async function fetchMapData(from: number, to: number) {
-  const resp = await fetch("map_data_url", {
-    body: JSON.stringify({
-      from: 2003,
-      to: 2011,
-    }),
-  });
-
-  const array_of_3000_counties: CountyDataPoint[] = await resp.json();
-  console.log(array_of_3000_counties);
-}
