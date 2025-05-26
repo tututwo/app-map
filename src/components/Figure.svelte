@@ -73,23 +73,25 @@ function handleResizeEvent() {
     </figcaption>
   {/if}
   <div
-    class="h-full w-full flex-grow"
+    class="relative h-full w-full flex-grow"
     bind:clientWidth={divClientWidth}
     bind:clientHeight={divClientHeight}
     use:resize={{ exclude, debounce }}
     onresize={handleResizeEvent}
   >
-    {#if hasDimensions && children}
-      {@render children()}
-    {:else}
-      <div
-        class="flex h-full w-full items-center justify-center bg-gray-50"
-        role="status"
-        aria-live="polite"
-      >
-        <div class="text-sm text-gray-400">Loading chart...</div>
-      </div>
-    {/if}
+    <div class="absolute inset-0">
+      {#if hasDimensions && children}
+        {@render children()}
+      {:else}
+        <div
+          class="flex h-full w-full items-center justify-center bg-gray-50"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="text-sm text-gray-400">Loading chart...</div>
+        </div>
+      {/if}
+    </div>
   </div>
 </figure>
 
