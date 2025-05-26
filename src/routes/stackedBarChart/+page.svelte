@@ -92,7 +92,7 @@ function randomizeData() {
       <button
         onclick={() => (currentDataset = "original")}
         class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-               {currentDataset === 'original'
+                 {currentDataset === 'original'
           ? 'bg-blue-600 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
       >
@@ -102,7 +102,7 @@ function randomizeData() {
       <button
         onclick={() => (currentDataset = "updated")}
         class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-               {currentDataset === 'updated'
+                 {currentDataset === 'updated'
           ? 'bg-blue-600 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
       >
@@ -112,7 +112,7 @@ function randomizeData() {
       <button
         onclick={() => (currentDataset = "extended")}
         class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-               {currentDataset === 'extended'
+                 {currentDataset === 'extended'
           ? 'bg-blue-600 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
       >
@@ -122,7 +122,7 @@ function randomizeData() {
       <button
         onclick={() => (currentDataset = "reduced")}
         class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-               {currentDataset === 'reduced'
+                 {currentDataset === 'reduced'
           ? 'bg-blue-600 text-white'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}"
       >
@@ -168,7 +168,7 @@ function randomizeData() {
             showChartBorder={true}
             barPadding={0.1}
             yTickCount={6}
-            animationDuration={750}
+            animationDuration={5000}
             animationDelay={30}
           />
 

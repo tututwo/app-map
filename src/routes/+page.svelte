@@ -14,6 +14,7 @@ import Figure from "$components/Figure.svelte";
 // Line Chart
 
 import LineChart from "$components/lineChartBrush/lineChart.svelte";
+import StackedBar from "$components/bar/stackedBar.svelte";
 
 // Map
 import MapLibreMap from "$components/map/maplibre-map.svelte";
@@ -71,6 +72,59 @@ const initialBrushSelection = [
   new Date("2003-01-01T00:00:00.000Z"),
   new Date("2011-01-01T00:00:00.000Z"),
 ];
+
+let currentDataset = $state("original");
+// Multiple datasets to demonstrate animations
+const datasets: Record<
+  string,
+  Array<{ year: number; negative: number; neutral: number; positive: number }>
+> = {
+  original: [
+    { year: 2003, negative: -10, neutral: 20, positive: 4 },
+    { year: 2004, negative: -18, neutral: 20, positive: 6 },
+    { year: 2005, negative: -4, neutral: 20, positive: 4 },
+    { year: 2006, negative: -10, neutral: 20, positive: 6 },
+    { year: 2007, negative: -8, neutral: 20, positive: 8 },
+    { year: 2008, negative: -4, neutral: 20, positive: 10 },
+    { year: 2009, negative: -2, neutral: 20, positive: 12 },
+    { year: 2010, negative: -12, neutral: 20, positive: 8 },
+    { year: 2011, negative: -4, neutral: 20, positive: 14 },
+  ],
+  updated: [
+    { year: 2003, negative: -5, neutral: 15, positive: 8 },
+    { year: 2004, negative: -12, neutral: 18, positive: 10 },
+    { year: 2005, negative: -8, neutral: 22, positive: 6 },
+    { year: 2006, negative: -15, neutral: 25, positive: 4 },
+    { year: 2007, negative: -3, neutral: 18, positive: 12 },
+    { year: 2008, negative: -6, neutral: 20, positive: 15 },
+    { year: 2009, negative: -10, neutral: 22, positive: 8 },
+    { year: 2010, negative: -8, neutral: 19, positive: 10 },
+    { year: 2011, negative: -2, neutral: 21, positive: 18 },
+  ],
+  extended: [
+    { year: 2003, negative: -10, neutral: 20, positive: 4 },
+    { year: 2004, negative: -18, neutral: 20, positive: 6 },
+    { year: 2005, negative: -4, neutral: 20, positive: 4 },
+    { year: 2006, negative: -10, neutral: 20, positive: 6 },
+    { year: 2007, negative: -8, neutral: 20, positive: 8 },
+    { year: 2008, negative: -4, neutral: 20, positive: 10 },
+    { year: 2009, negative: -2, neutral: 20, positive: 12 },
+    { year: 2010, negative: -12, neutral: 20, positive: 8 },
+    { year: 2011, negative: -4, neutral: 20, positive: 14 },
+    { year: 2012, negative: -6, neutral: 18, positive: 16 },
+    { year: 2013, negative: -3, neutral: 22, positive: 12 },
+    { year: 2014, negative: -8, neutral: 24, positive: 10 },
+  ],
+  reduced: [
+    { year: 2005, negative: -4, neutral: 20, positive: 4 },
+    { year: 2007, negative: -8, neutral: 20, positive: 8 },
+    { year: 2009, negative: -2, neutral: 20, positive: 12 },
+    { year: 2011, negative: -4, neutral: 20, positive: 14 },
+  ],
+};
+
+// Get current data based on selection
+const stackedBarData = $derived(datasets[currentDataset]);
 </script>
 
 <div class="flex h-screen">
@@ -88,7 +142,7 @@ const initialBrushSelection = [
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section aria-label="Line chart" class="mb-5 h-[20vh] rounded border border-gray-200">
+    <section aria-label="Line chart" class="mb-5 h-[30vh] rounded border border-gray-200">
       <header class="mb-8">
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
@@ -96,7 +150,7 @@ const initialBrushSelection = [
         </h1>
         <p class="text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
-      <div class="w-fullitems-center flex h-[calc(20vh-50px)] justify-center">
+      <div class="w-fullitems-center flex h-[calc(30vh-50px)] justify-center">
         <Figure>
           <LineChart
             {data}
@@ -223,13 +277,44 @@ const initialBrushSelection = [
           aria-label="Stacked bar chart"
           class="mb-5 flex min-h-[185px] items-center justify-center rounded border border-gray-200"
         >
-          <h1 class="text-4xl text-black opacity-80">stacked bar</h1>
+          <div class="h-full w-full rounded-lg bg-white p-6 shadow-sm">
+            <Figure>
+              <StackedBar
+                data={stackedBarData}
+                keys={["negative", "neutral", "positive"]}
+                margin={{ top: 0, right: 0, bottom: 0, left: 60 }}
+                colors={{
+                  negative: "hsla(211, 100%, 50%, 1)", // Bright blue
+                  neutral: "hsla(0, 0%, 85%, 1)", // Light gray
+                  positive: "hsla(145, 63%, 42%, 1)", // Green
+                }}
+                hoverColors={{
+                  negative: "hsla(211, 100%, 40%, 1)",
+                  neutral: "hsla(0, 0%, 75%, 1)",
+                  positive: "hsla(145, 63%, 32%, 1)",
+                }}
+                chartBackgroundColor="hsla(0, 0%, 98%, 1)"
+                gridLineColor="hsla(0, 0%, 90%, 1)"
+                showYGridlines={true}
+                showXGridlines={false}
+                showChartBorder={true}
+                barPadding={0.5}
+                yTickCount={6}
+                animationDuration={350}
+                animationDelay={30}
+              />
+
+              {#snippet figcaption()}
+                <p>Stacked barchart showing negative, neutral, and positive</p>
+              {/snippet}
+            </Figure>
+          </div>
         </section>
 
         <!-- ------------------------------------------------------------------ -->
         <!-- Small line charts section -->
         <!-- ------------------------------------------------------------------ -->
-        <div class="relative h-[calc(100%-185px-1.25rem)]">
+        <div class="relative h-[calc(100%)]">
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
             <!-- Multiple small line charts to demonstrate scrolling -->
@@ -255,7 +340,7 @@ const initialBrushSelection = [
                     lineColor="hsla(0, 0%, 20%, 1)"
                     circleColor="hsla(0, 0%, 20%, 1)"
                     circleHoverColor="hsla(0, 0%, 10%, 1)"
-                    margin={{ top: 40, right: 40, bottom: 50, left: 50 }}
+                    margin={{ top: 10, right: 40, bottom: 10, left: 50 }}
                   />
 
                   {#snippet figcaption()}{/snippet}
