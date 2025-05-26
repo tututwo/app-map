@@ -138,19 +138,23 @@ const stackedBarData = $derived(datasets[currentDataset]);
   </Sidebar>
 
   <!-- Main Content -->
-  <main class="flex h-screen flex-1 flex-col overflow-hidden p-5">
+  <main class="flex h-screen flex-1 flex-col overflow-hidden">
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section aria-label="Line chart" class="mb-5 h-[30vh] rounded border border-gray-200">
-      <header class="mb-8">
+    <section
+      aria-label="Line chart"
+      class="mb-5 h-[28vh] rounded border border-gray-200 px-5"
+      style="background-color: #EAF6FF;"
+    >
+      <header class="flex w-full justify-between">
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
           <span class="font-bold">all locations</span> over time
         </h1>
-        <p class="text-right text-sm text-gray-500">Data source: research center data port</p>
+        <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
-      <div class="w-fullitems-center flex h-[calc(30vh-50px)] justify-center">
+      <div class="w-fullitems-center flex h-[calc(28vh-50px)] justify-center">
         <Figure>
           <LineChart
             {data}
@@ -161,12 +165,12 @@ const stackedBarData = $derived(datasets[currentDataset]);
             showXGridlines={true}
             showYGridlines={true}
             gridLineColor="hsla(0, 0%, 85%, 1)"
-            yTickCount={2}
-            circleRadius={8}
-            circleHoverRadius={6}
+            yTickCount={5}
+            circleRadius={6}
+            circleHoverRadius={9}
             lineColor="hsla(0, 0%, 53%, 1)"
             circleColor="hsla(211, 98%, 21%, 1)"
-            margin={{ top: 60, right: 40, bottom: 60, left: 60 }}
+            margin={{ top: 40, right: 10, bottom: 10, left: 50 }}
           />
 
           {#snippet figcaption()}
@@ -177,7 +181,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
     </section>
 
     <!-- Controls and charts section - takes remaining height -->
-    <div class="grid flex-1 grid-cols-[2fr_1fr] gap-5">
+    <div class="grid flex-1 grid-cols-[2fr_1fr] gap-5 px-5">
       <!-- ------------------------------------------------------------------ -->
       <!-- ------------------------------------------------------------------ -->
       <!-- Map, controls, and legend section -->
@@ -275,14 +279,14 @@ const stackedBarData = $derived(datasets[currentDataset]);
         <!-- ------------------------------------------------------------------ -->
         <section
           aria-label="Stacked bar chart"
-          class="mb-5 flex min-h-[185px] items-center justify-center rounded border border-gray-200"
+          class="mb-5 min-h-[300px] flex-col items-center justify-center rounded border border-gray-200"
         >
           <div class="h-full w-full rounded-lg bg-white p-6 shadow-sm">
-            <Figure>
+            <Figure visuallyHiddenCaption={false}>
               <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
-                margin={{ top: 0, right: 0, bottom: 0, left: 60 }}
+                margin={{ top: 10, right: 0, bottom: 0, left: 40 }}
                 colors={{
                   negative: "hsla(211, 100%, 50%, 1)", // Bright blue
                   neutral: "hsla(0, 0%, 85%, 1)", // Light gray
@@ -293,19 +297,30 @@ const stackedBarData = $derived(datasets[currentDataset]);
                   neutral: "hsla(0, 0%, 75%, 1)",
                   positive: "hsla(145, 63%, 32%, 1)",
                 }}
-                chartBackgroundColor="hsla(0, 0%, 98%, 1)"
+                chartBackgroundColor="hsla(0, 0%, 100%, 1)"
                 gridLineColor="hsla(0, 0%, 90%, 1)"
                 showYGridlines={true}
                 showXGridlines={false}
                 showChartBorder={true}
                 barPadding={0.5}
-                yTickCount={6}
+                yTickCount={3}
                 animationDuration={350}
                 animationDelay={30}
               />
 
               {#snippet figcaption()}
-                <p>Stacked barchart showing negative, neutral, and positive</p>
+                <div class="mx-auto ml-[40px] max-w-2xl">
+                  <p class="flex flex-wrap items-center gap-1 text-lg text-gray-800">
+                    <span class="rounded bg-emerald-500 px-2 py-1 font-medium text-white">New</span>
+                    <span>,</span>
+                    <span class="rounded bg-[#E9E9E9] px-2 py-1 font-medium text-gray-800"
+                      >existing</span
+                    >
+                    <span>and</span>
+                    <span class="rounded bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
+                    <span>churches</span>
+                  </p>
+                </div>
               {/snippet}
             </Figure>
           </div>
@@ -318,12 +333,28 @@ const stackedBarData = $derived(datasets[currentDataset]);
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
             <!-- Multiple small line charts to demonstrate scrolling -->
-            {#each [1, 2, 3, 4, 5] as chartIndex}
+            {#each ["Persistance", "Trends of Education", "Home onwership rate", "Median Rent", "GDP"] as socialDeterminant, chartIndex}
               <section
                 aria-label={`Small line chart ${chartIndex}`}
                 class="flex h-[200px] items-center justify-center rounded border border-gray-200"
               >
-                <Figure>
+                <Figure visuallyHiddenCaption={false}>
+                  {#snippet figcaption()}
+                    {#if socialDeterminant === "Persistance"}
+                      <div class="mr- ml-[50px] flex justify-between">
+                        <h3 class="text-left text-lg font-medium text-gray-800">
+                          {socialDeterminant}
+                        </h3>
+                        <u class="mr-[15px] ml-[50px] cursor-pointer text-sm text-gray-500"
+                          >What is persistance?</u
+                        >
+                      </div>
+                    {:else}
+                      <h3 class="ml-[50px] text-left text-lg font-medium text-gray-800">
+                        {socialDeterminant}
+                      </h3>
+                    {/if}
+                  {/snippet}
                   <LineChart
                     {data}
                     chartBackgroundColor="white"
@@ -340,10 +371,8 @@ const stackedBarData = $derived(datasets[currentDataset]);
                     lineColor="hsla(0, 0%, 20%, 1)"
                     circleColor="hsla(0, 0%, 20%, 1)"
                     circleHoverColor="hsla(0, 0%, 10%, 1)"
-                    margin={{ top: 10, right: 40, bottom: 10, left: 50 }}
+                    margin={{ top: 10, right: 15, bottom: 10, left: 50 }}
                   />
-
-                  {#snippet figcaption()}{/snippet}
                 </Figure>
               </section>
             {/each}

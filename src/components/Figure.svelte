@@ -12,6 +12,7 @@ let {
   children,
   figcaption, // Named slot for figcaption
   captionId = `figure-caption-${Math.random().toString(36).substring(2, 15)}`, // Unique ID for ARIA
+  visuallyHiddenCaption = true,
 } = $props();
 
 // Base $state variables
@@ -62,6 +63,15 @@ function handleResizeEvent() {
 </script>
 
 <figure class="flex h-full w-full flex-col" aria-labelledby={figcaption ? captionId : undefined}>
+  {#if figcaption}
+    <figcaption
+      id={captionId}
+      class="mt-2 text-center text-sm text-gray-600"
+      class:sr-only={visuallyHiddenCaption}
+    >
+      {@render figcaption()}
+    </figcaption>
+  {/if}
   <div
     class="h-full w-full flex-grow"
     bind:clientWidth={divClientWidth}
@@ -81,11 +91,6 @@ function handleResizeEvent() {
       </div>
     {/if}
   </div>
-  {#if figcaption}
-    <figcaption id={captionId} class="mt-2 text-center text-sm text-gray-600">
-      {@render figcaption()}
-    </figcaption>
-  {/if}
 </figure>
 
 <style>

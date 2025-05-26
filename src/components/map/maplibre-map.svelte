@@ -53,7 +53,7 @@ let layers = $state([
 
 <MapLibre
   class="h-full min-h-[300px] w-full"
-  style="https://geoserveis.icgc.cat/contextmaps/icgc_delimitacio_gris.json"
+  style="	https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
   zoom={3.5}
   pitch={0}
   minZoom={2}
