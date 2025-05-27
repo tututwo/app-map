@@ -5,6 +5,7 @@ import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
 // UI
 import LocationInput from "$components/LocationInput.svelte";
+import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
@@ -133,11 +134,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
-    <LocationInput
-      class="text-gray-800 shadow-sm"
-      value={dataFilters.county}
-      onSelect={(geoid) => dataFilters.setCounty(geoid)}
-    />
+    <CountySearch />
   </Sidebar>
 
   <!-- Main Content -->
@@ -286,9 +283,9 @@ const stackedBarData = $derived(datasets[currentDataset]);
         <!-- ------------------------------------------------------------------ -->
         <section
           aria-label="Stacked bar chart"
-          class="mb-5 min-h-[300px] flex-col items-center justify-center rounded border border-gray-200"
+          class="mb-5 min-h-[300px] flex-col items-center justify-center border-gray-200"
         >
-          <div class="h-full w-full rounded-lg bg-white p-2 shadow-sm">
+          <div class="h-full w-full rounded-lg bg-white p-2">
             <Figure visuallyHiddenCaption={false}>
               <StackedBar
                 data={stackedBarData}
