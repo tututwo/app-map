@@ -134,6 +134,11 @@ const stackedBarData = $derived(datasets[currentDataset]);
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
+    <!-- <LocationInput
+      class="text-gray-800 shadow-sm"
+      value={dataFilters.county}
+      onSelect={(geoid) => dataFilters.setCounty(geoid)}
+    /> -->
     <CountySearch />
   </Sidebar>
 

@@ -17,7 +17,7 @@ export async function searchCounties(query) {
         }),
       {
         headers: {
-          "User-Agent": "YourApp/1.0 (your-email@example.com)",
+          "User-Agent": "YourApp/1.0 (gordontu2@gmail.com)",
         },
       }
     );
@@ -32,6 +32,7 @@ export async function searchCounties(query) {
 
       // Extract county from address components
       if (location.address) {
+        // console.log(location.address);
         countyName =
           location.address.county ||
           location.address.administrative_area_level_2 ||
