@@ -147,11 +147,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section
-      aria-label="Line chart"
-      class="mb-5 h-[25vh] rounded border border-gray-200 px-5"
-      style="background-color: #EAF6FF;"
-    >
+    <section aria-label="Line chart" class="mb-5 h-[25vh] rounded border border-gray-200 px-5">
       <header class="flex w-full justify-between">
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
