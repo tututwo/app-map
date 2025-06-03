@@ -134,12 +134,12 @@ const stackedBarData = $derived(datasets[currentDataset]);
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
-    <!-- <LocationInput
+    <LocationInput
       class="text-gray-800 shadow-sm"
       value={dataFilters.county}
       onSelect={(geoid) => dataFilters.setCounty(geoid)}
-    /> -->
-    <CountySearch />
+    />
+    <!-- <CountySearch /> -->
   </Sidebar>
 
   <!-- Main Content -->
@@ -288,7 +288,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
         >
           <div class="h-full w-full rounded-lg bg-white p-2">
             <Figure visuallyHiddenCaption={false}>
-              <StackedBar
+              <!-- <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
                 margin={{ top: 10, right: 0, bottom: 0, left: 40 }}
@@ -311,7 +311,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
                 yTickCount={3}
                 animationDuration={350}
                 animationDelay={30}
-              />
+              /> -->
 
               {#snippet figcaption()}
                 <div class="mx-auto ml-[40px] max-w-2xl">

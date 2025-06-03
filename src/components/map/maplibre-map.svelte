@@ -1,9 +1,10 @@
 <script lang="ts">
 import { onMount } from "svelte";
 import * as d3 from "d3";
-import { MapLibre, FillExtrusionLayer } from "svelte-maplibre-gl";
-import { DeckGLOverlay } from "svelte-maplibre-gl/deckgl";
+import MapLibre from "$components/maplibreLib/MapLibre.svelte";
+import DeckGLOverlay from "$components/maplibreLib/DeckGLOverlay.svelte";
 
+import { zoomToWhichCounty } from "../../data/calculateStateViews";
 // GEOJSON DATA
 // import countyGeojson from "../data/counties.json"
 import usmap from "../../data/counties-10m.json";
@@ -29,7 +30,7 @@ let layers = $state([
   new GeoJsonLayer({
     id: "GeoJsonLayer",
     data: topoToGeo(usmap),
-
+    beforeId: "waterway",
     stroked: true,
     filled: true,
     pointType: "circle+text",

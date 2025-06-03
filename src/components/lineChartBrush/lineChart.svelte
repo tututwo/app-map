@@ -516,10 +516,10 @@ function isPointOutsideSelection(point) {
     <div
       class="pointer-events-none absolute z-50 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
       style="
-        left: {xScale(activePoint.date) + margin.left - 30}px; 
-        top: {yScale(activePoint.close) + margin.top - 60}px;
-        transform: translateX(-50%);
-      "
+          left: {xScale(activePoint.date) + margin.left - 30}px; 
+          top: {yScale(activePoint.close) + margin.top - 60}px;
+          transform: translateX(-50%);
+        "
       transition:scale={{ duration: 150, start: 0.9 }}
     >
       <div class="font-medium">{activePoint.year}</div>
