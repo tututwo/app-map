@@ -381,65 +381,99 @@ $effect(() => {
 });
 
 // Map Options (reactive)
+
 $effect(() => {
+  // Reactive dependencies: props that define the camera's target view
   center;
   zoom;
   bearing;
   pitch;
-  roll;
-  elevation;
-  padding;
-  if (!firstRun && map) {
-    const tr = map._getTransformForUpdate();
-    let jumpTo: maplibregl.JumpToOptions = {};
-    let changed = false;
+  padding; // Assuming padding changes should also trigger a view update
 
-    function notAlmostEqual(a: number, b: number) {
-      // The globe projection causes rounding errors, so we need to allow for a small difference
-      return Math.abs(a - b) > 1e-14;
+  // Ensure the effect only runs after the initial setup and if the map instance exists and its style is loaded
+  if (!firstRun && map && map.isStyleLoaded()) {
+    // Get the map's current camera state. map.getFreeCameraOptions() is good if available and you use it.
+    // Otherwise, get individual properties.
+    const currentMapCenter = map.getCenter();
+    const currentMapZoom = map.getZoom();
+    const currentMapBearing = map.getBearing();
+    const currentMapPitch = map.getPitch();
+    // You'd need a way to get currentMapPadding if it's part of FreeCameraOptions or a separate getter
+
+    let targetCameraOptions: maplibregl.FlyToOptions = {};
+    let needsViewUpdate = false;
+
+    // Helper to compare floating point numbers with a tolerance
+    function propsChangedEnough(
+      currentVal: number,
+      targetVal: number | undefined,
+      tolerance = 1e-5
+    ) {
+      if (targetVal === undefined) return false; // If the target prop isn't set, don't consider it a change
+      return Math.abs(currentVal - targetVal) > tolerance;
     }
 
-    if (center) {
-      const _center = maplibregl.LngLat.convert(center);
-      if (
-        notAlmostEqual(tr.center.lat, _center.lat) ||
-        notAlmostEqual(tr.center.lng, _center.lng)
-      ) {
-        jumpTo.center = center;
-        changed = true;
+    // Helper to compare LngLat objects
+    function lngLatChangedEnough(
+      currentVal: maplibregl.LngLat,
+      targetValLngLatLike: maplibregl.LngLatLike | undefined,
+      tolerance = 1e-5
+    ) {
+      if (targetValLngLatLike === undefined) return false;
+      const targetVal = maplibregl.LngLat.convert(targetValLngLatLike);
+      return (
+        Math.abs(currentVal.lng - targetVal.lng) > tolerance ||
+        Math.abs(currentVal.lat - targetVal.lat) > tolerance
+      );
+    }
+
+    // Check if 'center' prop has changed significantly
+    if (center && lngLatChangedEnough(currentMapCenter, center)) {
+      targetCameraOptions.center = center;
+      needsViewUpdate = true;
+    }
+    // Check if 'zoom' prop has changed significantly
+    if (zoom !== undefined && propsChangedEnough(currentMapZoom, zoom)) {
+      targetCameraOptions.zoom = zoom;
+      needsViewUpdate = true;
+    }
+    // Check if 'bearing' prop has changed significantly
+    if (bearing !== undefined && propsChangedEnough(currentMapBearing, bearing)) {
+      targetCameraOptions.bearing = bearing;
+      needsViewUpdate = true;
+    }
+    // Check if 'pitch' prop has changed significantly
+    if (pitch !== undefined && propsChangedEnough(currentMapPitch, pitch)) {
+      targetCameraOptions.pitch = pitch;
+      needsViewUpdate = true;
+    }
+    // Check for padding changes (simplified check, adapt if you have a more robust currentPadding value)
+    if (padding) {
+      // This logic might need refinement based on how you track current padding
+      targetCameraOptions.padding = padding;
+      needsViewUpdate = true; // Assuming any change to padding prop warrants an update
+    }
+
+    if (needsViewUpdate && Object.keys(targetCameraOptions).length > 0) {
+      // Add default animation options if you defined them as props or have fixed values
+      // These can be overridden if targetCameraOptions (derived from props) already contains them.
+      const animationDefaults: Partial<maplibregl.AnimationOptions> = {
+        // speed: animationSpeed, // from component props or fixed
+        // curve: animationCurve, // from component props or fixed
+        // maxDuration: animationMaxDuration, // from component props or fixed
+        // easing: (t) => t, // example, MapLibre has its own default easing
+      };
+
+      const finalFlyToOptions: maplibregl.FlyToOptions = {
+        ...animationDefaults, // Apply defaults first
+        ...targetCameraOptions, // Then specific targets, which might include their own animation params
+      };
+
+      // Call map.flyTo with the consolidated options
+      // Check if map is already moving to avoid conflicting animations, though flyTo usually handles this.
+      if (!map.isMoving() && !map.isZooming() && !map.isRotating()) {
+        map.flyTo(finalFlyToOptions);
       }
-    }
-    if (zoom !== undefined && notAlmostEqual(tr.zoom, zoom)) {
-      jumpTo.zoom = zoom;
-      changed = true;
-    }
-    if (bearing !== undefined && notAlmostEqual(tr.bearing, bearing)) {
-      jumpTo.bearing = bearing;
-      changed = true;
-    }
-    if (pitch !== undefined && tr.pitch !== pitch) {
-      jumpTo.pitch = pitch;
-      changed = true;
-    }
-    if (roll !== undefined && tr.roll !== roll) {
-      jumpTo.roll = roll;
-      changed = true;
-    }
-    if (elevation !== undefined && tr.elevation !== elevation) {
-      jumpTo.elevation = elevation;
-      changed = true;
-    }
-    if (padding && !tr.isPaddingEqual(padding)) {
-      jumpTo.padding = padding;
-      changed = true;
-    }
-
-    if (changed) {
-      // Temporarily replace `stop` with `_stop(allowGestures: true)` to allow ongoing gestures during `jumpTo`,
-      const originalStop = map.stop;
-      map.stop = () => map!._stop(true);
-      map?.jumpTo(jumpTo, { reactivity: true });
-      map.stop = originalStop;
     }
   }
 });
