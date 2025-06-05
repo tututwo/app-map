@@ -95,7 +95,7 @@ const averagePercentRounded = $derived(
 
 <article class="w-full" role="region" aria-labelledby={titleId} aria-describedby={descriptionId}>
   <header class="">
-    <h2 id={titleId} class="text-lg">
+    <h2 id={titleId} class="text-sm">
       {title}
     </h2>
     {#if description}
@@ -105,14 +105,14 @@ const averagePercentRounded = $derived(
     {/if}
   </header>
 
-  <div class="flex items-center gap-x-4 sm:gap-x-6">
+  <div class="flex items-center gap-x-2">
     <!-- Current value display with baseline alignment to progress bar -->
     <div
-      class="w-auto min-w-[6rem] shrink-0 self-end pt-3 text-left"
+      class="w-auto min-w-[6rem] shrink-0 self-end pt-2 text-left"
       aria-live="polite"
       aria-atomic="true"
     >
-      <span class="text-2xl font-medium text-gray-900 tabular-nums">
+      <span class="text-xl font-medium text-gray-900 tabular-nums">
         {currentValueDisplay}
       </span>
       <span class="sr-only">out of {maxLabel}</span>
@@ -120,13 +120,13 @@ const averagePercentRounded = $derived(
 
     <div class="flex-1">
       <!-- Scale labels with better positioning -->
-      <div class="relative mb-1.5 h-4" aria-hidden="true">
+      <div class="relative h-4" aria-hidden="true">
         <span class="absolute bottom-0 left-0 text-xs font-medium text-gray-600">
           {minLabel}
         </span>
         {#if animatedAveragePercent && averageLabel}
           <span
-            class="absolute bottom-0 text-xs font-medium whitespace-nowrap text-gray-600 transition-all"
+            class="absolute bottom-1 text-xs font-light whitespace-nowrap text-gray-600 transition-all"
             style="left: {animatedAveragePercent.current}%; transform: translateX(-50%); transition-duration: {prefersReducedMotion.current
               ? '0ms'
               : `${animationDuration}ms`};"
@@ -152,7 +152,7 @@ const averagePercentRounded = $derived(
         >
           <!-- Progress fill with animated width -->
           <div
-            class="absolute top-0 left-0 h-full bg-teal-600"
+            class="absolute top-0 left-0 h-full bg-[#00C288]"
             style="width: {animatedValuePercent.current}%; will-change: width;"
           >
             <span class="sr-only">{valuePercentRounded}% complete</span>

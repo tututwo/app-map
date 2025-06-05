@@ -534,7 +534,7 @@ function isPointOutsideSelection(point) {
   <!-- Year range pills -->
   {#if enableBrushing && brushSelection && brushPillPositions.width > 0}
     <div
-      class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
+      class="absolute z-10 -translate-x-1/2 transform rounded-sm bg-[#00C288] px-2 py-1 text-xs shadow-md"
       style="left: {brushPillPositions.left}px; top: {margin.top + innerHeight + 20}px;"
       aria-hidden={!brushSelection}
     >
@@ -542,7 +542,7 @@ function isPointOutsideSelection(point) {
     </div>
 
     <div
-      class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
+      class="absolute z-10 -translate-x-1/2 transform rounded-sm bg-[#00C288] px-2 py-1 text-xs shadow-md"
       style="left: {brushPillPositions.right}px; top: {margin.top + innerHeight + 20}px;"
       aria-hidden={!brushSelection}
     >

@@ -57,7 +57,7 @@ function flyToCounty(countyZoomData: {
   pitch?: number;
 }) {
   mapCenter = [countyZoomData.longitude, countyZoomData.latitude];
-  mapZoom = countyZoomData.zoom;
+  mapZoom = countyZoomData.zoom * 0.88;
   if (countyZoomData.bearing !== undefined) {
     mapBearing = countyZoomData.bearing;
   }

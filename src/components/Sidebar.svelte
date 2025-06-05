@@ -5,7 +5,7 @@ import { ArrowRight, Download } from "lucide-svelte";
 let { children } = $props();
 </script>
 
-<aside class="bg-yale-blue flex w-[max(280px,min(18vw,280px))] flex-col text-white">
+<aside class="bg-yale-blue flex w-[min(250px,max(18vw,250px))] flex-col text-white">
   <div class="flex h-full flex-col px-6 py-10">
     <!-- Yale Logo -->
     <div class="mb-14">
@@ -21,8 +21,8 @@ let { children } = $props();
 
     <!-- Location Section -->
     <div class="mb-auto">
-      <h3 class="mb-2 text-lg font-normal">Location of interest</h3>
-      <p class="mb-3 text-[15px] leading-snug font-light opacity-90">
+      <h3 class="mb-2 text-[1.1rem] font-medium">Location of interest</h3>
+      <p class="mb-3 text-[14px] leading-snug font-light opacity-90">
         Input name or zipcode of a location, leave it blank for the entire country
       </p>
 
