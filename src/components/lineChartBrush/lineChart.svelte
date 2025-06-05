@@ -3,8 +3,8 @@
 import * as d3 from "d3";
 import { untrack, getContext } from "svelte";
 import { scale } from "svelte/transition";
-import { elasticOut } from "svelte/easing";
-import { browser } from "$app/environment";
+import { cubicOut } from "svelte/easing";
+import { Tween } from "svelte/motion";
 
 // Get responsive dimensions from Figure context
 const figure = getContext("Figure");
@@ -36,6 +36,26 @@ let {
   enableBrushing = true, // New prop to enable/disable brushing
 } = $props();
 
+// ------------------------------------------------------------
+// Brush Tween
+// ------------------------------------------------------------
+// Default options for the snapping animation
+const tweenOptions = {
+  duration: 500,
+  easing: cubicOut,
+};
+
+// Initialize with default/initial values.
+// The actual initial brush position will be set in an effect once scales are ready.
+const visualBrush = new Tween({ x: 0, width: 0 }, tweenOptions);
+
+// For the pills, derive positions from the tween's current value and margins
+const brushPillPositions = $derived({
+  left: visualBrush.current.x + margin.left, // Access the current value via .current
+  right: visualBrush.current.x + visualBrush.current.width + margin.left,
+  width: visualBrush.current.width,
+});
+
 // State variables
 let activePoint = $state(null);
 let hoveredPoint = $state(null);
@@ -44,11 +64,6 @@ let hoveredPoint = $state(null);
 let brushSelection = $state(enableBrushing ? initialBrushSelection : null);
 
 // Calculated pixel positions for the brushed area
-let brushPixelPositions = $state({
-  left: 0,
-  right: 0,
-  width: 0,
-});
 
 // References to DOM elements
 let brushGroupEl = $state(null);
@@ -113,86 +128,37 @@ function hideTooltip() {
   hoveredPoint = null;
 }
 
-// Create debounce function
-function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
-    const context = this;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
-  };
-}
-
 // Brush implementation
 let brush;
 let brushGroup;
 
-// Update brush pixel positions for animation
-function updateBrushPixelPositions() {
-  if (brushSelection && svgContainer) {
-    const leftPos = xScale(brushSelection[0]);
-    const rightPos = xScale(brushSelection[1]);
-
-    brushPixelPositions = {
-      left: leftPos + margin.left,
-      right: rightPos + margin.left,
-      width: rightPos - leftPos,
-    };
-  }
-}
-
 // D3 Brush effect
 $effect(() => {
-  if (!enableBrushing || !brushGroupEl || !width || !height) return;
+  if (
+    !enableBrushing ||
+    !brushGroupEl ||
+    !width ||
+    !height ||
+    !innerWidth ||
+    !innerHeight ||
+    !xScale.domain().length
+  )
+    return;
+
+  const yearInterval = d3.timeYear;
+  const minYearSpanRequired = 4; // Minimum 4 years in the selection
+  const minYearDifference = minYearSpanRequired - 1; // e.g. 2010 to 2013 (4 years) has a difference of 3.
+
+  function snapToClosestYear(date) {
+    const floorDate = yearInterval.floor(date);
+    const ceilDate = yearInterval.ceil(date);
+    if (floorDate.getTime() === ceilDate.getTime()) return floorDate; // Already on a year boundary
+    const distToFloor = date.getTime() - floorDate.getTime();
+    const distToCeil = ceilDate.getTime() - date.getTime();
+    return distToFloor < distToCeil ? floorDate : ceilDate;
+  }
 
   if (!brush) {
-    const yearInterval = d3.timeYear;
-
-    function snapToClosestYear(date) {
-      const floorDate = yearInterval.floor(date);
-      const ceilDate = yearInterval.ceil(date);
-      if (floorDate.getTime() === ceilDate.getTime()) return floorDate;
-      const distToFloor = date.getTime() - floorDate.getTime();
-      const distToCeil = ceilDate.getTime() - date.getTime();
-      return distToFloor < distToCeil ? floorDate : ceilDate;
-    }
-
-    const debouncedBrushMove = debounce((selection) => {
-      if (!selection) {
-        brushSelection = null;
-        return;
-      }
-      const [x0, x1] = selection;
-      const d0 = xScale.invert(x0);
-      const d1 = xScale.invert(x1);
-      brushSelection = [d0, d1];
-      updateBrushPixelPositions();
-    }, 50);
-
-    function brushEnded(event) {
-      if (!event.sourceEvent) return;
-      if (!event.selection) {
-        brushSelection = null;
-        return;
-      }
-      const [x0, x1] = event.selection;
-      let d0 = xScale.invert(x0);
-      let d1 = xScale.invert(x1);
-      d0 = snapToClosestYear(d0);
-      d1 = snapToClosestYear(d1);
-      if (d0.getTime() === d1.getTime()) {
-        d1 = yearInterval.offset(d0, 1);
-      }
-      untrack(() => {
-        brushSelection = [d0, d1];
-        updateBrushPixelPositions();
-      });
-      brushGroup
-        .transition()
-        .duration(200)
-        .call(brush.move, [xScale(d0), xScale(d1)]);
-    }
-
     brush = d3
       .brushX()
       .extent([
@@ -200,72 +166,156 @@ $effect(() => {
         [innerWidth, innerHeight],
       ])
       .handleSize(8)
-      .on("brush.move", (event) => {
-        if (event.sourceEvent && event.sourceEvent.type === "brush") return;
+      .on("brush", (event) => {
+        if (
+          !event.sourceEvent ||
+          event.sourceEvent.type === "zoom" ||
+          event.sourceEvent.type === "end"
+        )
+          return;
+
         if (event.selection) {
-          const [x0, x1] = event.selection;
-          brushPixelPositions = {
-            left: x0 + margin.left,
-            right: x1 + margin.left,
-            width: x1 - x0,
-          };
+          const [px0, px1] = event.selection;
+          visualBrush.set({ x: px0, width: px1 - px0 }, { duration: 0 });
+        } else {
+          visualBrush.set({ x: 0, width: 0 }, { duration: 0 });
         }
-        debouncedBrushMove(event.selection);
       })
-      .on("end", brushEnded);
+      .on("end", (event) => {
+        if (!event.sourceEvent) return;
+
+        const selection = event.selection;
+        if (!selection) {
+          untrack(() => {
+            brushSelection = null;
+          });
+          visualBrush.set({ x: 0, width: 0 });
+          return;
+        }
+
+        const [px0_transient, px1_transient] = selection;
+        let d0_transient = xScale.invert(px0_transient);
+        let d1_transient = xScale.invert(px1_transient);
+
+        let d0_snapped = snapToClosestYear(d0_transient);
+        let d1_snapped = snapToClosestYear(d1_transient);
+
+        if (d0_snapped.getTime() === d1_snapped.getTime()) {
+          // If snapped to the exact same year, extend d1 to meet minimum or by 1 year initially
+          d1_snapped = yearInterval.offset(d0_snapped, 1); // Extend by at least one year first
+        }
+        // Ensure d0_snapped is before d1_snapped
+        if (d0_snapped > d1_snapped) {
+          [d0_snapped, d1_snapped] = [d1_snapped, d0_snapped];
+        }
+
+        // --- START: Enforce minimum 4-year selection ---
+        const currentYearDifference = d1_snapped.getFullYear() - d0_snapped.getFullYear();
+
+        if (currentYearDifference < minYearDifference) {
+          d1_snapped = yearInterval.offset(d0_snapped, minYearDifference);
+          // Optional: Check if d1_snapped exceeds the max domain of your data/xScale
+          // and clamp it if necessary. For example:
+          const maxDomainDate = xScale.domain()[1];
+          if (d1_snapped > maxDomainDate) {
+            // d1_snapped = maxDomainDate; // This would clamp it
+            // If clamping changes d1_snapped, you might also need to adjust d0_snapped
+            // to maintain the minimum span from the right edge, if possible.
+            // For simplicity now, we'll let it potentially go over if not clamped.
+            // Or, more robustly, adjust d0 backwards if d1 hits the end:
+            // d1_snapped = snapToClosestYear(maxDomainDate); // Snap to a valid year at the end
+            // d0_snapped = yearInterval.offset(d1_snapped, -minYearDifference);
+            // d0_snapped = snapToClosestYear(d0_snapped); // Re-snap d0
+            // if (d0_snapped < xScale.domain()[0]) d0_snapped = xScale.domain()[0]; // Clamp d0
+          }
+        }
+        // --- END: Enforce minimum 4-year selection ---
+
+        untrack(() => {
+          brushSelection = [d0_snapped, d1_snapped];
+        });
+
+        const finalPixelX0 = xScale(d0_snapped);
+        const finalPixelX1 = xScale(d1_snapped);
+
+        visualBrush.set({ x: finalPixelX0, width: finalPixelX1 - finalPixelX0 });
+
+        if (event.selection) {
+          // event.selection should still be used for the .call here
+          d3.select(brushGroupEl)
+            .transition()
+            .duration(tweenOptions.duration)
+            .ease(d3.easeCubicOut)
+            .call(brush.move, finalPixelX1 > finalPixelX0 ? [finalPixelX0, finalPixelX1] : null);
+        }
+      });
   }
 
   brushGroup = d3.select(brushGroupEl);
   brushGroup.call(brush);
 
-  // Style D3 brush elements
+  // Style D3 brush (make D3's selection rect transparent)
   brushGroup.select(".selection").attr("fill", "transparent").attr("stroke", "none");
-
   brushGroup.select(".overlay").attr("fill", "transparent");
-
-  // Style brush handles
   brushGroup
     .selectAll(".handle")
     .attr("fill", "hsla(162, 100%, 38%, 1)")
     .attr("stroke", "white")
     .attr("stroke-width", 2)
-    .attr("rx", 2); // Rounded corners
+    .attr("rx", 2);
 
-  if (brushSelection) {
+  // Handle initial brush selection
+  // Ensure scales are initialized (xScale.domain().length check helps)
+  if (initialBrushSelection && xScale.domain().length === 2) {
+    // --- Apply minimum year span to initialBrushSelection too ---
+    let [initial_d0, initial_d1] = initialBrushSelection.map((d) => new Date(d)); // Ensure they are date objects
+    initial_d0 = snapToClosestYear(initial_d0);
+    initial_d1 = snapToClosestYear(initial_d1);
+
+    if (initial_d0.getTime() === initial_d1.getTime()) {
+      initial_d1 = yearInterval.offset(initial_d0, 1);
+    }
+    if (initial_d0 > initial_d1) {
+      [initial_d0, initial_d1] = [initial_d1, initial_d0];
+    }
+    const initialYearDiff = initial_d1.getFullYear() - initial_d0.getFullYear();
+    if (initialYearDiff < minYearDifference) {
+      initial_d1 = yearInterval.offset(initial_d0, minYearDifference);
+      // Add clamping for initial_d1 against xScale.domain()[1] if needed
+    }
+    // Update the actual initialBrushSelection prop if possible, or just use these adjusted values
+    // For now, we'll use these adjusted values for setting up the brush
+    const initialPx0 = xScale(initial_d0);
+    const initialPx1 = xScale(initial_d1);
+
+    // Update brushSelection state with adjusted initial values
+    // This ensures the pills show the correct initial range
     untrack(() => {
-      brushGroup.call(brush.move, [xScale(brushSelection[0]), xScale(brushSelection[1])]);
-      updateBrushPixelPositions();
+      brushSelection = [initial_d0, initial_d1];
     });
+
+    visualBrush.set({ x: initialPx0, width: initialPx1 - initialPx0 }, { duration: 0 });
+    if (brushGroupEl && brush) {
+      d3.select(brushGroupEl).call(brush.move, [initialPx0, initialPx1]);
+    }
+  } else if (!initialBrushSelection) {
+    visualBrush.set({ x: 0, width: 0 }, { duration: 0 });
+    if (brushGroupEl && brush) {
+      d3.select(brushGroupEl).call(brush.move, null);
+    }
   }
 
   return () => {
-    brushGroup.on(".brush", null);
+    if (brushGroup) {
+      brushGroup.on(".brush", null).on(".end", null);
+    }
   };
 });
-
-// Update positions on resize
-$effect(() => {
-  if (enableBrushing && chartEl && brushSelection && svgContainer) {
-    updateBrushPixelPositions();
-  }
-});
-
-function animateYearPill(node, { duration = 300 }) {
-  return {
-    duration,
-    css: (t) => {
-      const eased = elasticOut(t);
-      return `transform: scale(${0.8 + 0.2 * eased}); opacity: ${t};`;
-    },
-  };
-}
 
 // Helper function to determine if a point is outside the brush selection
 function isPointOutsideSelection(point) {
   return brushSelection && (point.date < brushSelection[0] || point.date > brushSelection[1]);
 }
-
-// Add unique ID for this chart instance
 </script>
 
 <div class="relative h-full w-full" bind:this={svgContainer}>
@@ -276,19 +326,14 @@ function isPointOutsideSelection(point) {
       <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
 
       <!-- White selection rectangle (Svelte-controlled for visual appearance) -->
-      {#if enableBrushing && brushSelection && brushPixelPositions.width > 0}
+      {#if enableBrushing && visualBrush.current.width > 0}
         <rect
-          x={brushPixelPositions.left - margin.left}
+          x={visualBrush.current.x}
           y={0}
-          width={brushPixelPositions.width}
+          width={visualBrush.current.width}
           height={innerHeight}
           class="fill-white"
           pointer-events="none"
-          transition:scale={{
-            duration: 150,
-            start: 0.95,
-            easing: elasticOut,
-          }}
         />
       {/if}
 
@@ -471,10 +516,10 @@ function isPointOutsideSelection(point) {
     <div
       class="pointer-events-none absolute z-50 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
       style="
-        left: {xScale(activePoint.date) + margin.left - 30}px; 
-        top: {yScale(activePoint.close) + margin.top - 60}px;
-        transform: translateX(-50%);
-      "
+          left: {xScale(activePoint.date) + margin.left - 30}px; 
+          top: {yScale(activePoint.close) + margin.top - 60}px;
+          transform: translateX(-50%);
+        "
       transition:scale={{ duration: 150, start: 0.9 }}
     >
       <div class="font-medium">{activePoint.year}</div>
@@ -487,27 +532,29 @@ function isPointOutsideSelection(point) {
   {/if}
 
   <!-- Year range pills -->
-  {#if enableBrushing && brushSelection && brushPixelPositions.width > 0}
+  {#if enableBrushing && brushSelection && brushPillPositions.width > 0}
     <div
       class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
-      style="left: {brushPixelPositions.left}px; top: {margin.top + innerHeight + 20}px;"
-      transition:animateYearPill
+      style="left: {brushPillPositions.left}px; top: {margin.top + innerHeight + 20}px;"
+      aria-hidden={!brushSelection}
     >
       from <strong>{formatDate(brushSelection[0])}</strong>
     </div>
 
     <div
       class="absolute z-10 -translate-x-1/2 transform rounded-md bg-emerald-500 px-2 py-1 text-xs shadow-md"
-      style="left: {brushPixelPositions.right}px; top: {margin.top + innerHeight + 20}px;"
-      transition:animateYearPill
+      style="left: {brushPillPositions.right}px; top: {margin.top + innerHeight + 20}px;"
+      aria-hidden={!brushSelection}
     >
       to <strong>{formatDate(brushSelection[1])}</strong>
     </div>
 
     <div
-      class="absolute z-10 text-lg text-emerald-500"
-      style="left: {(brushPixelPositions.left + brushPixelPositions.right) /
-        2}px; top: {margin.top + 10}px; transform: translateX(-50%);"
+      class="absolute z-10 text-xs font-medium text-emerald-500"
+      style="left: {(brushPillPositions.left + brushPillPositions.right) / 2}px; top: {margin.top +
+        innerHeight +
+        10}px; transform: translateX(-50%);"
+      aria-hidden={!brushSelection}
     >
       Selected year range
     </div>

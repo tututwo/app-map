@@ -134,7 +134,12 @@ const stackedBarData = $derived(datasets[currentDataset]);
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
-    <CountySearch />
+    <LocationInput
+      class="text-gray-800 shadow-sm"
+      value={dataFilters.county}
+      onSelect={(geoid) => dataFilters.setCounty(geoid)}
+    />
+    <!-- <CountySearch /> -->
   </Sidebar>
 
   <!-- Main Content -->
@@ -142,11 +147,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section
-      aria-label="Line chart"
-      class="mb-5 h-[25vh] rounded border border-gray-200 px-5"
-      style="background-color: #EAF6FF;"
-    >
+    <section aria-label="Line chart" class="mb-5 h-[25vh] rounded border border-gray-200 px-5">
       <header class="flex w-full justify-between">
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
@@ -287,7 +288,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
         >
           <div class="h-full w-full rounded-lg bg-white p-2">
             <Figure visuallyHiddenCaption={false}>
-              <StackedBar
+              <!-- <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
                 margin={{ top: 10, right: 0, bottom: 0, left: 40 }}
@@ -310,7 +311,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
                 yTickCount={3}
                 animationDuration={350}
                 animationDelay={30}
-              />
+              /> -->
 
               {#snippet figcaption()}
                 <div class="mx-auto ml-[40px] max-w-2xl">

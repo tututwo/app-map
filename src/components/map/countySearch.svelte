@@ -2,6 +2,7 @@
 <!-- @ts-nocheck -->
 <script>
 import { searchCounties } from "./utils.js";
+import { Debounced } from "runed";
 
 let query = $state("");
 let suggestions = $state([]);
@@ -9,30 +10,42 @@ let isLoading = $state(false);
 let showDropdown = $state(false);
 let selectedIndex = $state(-1);
 
-let debounceTimer;
+// Create debounced query that updates 300ms after query changes
+const debouncedQuery = new Debounced(() => query, 300);
 
-async function handleInput() {
-  clearTimeout(debounceTimer);
+// Effect that runs when debounced query changes
+$effect(async () => {
+  const searchTerm = debouncedQuery.current;
 
-  if (query.length < 3) {
+  if (!searchTerm || searchTerm.length < 3) {
     suggestions = [];
     showDropdown = false;
+    isLoading = false;
     return;
   }
 
-  debounceTimer = setTimeout(async () => {
-    isLoading = true;
-    showDropdown = true;
+  isLoading = true;
+  showDropdown = true;
 
-    try {
-      suggestions = await searchCounties(query);
-    } catch (error) {
-      console.error("Search error:", error);
-      suggestions = [];
-    } finally {
-      isLoading = false;
-    }
-  }, 300);
+  try {
+    suggestions = await searchCounties(searchTerm);
+  } catch (error) {
+    console.error("Search error:", error);
+    suggestions = [];
+  } finally {
+    isLoading = false;
+  }
+});
+
+// Remove the old handleInput function since we're using $effect now
+function handleInput() {
+  // This can be empty or removed entirely since the effect handles the search
+  if (query.length >= 3) {
+    showDropdown = true;
+  } else {
+    showDropdown = false;
+    selectedIndex = -1;
+  }
 }
 
 function selectSuggestion(suggestion) {
@@ -117,6 +130,7 @@ function handleBlur() {
   {/if}
 </div>
 
+<!-- Keep your existing styles -->
 <style>
 .search-container {
   position: relative;
