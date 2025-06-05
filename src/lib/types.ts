@@ -87,3 +87,12 @@ async function fetchMapData(from: number, to: number) {
   const array_of_3000_counties: CountyDataPoint[] = await resp.json();
   console.log(array_of_3000_counties);
 }
+
+
+export interface BarSegment {
+  range: string
+  color: string // Tailwind background color class
+  textColor?: string // Tailwind text color class for text inside segment
+  popupValue?: string // Value for the popup above a segment
+  markerText?: string // Text below a segment
+}
