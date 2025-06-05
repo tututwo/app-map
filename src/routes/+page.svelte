@@ -8,6 +8,7 @@ import LocationInput from "$components/LocationInput.svelte";
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
+import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
 
 // UI components
@@ -126,7 +127,65 @@ const datasets: Record<
     { year: 2011, negative: -4, neutral: 20, positive: 14 },
   ],
 };
-
+const statistics = $state([
+    {
+      id: 'college-degree',
+      title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
+      currentValueDisplay: "17%",
+      currentValue: 17,
+      minValue: 0,
+      maxValue: 100,
+      minLabel: "0%",
+      maxLabel: "100%",
+      averageValue: 35,
+      averageLabel: "US Average",
+    },
+    {
+      id: 'median-rent',
+      title: "Median rent (USD)",
+      currentValueDisplay: "$2039",
+      currentValue: 2039,
+      minValue: 200,
+      maxValue: 10000,
+      minLabel: "200",
+      maxLabel: "10k",
+      averageValue: 5500, // Estimated from image
+      // No averageLabel for this one based on image, but line is present
+    },
+    {
+      id: 'renters-percent',
+      title: "Percent of people who are renters",
+      currentValueDisplay: "87%",
+      currentValue: 87,
+      minValue: 0,
+      maxValue: 100,
+      minLabel: "0%",
+      maxLabel: "100%",
+      averageValue: 70, // Estimated from image
+    },
+    {
+      id: 'poverty-level',
+      title: "Percent below the federal poverty level",
+      currentValueDisplay: "17%",
+      currentValue: 17,
+      minValue: 0,
+      maxValue: 100,
+      minLabel: "0%",
+      maxLabel: "100%",
+      averageValue: 30, // Estimated from image
+    },
+    {
+      id: 'household-income',
+      title: "Median household income (USD)",
+      currentValueDisplay: "$30.5k",
+      currentValue: 30500,
+      minValue: 0,
+      maxValue: 80000,
+      minLabel: "0",
+      maxLabel: "80k",
+      averageValue: 45000, // Estimated from image
+    }
+  ]);
 // Get current data based on selection
 const stackedBarData = $derived(datasets[currentDataset]);
 </script>
@@ -336,55 +395,24 @@ const stackedBarData = $derived(datasets[currentDataset]);
         <!-- ------------------------------------------------------------------ -->
         <div class="relative h-[calc(100%)] p-2">
           <!-- Scrollable container -->
-          <div
-            class="absolute inset-0 overflow-y-auto pr-1"
-            style="background-color: hsla(0, 0%, 85%, .2);"
-          >
-            <!-- Multiple small line charts to demonstrate scrolling -->
-            {#each ["Persistance", "Trends of Education", "Home onwership rate", "Median Rent", "GDP"] as socialDeterminant, chartIndex}
-              <section
-                aria-label={`Small line chart ${chartIndex}`}
-                class="flex h-[200px] items-center justify-center border-gray-200"
-              >
-                <Figure visuallyHiddenCaption={false}>
-                  {#snippet figcaption()}
-                    {#if socialDeterminant === "Persistance"}
-                      <div class="mr- ml-[50px] flex justify-between">
-                        <h3 class="text-left text-lg font-medium text-gray-800">
-                          {socialDeterminant}
-                        </h3>
-                        <u class="mr-[15px] ml-[50px] cursor-pointer text-sm text-gray-500"
-                          >What is persistance?</u
-                        >
-                      </div>
-                    {:else}
-                      <h3 class="ml-[50px] text-left text-lg font-medium text-gray-800">
-                        {socialDeterminant}
-                      </h3>
-                    {/if}
-                  {/snippet}
-                  <LineChart
-                    {data}
-                    chartBackgroundColor="white"
-                    enableBrushing={false}
-                    xTickPosition="bottom"
-                    yTickPosition="left"
-                    showChartBorder={true}
-                    showXGridlines={true}
-                    showYGridlines={true}
-                    gridLineColor="hsla(0, 0%, 80%, 1)"
-                    yTickCount={3}
-                    circleRadius={5}
-                    circleHoverRadius={8}
-                    lineColor="hsla(0, 0%, 20%, 1)"
-                    circleColor="hsla(0, 0%, 20%, 1)"
-                    circleHoverColor="hsla(0, 0%, 10%, 1)"
-                    margin={{ top: 10, right: 15, bottom: 10, left: 50 }}
-                  />
-                </Figure>
-              </section>
+          <div class="absolute inset-0 overflow-y-auto pr-1">
+            <!-- <div class="max-w-2xl mx-auto space-y-10"> -->
+              {#each statistics as stat (stat.id)}
+              <PercentageBar
+                title={stat.title}
+                currentValueDisplay={stat.currentValueDisplay}
+                currentValue={stat.currentValue}
+                minValue={stat.minValue}
+                maxValue={stat.maxValue}
+                minLabel={stat.minLabel}
+                maxLabel={stat.maxLabel}
+                averageValue={stat.averageValue}
+                averageLabel={stat.averageLabel}
+                uniqueIdBase={stat.id}
+              />
             {/each}
-          </div>
+            <!-- </div> -->
+         
         </div>
       </div>
     </div>
