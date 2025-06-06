@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { BarSegment } from "$lib/types";
 import SegmentedBar from "./segmentedBar.svelte";
-
+import MapLibreMap from "$components/map/maplibre-map.svelte";
 let {
   title,
   mapPlaceholderText,
@@ -23,7 +23,8 @@ let {
   <h2 class="mb-4 text-lg font-semibold text-gray-700">{title}</h2>
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
     <div class="border {mapBorderColor} flex h-48 items-center justify-center rounded bg-gray-50">
-      <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span>
+      <!-- <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span> -->
+      <MapLibreMap />
     </div>
     <div>
       <SegmentedBar data={barData} />

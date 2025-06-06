@@ -1,4 +1,7 @@
 <script lang="ts">
+// CRITICAL: Import and apply the patch BEFORE anything else
+import { patchMapLibreGL } from "$lib/maplibre-patch";
+
 import { onMount } from "svelte";
 import * as d3 from "d3";
 import MapLibre from "$components/maplibreLib/MapLibre.svelte";
@@ -21,7 +24,7 @@ const colorKey = "close_4_0005_r_100k";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
 // Initial map view state
-let mapCenter = $state([-98.5795, 39.8283]);
+let mapCenter = $state<[number, number]>([-98.5795, 39.8283]);
 let mapZoom = $state(3.5);
 let mapBearing = $state(0);
 let mapPitch = $state(0);

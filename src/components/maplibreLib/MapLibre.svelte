@@ -42,7 +42,7 @@ interface Props extends Omit<maplibregl.MapOptions, "container">, MapEventProps 
   /** Whether the map will continuously repaint. This information is useful for analyzing performance. */
   repaint?: boolean;
   vertices?: boolean;
-
+  preserveDrawingBuffer?: boolean;
   // Snippets
   children?: Snippet<[maplibregl.Map]>;
 }
@@ -154,7 +154,7 @@ let {
   touchPitch,
   touchZoomRotate,
   transformCameraUpdate,
-
+  preserveDrawingBuffer = true,
   // Map Options (others)
   ...restOptions
 }: Props = $props();
