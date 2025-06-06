@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { BarSegment } from "$lib/types";
-import SegmentedBar from "$components/pdf/segmentedBar.svelte";
+import SegmentedBar from "./segmentedBar.svelte";
 
 let {
   title,
@@ -8,12 +8,14 @@ let {
   mapBorderColor = "border-gray-300",
   barData,
   description,
+  foo, // Added callback prop for event handling
 } = $props<{
   title: string;
   mapPlaceholderText: string;
   mapBorderColor?: string;
   barData: BarSegment[];
   description: string;
+  foo?: () => void; // Added type for callback prop
 }>();
 </script>
 
