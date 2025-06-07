@@ -141,8 +141,8 @@ let layers = $derived([
 </script>
 
 <MapLibre
-  class="h-full min-h-[300px] w-full"
-  style="	https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+  class="h-full min-h-[200px] w-full"
+  style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
   zoom={mapZoom}
   pitch={mapPitch}
   minZoom={2}

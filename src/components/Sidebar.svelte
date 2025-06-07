@@ -1,6 +1,6 @@
 <script lang="ts">
-import { ArrowRight, Download } from "lucide-svelte";
-
+import { Download } from "lucide-svelte";
+import SocialShare from "$components/sideSection/socialShare.svelte";
 // Define props with $props rune
 let { children } = $props();
 </script>
@@ -42,12 +42,9 @@ let { children } = $props();
 
       <!-- Action Buttons -->
       <div class="flex flex-col gap-4">
-        <button
-          class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
-        >
-          <ArrowRight color="white" strokeWidth={1.5} />
-          Share to social media
-        </button>
+        <div>
+          <SocialShare />
+        </div>
         <button
           class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
         >

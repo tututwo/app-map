@@ -5,7 +5,6 @@ let { data } = $props<{ data: BarSegment[] }>();
 
 // Default text color if not specified, ensuring it's dark for good contrast on unknown light bgs
 const defaultTextColor = "text-black";
-console.log(data);
 </script>
 
 <div class="relative z-0 w-full pt-10 pb-8">
