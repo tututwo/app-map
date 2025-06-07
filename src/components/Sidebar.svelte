@@ -42,11 +42,10 @@ let { children } = $props();
 
       <!-- Action Buttons -->
       <div class="flex flex-col gap-4">
-        <div>
-          <SocialShare />
-        </div>
+        <SocialShare />
+
         <button
-          class="flex items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
+          class="flex w-full items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
         >
           <Download size={24} strokeWidth={1.5} color="white" />
           Download data

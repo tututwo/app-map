@@ -1,40 +1,182 @@
 <script lang="ts">
-import { Popover, Button } from "bits-ui";
+import { onMount } from "svelte";
+import { Popover } from "bits-ui";
 import {
-  Share2, // Changed back to Share2 to match the button's purpose
+  ExternalLink,
   Link,
   Mail,
   Facebook,
   Twitter,
   Linkedin,
   MessageSquare,
-  ArrowRight,
 } from "lucide-svelte";
 import type { ComponentType } from "svelte";
+
+// Props for the component
+interface Props {
+  url?: string;
+  title?: string;
+  text?: string;
+  hashtags?: string;
+  via?: string;
+  media?: string;
+  fbAppId?: string;
+  className?: string;
+}
+
+let {
+  url = "",
+  title = "",
+  text = "",
+  hashtags = "",
+  via = "",
+  media = "",
+  fbAppId = "",
+  className = "",
+}: Props = $props();
+
+// Reactive state for URL and title
+let currentUrl = $state(url);
+let currentTitle = $state(title);
 
 type ShareOption = {
   label: string;
   icon: ComponentType;
+  shareonClass: string;
   action?: () => void;
 };
 
-const shareOptions = [
-  { label: "Copy link", icon: Link, action: () => console.log("Copy link clicked") },
-  { label: "Email", icon: Mail, action: () => console.log("Email clicked") },
-  { label: "Facebook", icon: Facebook, action: () => console.log("Facebook clicked") },
-  { label: "Bluesky", icon: MessageSquare, action: () => console.log("Bluesky clicked") },
-  { label: "X", icon: Twitter, action: () => console.log("X clicked") },
-  { label: "LinkedIn", icon: Linkedin, action: () => console.log("LinkedIn clicked") },
+const shareOptions: ShareOption[] = [
+  {
+    label: "Copy link",
+    icon: Link,
+    shareonClass: "copy-url",
+    action: async () => {
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        console.log("Link copied to clipboard!");
+      } catch (err) {
+        console.error("Failed to copy link:", err);
+      }
+    },
+  },
+  {
+    label: "Email",
+    icon: Mail,
+    shareonClass: "email",
+  },
+  {
+    label: "Facebook",
+    icon: Facebook,
+    shareonClass: "facebook",
+  },
+  {
+    label: "Bluesky",
+    icon: MessageSquare,
+    shareonClass: "bluesky",
+  },
+  {
+    label: "X",
+    icon: Twitter,
+    shareonClass: "twitter",
+  },
+  {
+    label: "LinkedIn",
+    icon: Linkedin,
+    shareonClass: "linkedin",
+  },
 ];
 
 let open = $state(false);
+let shareContainer: HTMLDivElement = $state(undefined);
+let shareonModule: any = null;
+
+// Set default values on mount
+onMount(() => {
+  currentUrl = url || window.location.href;
+  currentTitle = title || document.title;
+
+  // Preload Shareon module
+  import("shareon").then((module) => {
+    shareonModule = module;
+    import("shareon/css");
+  });
+});
+
+// Update reactive values when props change
+$effect(() => {
+  if (url) currentUrl = url;
+  if (title) currentTitle = title;
+});
+
+// Initialize Shareon each time the popover opens
+$effect(() => {
+  if (open && shareContainer && shareonModule && typeof window !== "undefined") {
+    // Ensure the container has the latest data attributes
+    shareContainer.setAttribute("data-url", currentUrl);
+    shareContainer.setAttribute("data-title", currentTitle);
+    if (text) shareContainer.setAttribute("data-text", text);
+    if (media) shareContainer.setAttribute("data-media", media);
+    if (fbAppId) shareContainer.setAttribute("data-fb-app-id", fbAppId);
+
+    // Set platform-specific attributes on the buttons
+    const buttons = shareContainer.querySelectorAll("a");
+    buttons.forEach((button) => {
+      const className = button.className;
+
+      if (className === "facebook" && hashtags) {
+        button.setAttribute("data-hashtags", hashtags.split(",")[0]);
+      }
+
+      if (className === "bluesky" && text) {
+        button.setAttribute("data-text", text);
+      }
+
+      if (className === "twitter") {
+        if (via) button.setAttribute("data-via", via);
+        if (hashtags) button.setAttribute("data-hashtags", hashtags);
+      }
+
+      if ((className === "mastodon" || className === "tumblr") && via) {
+        button.setAttribute("data-via", via);
+      }
+
+      if ((className === "telegram" || className === "whatsapp" || className === "viber") && text) {
+        button.setAttribute("data-text", text);
+      }
+    });
+
+    // Initialize Shareon with a small delay to ensure DOM is ready
+    setTimeout(() => {
+      shareonModule.init();
+    }, 100);
+  }
+});
+
+// Handle button clicks
+function handleShareClick(option: ShareOption) {
+  if (option.action) {
+    // Custom action (copy link)
+    option.action();
+    open = false;
+  } else if (typeof window !== "undefined" && shareContainer) {
+    // Trigger the corresponding hidden Shareon button
+    const shareonButton = shareContainer.querySelector(`.${option.shareonClass}`);
+    if (shareonButton instanceof HTMLElement) {
+      shareonButton.click();
+      setTimeout(() => (open = false), 100);
+    }
+  }
+}
 </script>
 
 <Popover.Root bind:open>
   <Popover.Trigger
-    class="flex cursor-pointer items-center gap-2 text-[15px] font-light text-white opacity-90 transition-opacity hover:opacity-100"
+    class="flex w-full cursor-pointer items-center gap-3 text-[15px] font-light text-white opacity-90 transition-opacity hover:opacity-100 {className}"
   >
-    <ArrowRight color="white" strokeWidth={1.5} />
+    <i class="flex size-6 items-center justify-center">
+      <ExternalLink color="white" strokeWidth={1.5} size={22} />
+    </i>
     Share to social media
   </Popover.Trigger>
   <Popover.Portal>
@@ -45,12 +187,19 @@ let open = $state(false);
     >
       <Popover.Arrow class="fill-[#286DC0]" width={16} height={8} />
       <div class="p-2">
+        <!-- Hidden Shareon container -->
+        {#if typeof window !== "undefined"}
+          <div bind:this={shareContainer} class="shareon hidden">
+            {#each shareOptions as option (option.label)}
+              <a class={option.shareonClass}></a>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- YOUR ORIGINAL UI - UNCHANGED -->
         {#each shareOptions as option (option.label)}
           <button
-            onclick={() => {
-              option.action?.();
-              open = false;
-            }}
+            onclick={() => handleShareClick(option)}
             class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors hover:bg-[#01356B] focus:bg-[#01356B] focus:outline-none"
           >
             <option.icon class="h-5 w-5" />
@@ -61,3 +210,18 @@ let open = $state(false);
     </Popover.Content>
   </Popover.Portal>
 </Popover.Root>
+
+<style>
+/* Hide the actual Shareon buttons but keep them functional */
+:global(.shareon) {
+  position: absolute;
+  left: -9999px;
+}
+
+/* Override Shareon's default styles to ensure functionality without visibility */
+:global(.shareon > *) {
+  display: inline-block !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+</style>
