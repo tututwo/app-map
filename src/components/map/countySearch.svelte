@@ -66,21 +66,28 @@ function handleValueChange(value: string | undefined) {
     onCountySelected?.(selected);
   }
 }
-
 function handleInput(e: Event) {
   const target = e.target as HTMLInputElement;
   searchValue = target.value;
+
   if (searchValue.length >= 3) {
     open = true;
+    // Set loading immediately when user types enough characters
+    if (
+      suggestions.length === 0 ||
+      !suggestions.some((s) => s.displayName.toLowerCase().includes(searchValue.toLowerCase()))
+    ) {
+      isLoading = true;
+    }
   } else {
     // Clear selected key if search value is cleared and not matching a selection
-    // This logic might need refinement based on desired UX
     if (
       selectedCountyKey &&
       suggestions.find((s) => s.key === selectedCountyKey)?.displayName !== searchValue
     ) {
       selectedCountyKey = undefined;
     }
+    isLoading = false; // Clear loading for short queries
   }
 }
 

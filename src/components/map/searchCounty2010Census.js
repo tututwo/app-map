@@ -1,9 +1,10 @@
-// utils.js
+// searchCounty2010Census.js
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
-// Mapping of modern administrative regions back to 2010 county names
+// Keep track of the current request
+let currentAbortController = null;
+
 const REGION_TO_2010_COUNTY = {
-  // Connecticut planning regions to 2010 counties
   "South Central Connecticut Planning Region": "New Haven County",
   "Western Connecticut Planning Region": "Fairfield County",
   "Lower Connecticut River Valley Planning Region": "Middlesex County",
@@ -12,16 +13,20 @@ const REGION_TO_2010_COUNTY = {
   "Northeastern Connecticut Planning Region": "Windham County",
   "Northwest Hills Planning Region": "Litchfield County",
   "Central Connecticut Planning Region": "Hartford County",
-
-  // Add other state mappings as needed
-  // You can expand this based on what you encounter
 };
 
 export async function searchCounties(query) {
   if (!query || query.length < 3) return [];
 
+  // Cancel any existing request
+  if (currentAbortController) {
+    currentAbortController.abort();
+  }
+
+  // Create new abort controller for this request
+  currentAbortController = new AbortController();
+
   try {
-    // Use your existing Nominatim search logic
     const searchResponse = await fetch(
       `${NOMINATIM_BASE_URL}/search?` +
         new URLSearchParams({
@@ -35,6 +40,7 @@ export async function searchCounties(query) {
         headers: {
           "User-Agent": "CountySearchApp/1.0 (gordontu2@gmail.com)",
         },
+        signal: currentAbortController.signal,
       }
     );
 
@@ -55,6 +61,11 @@ export async function searchCounties(query) {
 
       // If we don't have county info, try reverse geocoding
       if (!countyName && location.lat && location.lon) {
+        // Check if request was cancelled before making another request
+        if (currentAbortController.signal.aborted) {
+          throw new Error("Request cancelled");
+        }
+
         const reverseResponse = await fetch(
           `${NOMINATIM_BASE_URL}/reverse?` +
             new URLSearchParams({
@@ -68,6 +79,7 @@ export async function searchCounties(query) {
             headers: {
               "User-Agent": "CountySearchApp/1.0 (gordontu2@gmail.com)",
             },
+            signal: currentAbortController.signal,
           }
         );
 
@@ -80,9 +92,7 @@ export async function searchCounties(query) {
       }
 
       if (countyName) {
-        // Convert modern regional names back to 2010 county names
         const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
-
         const displayName = state ? `${mapped2010County}, ${state}` : mapped2010County;
         const key = `${mapped2010County}_${state}`;
 
@@ -100,6 +110,10 @@ export async function searchCounties(query) {
 
     return countyResults;
   } catch (error) {
+    // Don't log cancelled requests as errors
+    if (error.name === "AbortError" || error.message === "Request cancelled") {
+      return [];
+    }
     console.error("Geocoding error:", error);
     return [];
   }
