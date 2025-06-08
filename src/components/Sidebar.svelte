@@ -5,7 +5,7 @@ import SocialShare from "$components/sideSection/socialShare.svelte";
 let { children } = $props();
 </script>
 
-<aside class="bg-yale-blue flex w-[min(250px,max(18vw,250px))] flex-col text-white">
+<aside class="bg-yale-blue flex w-[min(250px,max(18vw,250px))] flex-col text-white lg:w-[300px]">
   <div class="flex h-full flex-col px-6 py-10">
     <!-- Yale Logo -->
     <div class="mb-14">
