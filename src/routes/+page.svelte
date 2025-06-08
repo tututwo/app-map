@@ -249,20 +249,22 @@ const stackedBarData = $derived(datasets[currentDataset]);
       <!-- ------------------------------------------------------------------ -->
       <div class="flex h-full flex-col">
         <!-- Time range and controls -->
-        <div class="mb-5">
+        <div class="">
           <!-- Time range -->
           <h3 class="mb-4 text-lg font-medium text-[#00a651]">
             From {timeRange.from} to {timeRange.to}
           </h3>
 
           <!-- Controls grid with radio buttons and legend -->
-          <div class="mb-2 grid grid-cols-2 gap-4">
+          <div class="mb-2 grid grid-cols-2 gap-2">
             <!-- ------------------------------------------------------------------ -->
             <!-- Metric Buttons -->
             <!-- ------------------------------------------------------------------ -->
-            <section aria-label="Metrics" class="flex flex-col gap-2.5">
+            <section aria-label="Metrics" class="flex flex-col gap-3">
               {#each dataFilters.metrics as metric}
-                <label class="flex cursor-pointer items-center gap-2 text-sm select-none">
+                <label
+                  class="flex cursor-pointer items-center gap-2 text-sm select-none lg:text-lg"
+                >
                   <div class="relative flex items-center">
                     <input
                       type="radio"
@@ -291,27 +293,25 @@ const stackedBarData = $derived(datasets[currentDataset]);
             <!-- Legend section -->
             <!-- ------------------------------------------------------------------ -->
             <!-- Legend section -->
-            <section aria-label="Legend" class="flex flex-col space-y-4">
-              <div>
-                <h4 class="mb-3 text-sm font-medium text-gray-800">Number of closed church</h4>
-                <div class="flex gap-2.5">
-                  {#each dataRanges as range}
-                    <Button.Root
-                      style="background-color: {range.color}; {highlightedGroup === range.label
-                        ? 'filter: brightness(0.95);'
-                        : ''}"
-                      class="relative flex h-11 min-w-[4rem] flex-1 items-center justify-center  text-sm  text-gray-700 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow {highlightedGroup ===
-                      range.label
-                        ? 'shadow-md ring-2 ring-gray-800 ring-offset-2'
-                        : ''}"
-                      onclick={() => highlightGroup(range.label)}
+            <section aria-label="Legend" class="flex flex-col space-y-1">
+              <h4 class="mb-3 text-sm font-medium text-gray-800">Number of closed church</h4>
+              <div class="flex gap-1.5">
+                {#each dataRanges as range}
+                  <Button.Root
+                    style="background-color: {range.color}; {highlightedGroup === range.label
+                      ? 'filter: brightness(0.95);'
+                      : ''}"
+                    class="relative flex h-11 min-w-[4rem] flex-1 items-center justify-center  text-sm  text-gray-700 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow {highlightedGroup ===
+                    range.label
+                      ? 'shadow-md ring-2 ring-gray-800 ring-offset-2'
+                      : ''}"
+                    onclick={() => highlightGroup(range.label)}
+                  >
+                    <span class="relative z-10" style="color: {range.textColor};"
+                      >{range.label}</span
                     >
-                      <span class="relative z-10" style="color: {range.textColor};"
-                        >{range.label}</span
-                      >
-                    </Button.Root>
-                  {/each}
-                </div>
+                  </Button.Root>
+                {/each}
               </div>
 
               <div class="flex items-center justify-center gap-2 pt-1">

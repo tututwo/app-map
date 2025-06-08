@@ -41,7 +41,7 @@ let {
 // ------------------------------------------------------------
 // Default options for the snapping animation
 const tweenOptions = {
-  duration: 500,
+  duration: 350,
   easing: cubicOut,
 };
 
