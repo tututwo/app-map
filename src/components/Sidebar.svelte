@@ -14,7 +14,7 @@ let { children } = $props();
 
     <!-- Main Title -->
     <div class="mb-14">
-      <h2 class="text-3xl leading-tight font-semibold">
+      <h2 class="text-4xl leading-tight font-semibold">
         Closed<br />Churches<br />in the US
       </h2>
     </div>

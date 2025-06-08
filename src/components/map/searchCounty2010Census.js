@@ -1,11 +1,27 @@
-// lib/geocoding.js
+// utils.js
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
+
+// Mapping of modern administrative regions back to 2010 county names
+const REGION_TO_2010_COUNTY = {
+  // Connecticut planning regions to 2010 counties
+  "South Central Connecticut Planning Region": "New Haven County",
+  "Western Connecticut Planning Region": "Fairfield County",
+  "Lower Connecticut River Valley Planning Region": "Middlesex County",
+  "Southeastern Connecticut Planning Region": "New London County",
+  "Capitol Planning Region": "Hartford County",
+  "Northeastern Connecticut Planning Region": "Windham County",
+  "Northwest Hills Planning Region": "Litchfield County",
+  "Central Connecticut Planning Region": "Hartford County",
+
+  // Add other state mappings as needed
+  // You can expand this based on what you encounter
+};
 
 export async function searchCounties(query) {
   if (!query || query.length < 3) return [];
 
   try {
-    // First, get locations matching the query
+    // Use your existing Nominatim search logic
     const searchResponse = await fetch(
       `${NOMINATIM_BASE_URL}/search?` +
         new URLSearchParams({
@@ -17,7 +33,7 @@ export async function searchCounties(query) {
         }),
       {
         headers: {
-          "User-Agent": "YourApp/1.0 (gordontu2@gmail.com)",
+          "User-Agent": "CountySearchApp/1.0 (gordontu2@gmail.com)",
         },
       }
     );
@@ -25,14 +41,11 @@ export async function searchCounties(query) {
     const locations = await searchResponse.json();
     const countyResults = [];
 
-    // For each location, extract county information
     for (const location of locations) {
       let countyName = null;
       let state = null;
 
-      // Extract county from address components
       if (location.address) {
-        // console.log(location.address);
         countyName =
           location.address.county ||
           location.address.administrative_area_level_2 ||
@@ -48,12 +61,12 @@ export async function searchCounties(query) {
               lat: location.lat,
               lon: location.lon,
               format: "json",
-              zoom: "8", // County level
+              zoom: "8",
               addressdetails: "1",
             }),
           {
             headers: {
-              "User-Agent": "YourApp/1.0 (your-email@example.com)",
+              "User-Agent": "CountySearchApp/1.0 (gordontu2@gmail.com)",
             },
           }
         );
@@ -67,14 +80,16 @@ export async function searchCounties(query) {
       }
 
       if (countyName) {
-        const displayName = state ? `${countyName}, ${state}` : countyName;
-        const key = `${countyName}_${state}`;
+        // Convert modern regional names back to 2010 county names
+        const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
 
-        // Avoid duplicates
+        const displayName = state ? `${mapped2010County}, ${state}` : mapped2010County;
+        const key = `${mapped2010County}_${state}`;
+
         if (!countyResults.find((r) => r.key === key)) {
           countyResults.push({
             key,
-            county: countyName,
+            county: mapped2010County,
             state,
             displayName,
             originalLocation: location.display_name,

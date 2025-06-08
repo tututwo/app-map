@@ -128,64 +128,64 @@ const datasets: Record<
   ],
 };
 const statistics = $state([
-    {
-      id: 'college-degree',
-      title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
-      currentValueDisplay: "17%",
-      currentValue: 17,
-      minValue: 0,
-      maxValue: 100,
-      minLabel: "0%",
-      maxLabel: "100%",
-      averageValue: 35,
-      averageLabel: "US Average",
-    },
-    {
-      id: 'median-rent',
-      title: "Median rent (USD)",
-      currentValueDisplay: "$2039",
-      currentValue: 2039,
-      minValue: 200,
-      maxValue: 10000,
-      minLabel: "200",
-      maxLabel: "10k",
-      averageValue: 5500, // Estimated from image
-      // No averageLabel for this one based on image, but line is present
-    },
-    {
-      id: 'renters-percent',
-      title: "Percent of people who are renters",
-      currentValueDisplay: "87%",
-      currentValue: 87,
-      minValue: 0,
-      maxValue: 100,
-      minLabel: "0%",
-      maxLabel: "100%",
-      averageValue: 70, // Estimated from image
-    },
-    {
-      id: 'poverty-level',
-      title: "Percent below the federal poverty level",
-      currentValueDisplay: "17%",
-      currentValue: 17,
-      minValue: 0,
-      maxValue: 100,
-      minLabel: "0%",
-      maxLabel: "100%",
-      averageValue: 30, // Estimated from image
-    },
-    {
-      id: 'household-income',
-      title: "Median household income (USD)",
-      currentValueDisplay: "$30.5k",
-      currentValue: 30500,
-      minValue: 0,
-      maxValue: 80000,
-      minLabel: "0",
-      maxLabel: "80k",
-      averageValue: 45000, // Estimated from image
-    }
-  ]);
+  {
+    id: "college-degree",
+    title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
+    currentValueDisplay: "17%",
+    currentValue: 17,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 35,
+    averageLabel: "US Average",
+  },
+  {
+    id: "median-rent",
+    title: "Median rent (USD)",
+    currentValueDisplay: "$2039",
+    currentValue: 2039,
+    minValue: 200,
+    maxValue: 10000,
+    minLabel: "200",
+    maxLabel: "10k",
+    averageValue: 5500, // Estimated from image
+    // No averageLabel for this one based on image, but line is present
+  },
+  {
+    id: "renters-percent",
+    title: "Percent of people who are renters",
+    currentValueDisplay: "87%",
+    currentValue: 87,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 70, // Estimated from image
+  },
+  {
+    id: "poverty-level",
+    title: "Percent below the federal poverty level",
+    currentValueDisplay: "17%",
+    currentValue: 17,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 30, // Estimated from image
+  },
+  {
+    id: "household-income",
+    title: "Median household income (USD)",
+    currentValueDisplay: "$30.5k",
+    currentValue: 30500,
+    minValue: 0,
+    maxValue: 80000,
+    minLabel: "0",
+    maxLabel: "80k",
+    averageValue: 45000, // Estimated from image
+  },
+]);
 // Get current data based on selection
 const stackedBarData = $derived(datasets[currentDataset]);
 </script>
@@ -193,12 +193,12 @@ const stackedBarData = $derived(datasets[currentDataset]);
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
-    <LocationInput
+    <!-- <LocationInput
       class="text-gray-800 shadow-sm"
       value={dataFilters.county}
       onSelect={(geoid) => dataFilters.setCounty(geoid)}
-    />
-    <!-- <CountySearch /> -->
+    /> -->
+    <CountySearch />
   </Sidebar>
 
   <!-- Main Content -->
@@ -397,7 +397,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
             <!-- <div class="max-w-2xl mx-auto space-y-10"> -->
-              {#each statistics as stat (stat.id)}
+            {#each statistics as stat (stat.id)}
               <PercentageBar
                 title={stat.title}
                 currentValueDisplay={stat.currentValueDisplay}
@@ -412,7 +412,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
               />
             {/each}
             <!-- </div> -->
-         
+          </div>
         </div>
       </div>
     </div>
