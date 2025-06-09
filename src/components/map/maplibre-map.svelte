@@ -4,10 +4,10 @@ import { patchMapLibreGL } from "$lib/maplibre-patch";
 
 import { onMount } from "svelte";
 import * as d3 from "d3";
-import MapLibre from "$components/maplibreLib/MapLibre.svelte";
-import DeckGLOverlay from "$components/maplibreLib/DeckGLOverlay.svelte";
+import MapLibre from "$components/map/maplibreLib/MapLibre.svelte";
+import DeckGLOverlay from "$components/map/maplibreLib/DeckGLOverlay.svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
-import MapTooltipCard from "./tooltip/mapTooltipCard.svelte";
+import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
 import { zoomToWhichCounty } from "../../data/calculateStateViews";
 import usmap from "../../data/counties-10m.json";

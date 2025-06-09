@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Combobox } from "bits-ui";
-import { searchCounties } from "./searchCounty2010Census.js";
+import { searchCounties } from "$lib/utils/searchCounty2010Census.js";
 import { Debounced } from "runed";
 import type { ComponentProps } from "svelte";
 import Check from "lucide-svelte/icons/check";
