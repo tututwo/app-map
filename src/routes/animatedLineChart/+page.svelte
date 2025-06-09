@@ -1,6 +1,6 @@
 <script>
 import LineChart from "$components/lineChartBrush/lineChartAnimated.svelte";
-import Figure from "$components/Figure.svelte";
+import Figure from "$components/chart/Figure.svelte";
 
 // Sample datasets
 const dataset1 = [

@@ -6,14 +6,14 @@ import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 // UI
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/sideSection/Sidebar.svelte";
-import Tooltip from "$components/Tooltip.svelte";
+import Tooltip from "$components/chart/Tooltip.svelte";
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
 
 // UI components
 import { Button } from "bits-ui";
 
-import Figure from "$components/Figure.svelte";
+import Figure from "$components/chart/Figure.svelte";
 
 // Line Chart
 

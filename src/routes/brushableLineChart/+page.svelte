@@ -1,5 +1,5 @@
 <script>
-import Figure from "$components/Figure.svelte";
+import Figure from "$components/chart/Figure.svelte";
 import LineChart from "$components/lineChartBrush/lineChart.svelte";
 
 // Data points

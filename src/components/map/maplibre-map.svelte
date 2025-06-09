@@ -6,7 +6,7 @@ import { onMount } from "svelte";
 import * as d3 from "d3";
 import MapLibre from "$components/maplibreLib/MapLibre.svelte";
 import DeckGLOverlay from "$components/maplibreLib/DeckGLOverlay.svelte";
-import { Tooltip } from "bits-ui";
+import Tooltip from "$components/chart/Tooltip.svelte";
 import MapTooltipCard from "./tooltip/mapTooltipCard.svelte";
 
 import { zoomToWhichCounty } from "../../data/calculateStateViews";
@@ -39,7 +39,6 @@ let isTooltipOpen = $derived(!!hoveredCountyData);
 
 // --- Elements for Adaptive Positioning ---
 let mapContainerElement = $state<HTMLElement | null>(null);
-let virtualAnchorElement = $state<HTMLElement | null>(null);
 
 // --- Style constants ---
 const HIGHLIGHT_BORDER_COLOR = [255, 255, 255, 255]; // Black, fully opaque
@@ -158,33 +157,17 @@ const fayetteStats = $state([
     <DeckGLOverlay interleaved {layers} />
   </MapLibre>
 
-  <div
-    bind:this={virtualAnchorElement}
-    class="absolute"
-    style="left: {tooltipX}px; top: {tooltipY}px; width: 0; height: 0;"
-  ></div>
-
-  <Tooltip.Provider>
-    <Tooltip.Root bind:open={isTooltipOpen} delayDuration={0}>
-      <Tooltip.Portal disabled>
-        <Tooltip.Content
-          customAnchor={virtualAnchorElement}
-          collisionBoundary={mapContainerElement}
-          side="right"
-          align="start"
-          sideOffset={15}
-          collisionPadding={40}
-          sticky="always"
-          class="pointer-events-none z-10 rounded-md border bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md"
-        >
-          {#if hoveredCountyData}
-            <div class=" p-2">
-              <h2 class="mb-4 text-center text-xl font-bold text-black">{"State"}</h2>
-              <p>{colorKey}: {hoveredCountyData[colorKey]}</p>
-            </div>
-          {/if}
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  </Tooltip.Provider>
+  <Tooltip
+    x={tooltipX}
+    y={tooltipY}
+    open={isTooltipOpen}
+    boundary={mapContainerElement}
+    preferredSide="right"
+    sideOffset={15}
+    showArrow={false}
+  >
+    {#if hoveredCountyData}
+      <MapTooltipCard data={hoveredCountyData} {colorKey} locationName={hoveredCountyData.name} />
+    {/if}
+  </Tooltip>
 </figure>

@@ -13,7 +13,11 @@ interface Props {
 
 let {
   locationName = "",
-  stats = [],
+  stats = [
+    { label: "Closed church", value: 25 },
+    { label: "per 100k", value: 1.6 },
+    { label: "per sqkm", value: 0.3 },
+  ],
   reportLinkText = "Click to preview and download report",
   reportLink = "#",
 }: Props = $props();

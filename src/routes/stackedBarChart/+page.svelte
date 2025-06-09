@@ -1,5 +1,5 @@
 <script lang="ts">
-import Figure from "$components/Figure.svelte";
+import Figure from "$components/chart/Figure.svelte";
 import StackedBar from "$components/bar/stackedBar.svelte";
 
 // Initial data matching the pattern in the image
