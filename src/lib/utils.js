@@ -1,5 +1,7 @@
 import * as topojson from "topojson-client";
 
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 /**
  * Converts TopoJSON to GeoJSON with various options
  * @param {Object} topoData - The TopoJSON data
@@ -264,4 +266,8 @@ export function toDeckGLColor(color, alpha) {
   }
 
   return result;
+}
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
 }

@@ -20,7 +20,7 @@ export function patchMapLibreGL() {
         contextType === "experimental-webgl") &&
       (this.className?.includes("maplibregl") || this.closest(".maplibregl-map"))
     ) {
-      console.log("🔧 Patching MapLibre WebGL context creation");
+      // console.log("🔧 Patching MapLibre WebGL context creation");
 
       // Force preserveDrawingBuffer to true
       const patchedAttributes = {
@@ -31,14 +31,14 @@ export function patchMapLibreGL() {
         stencil: true,
       };
 
-      console.log("📝 WebGL context attributes:", patchedAttributes);
+      // console.log("📝 WebGL context attributes:", patchedAttributes);
 
       // Call original with patched attributes
       const context = originalGetContext.call(this, contextType, patchedAttributes);
 
       if (context) {
         const attrs = (context as WebGLRenderingContext).getContextAttributes();
-        console.log("✅ Context created with preserveDrawingBuffer:", attrs?.preserveDrawingBuffer);
+        // console.log("✅ Context created with preserveDrawingBuffer:", attrs?.preserveDrawingBuffer);
       }
 
       return context;
@@ -47,8 +47,6 @@ export function patchMapLibreGL() {
     // For non-WebGL contexts, use original
     return originalGetContext.call(this, contextType, contextAttributes);
   };
-
-  console.log("🚀 MapLibre GL patch applied successfully");
 }
 
 // Apply the patch immediately when this module is imported

@@ -32,7 +32,7 @@ let isLoading = $state(false);
 let selectedCountyKey = $state<string | undefined>(undefined); // Renamed to avoid conflict with selectedCounty object
 let open = $state(false);
 
-const debouncedSearchValue = new Debounced(() => searchValue, 300);
+const debouncedSearchValue = new Debounced(() => searchValue, 1000);
 
 $effect(async () => {
   const searchTerm = debouncedSearchValue.current;

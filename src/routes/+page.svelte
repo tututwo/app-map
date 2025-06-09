@@ -4,9 +4,8 @@ import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
 // UI
-import LocationInput from "$components/LocationInput.svelte";
 import CountySearch from "$components/map/countySearch.svelte";
-import Sidebar from "$components/Sidebar.svelte";
+import Sidebar from "$components/sideSection/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
@@ -185,9 +184,43 @@ const statistics = $state([
     maxLabel: "80k",
     averageValue: 45000, // Estimated from image
   },
+  {
+    id: "household-income1",
+    title: "Median household income (USD)",
+    currentValueDisplay: "$30.5k",
+    currentValue: 30500,
+    minValue: 0,
+    maxValue: 80000,
+    minLabel: "0",
+    maxLabel: "80k",
+    averageValue: 45000, // Estimated from image
+  },
+  {
+    id: "household-income2",
+    title: "Median household income (USD)",
+    currentValueDisplay: "$30.5k",
+    currentValue: 30500,
+    minValue: 0,
+    maxValue: 80000,
+    minLabel: "0",
+    maxLabel: "80k",
+    averageValue: 45000, // Estimated from image
+  },
+  {
+    id: "household-income3",
+    title: "Median household income (USD)",
+    currentValueDisplay: "$30.5k",
+    currentValue: 30500,
+    minValue: 0,
+    maxValue: 80000,
+    minLabel: "0",
+    maxLabel: "80k",
+    averageValue: 45000, // Estimated from image
+  },
 ]);
 // Get current data based on selection
 const stackedBarData = $derived(datasets[currentDataset]);
+const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
 </script>
 
 <div class="flex h-screen">
@@ -206,8 +239,15 @@ const stackedBarData = $derived(datasets[currentDataset]);
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section aria-label="Line chart" class="mb-5 h-[25vh] rounded border border-gray-200 px-5">
-      <header class="flex w-full justify-between">
+    <section
+      aria-label="Line chart"
+      class="mb-2 h-[25vh] rounded border border-gray-200 p-5"
+      style="background-color: hsla(206, 100%, 96%, 1);"
+    >
+      <header
+        class="flex w-full justify-between"
+        style="margin-left: {lineChartMargin.left - 10}px;"
+      >
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
           <span class="font-bold">all locations</span> over time
@@ -230,7 +270,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
             circleHoverRadius={9}
             lineColor="hsla(0, 0%, 53%, 1)"
             circleColor="hsla(211, 98%, 21%, 1)"
-            margin={{ top: 40, right: 10, bottom: 40, left: 50 }}
+            margin={lineChartMargin}
           />
 
           {#snippet figcaption()}
@@ -292,7 +332,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
             <!-- ------------------------------------------------------------------ -->
             <!-- Legend section -->
             <!-- ------------------------------------------------------------------ -->
-            <!-- Legend section -->
+
             <section aria-label="Legend" class="flex flex-col space-y-1">
               <h4 class="mb-3 text-sm font-medium text-gray-800">Number of closed church</h4>
               <div class="flex gap-1.5">
@@ -326,7 +366,7 @@ const stackedBarData = $derived(datasets[currentDataset]);
         <!-- ------------------------------------------------------------------ -->
         <section
           aria-label="Map"
-          class="flex flex-1 items-center justify-center rounded border border-gray-200"
+          class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
           <MapLibreMap />
         </section>

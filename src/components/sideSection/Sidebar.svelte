@@ -5,7 +5,7 @@ import SocialShare from "$components/sideSection/socialShare.svelte";
 let { children } = $props();
 </script>
 
-<aside class="bg-yale-blue flex w-[min(250px,max(18vw,250px))] flex-col text-white lg:w-[300px]">
+<aside class="bg-yale-blue flex w-[min(250px,max(18vw,250px))] flex-col text-white">
   <div class="flex h-full flex-col px-6 py-10">
     <!-- Yale Logo -->
     <div class="mb-14">
@@ -14,7 +14,7 @@ let { children } = $props();
 
     <!-- Main Title -->
     <div class="mb-14">
-      <h2 class="text-4xl leading-tight font-semibold">
+      <h2 class="text-3xl leading-tight font-semibold tracking-widest">
         Closed<br />Churches<br />in the US
       </h2>
     </div>
