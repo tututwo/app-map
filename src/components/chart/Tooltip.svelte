@@ -28,6 +28,8 @@ interface Props {
   outTransition?: TransitionFn;
   outTransitionParams?: any;
   children?: Snippet;
+  class?: string;
+  arrowClass?: string;
 }
 
 let {
@@ -48,6 +50,8 @@ let {
   outTransition = fade,
   outTransitionParams = { duration: 100 },
   children,
+  class: className = "",
+  arrowClass = "",
 }: Props = $props();
 
 let tooltipElement = $state<HTMLElement | null>(null);
@@ -113,7 +117,7 @@ $effect(() => {
     data-state={open ? "open" : "closed"}
     data-side={actualSide}
     data-align={align}
-    class="pointer-events-none fixed z-50 rounded-md border bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md
+    class="pointer-events-none fixed z-50 rounded-md border bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md {className}
            
            data-[side=bottom]:translate-y-[var(--side-offset)]
            data-[side=bottom]:data-[align=center]:-translate-x-1/2
@@ -141,7 +145,7 @@ $effect(() => {
     {@render children?.()}
     {#if showArrow}
       <div
-        class="absolute -z-10 size-2.5 rotate-45 border bg-white
+        class="absolute -z-10 size-2.5 rotate-45 border bg-white {arrowClass}
                data-[side=bottom]:top-0 data-[side=bottom]:translate-y-[-50%] data-[side=bottom]:border-t-0 data-[side=bottom]:border-l-0
                data-[side=left]:right-0 data-[side=left]:-translate-x-1/2 data-[side=left]:border-b-0 data-[side=left]:border-l-0
                data-[side=right]:left-0 data-[side=right]:translate-x-[-50%] data-[side=right]:border-t-0 data-[side=right]:border-r-0

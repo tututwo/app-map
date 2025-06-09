@@ -16,7 +16,6 @@ import real_data from "../../data/real_data.csv";
 import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
-import * as topojson from "topojson-client";
 
 const colorKey = "close_4_0005_r_100k";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
@@ -32,9 +31,8 @@ let hoveredCountyId = $state<string | null>(null);
 let clickedCountyId = $state<string | null>(null);
 
 // --- Tooltip State ---
-let hoveredCountyData = $state<any | null>(null);
-let tooltipX = $state(0);
-let tooltipY = $state(0);
+let tooltipPosition = $state<{ x: number; y: number } | null>(null);
+let hoveredCountyData = $derived(hoveredCountyId ? getCountyData(hoveredCountyId) : null);
 let isTooltipOpen = $derived(!!hoveredCountyData);
 
 // --- Elements for Adaptive Positioning ---
@@ -51,6 +49,8 @@ const colorScale = d3
   .domain(d3.extent(real_data, (d) => d[colorKey]))
   .range(colors);
 
+// --- Data Processing ---
+const geoData = topoToGeo(usmap);
 const { realData, getCountyData } = processCSVData(real_data);
 
 function flyToCounty(countyZoomData: {
@@ -70,10 +70,15 @@ function flyToCounty(countyZoomData: {
   }
 }
 
+function handleMouseLeave() {
+  hoveredCountyId = null;
+  tooltipPosition = null;
+}
+
 let layers = $derived([
   new GeoJsonLayer({
     id: "GeoJsonLayer",
-    data: topoToGeo(usmap),
+    data: geoData,
     beforeId: "road_path",
     stroked: true,
     filled: true,
@@ -121,13 +126,7 @@ let layers = $derived([
     },
     onHover: (info: any) => {
       hoveredCountyId = info.object ? info.object.id || info.object.properties?.GEOID : null;
-      if (info.object) {
-        hoveredCountyData = getCountyData(hoveredCountyId);
-        tooltipX = info.x;
-        tooltipY = info.y;
-      } else {
-        hoveredCountyData = null;
-      }
+      tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
     },
     updateTriggers: {
       getLineColor: [clickedCountyId, hoveredCountyId],
@@ -144,7 +143,11 @@ const fayetteStats = $state([
 ]);
 </script>
 
-<figure bind:this={mapContainerElement} class="relative h-full w-full">
+<figure
+  bind:this={mapContainerElement}
+  class="relative h-full w-full"
+  onmouseleave={handleMouseLeave}
+>
   <MapLibre
     class="h-full min-h-[200px] w-full"
     style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
@@ -158,8 +161,8 @@ const fayetteStats = $state([
   </MapLibre>
 
   <Tooltip
-    x={tooltipX}
-    y={tooltipY}
+    x={tooltipPosition?.x ?? 0}
+    y={tooltipPosition?.y ?? 0}
     open={isTooltipOpen}
     boundary={mapContainerElement}
     preferredSide="right"

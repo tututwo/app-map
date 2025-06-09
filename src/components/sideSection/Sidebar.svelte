@@ -1,5 +1,5 @@
 <script lang="ts">
-import { Download } from "lucide-svelte";
+import { Download, FileChartColumnIncreasing } from "lucide-svelte";
 import SocialShare from "$components/sideSection/socialShare.svelte";
 // Define props with $props rune
 let { children } = $props();
@@ -43,7 +43,12 @@ let { children } = $props();
       <!-- Action Buttons -->
       <div class="flex flex-col gap-4">
         <SocialShare />
-
+        <button
+          class="flex w-full items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
+        >
+          <FileChartColumnIncreasing size={24} strokeWidth={1.5} color="white" />
+          Export Report
+        </button>
         <button
           class="flex w-full items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
         >
