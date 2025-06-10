@@ -137,8 +137,8 @@ $effect(() => {
            data-[side=top]:data-[align=center]:-translate-x-1/2
            data-[side=top]:data-[align=end]:-translate-x-[calc(100%_-_var(--align-offset))]
            data-[side=top]:data-[align=start]:-translate-x-[var(--align-offset)]"
-    style="left: {pos.x.current}px; top: {pos.y
-      .current}px; --side-offset: {sideOffset}px; --align-offset: {alignOffset}px;"
+    style="left: {pos.x.current + 10}px; top: {pos.y.current +
+      10}px; --side-offset: {sideOffset}px; --align-offset: {alignOffset}px;"
     in:inTransition={inTransitionParams}
     out:outTransition={outTransitionParams}
   >
@@ -152,7 +152,7 @@ $effect(() => {
                data-[side=top]:bottom-0 data-[side=top]:-translate-y-1/2 data-[side=top]:border-r-0 data-[side=top]:border-b-0"
         style={arrowStyle}
         data-side={actualSide}
-      />
+      ></div>
     {/if}
   </div>
 {/if}

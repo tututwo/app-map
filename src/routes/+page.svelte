@@ -3,20 +3,21 @@
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
-// UI
+// Custom UI
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/sideSection/Sidebar.svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
+import Figure from "$components/chart/Figure.svelte";
+
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import { dataFilters } from "$lib/filters.svelte.js";
 
-// UI components
+// Reusable UI components
 import { Button } from "bits-ui";
+import * as RadioGroup from "$components/ui/radio-group/index.js";
+import { Label } from "$components/ui/label/index.js";
 
-import Figure from "$components/chart/Figure.svelte";
-
-// Line Chart
-
+// Visualizations
 import LineChart from "$components/lineChartBrush/lineChart.svelte";
 import StackedBar from "$components/bar/stackedBar.svelte";
 
@@ -24,7 +25,7 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 
 // State management using Svelte 5 runes
-let selectedMetric = $state(dataFilters.metrics[0].label);
+
 let timeRange = $state({ from: 2003, to: 2011 });
 let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
@@ -42,9 +43,10 @@ const dataRanges = [
 function handleLocationChange(e: { target: { value: string } }) {
   selectedLocation = e.target.value;
 }
-
-function highlightGroup(range: string) {
+let selectedQuantile = $state(0);
+function highlightGroup(range: string, i: number) {
   highlightedGroup = range;
+  selectedQuantile = i;
 }
 
 // Initialize any components on mount
@@ -85,13 +87,13 @@ const datasets: Record<
 > = {
   original: [
     { year: 2003, negative: -10, neutral: 20, positive: 4 },
-    { year: 2004, negative: -18, neutral: 20, positive: 6 },
-    { year: 2005, negative: -4, neutral: 20, positive: 4 },
-    { year: 2006, negative: -10, neutral: 20, positive: 6 },
-    { year: 2007, negative: -8, neutral: 20, positive: 8 },
-    { year: 2008, negative: -4, neutral: 20, positive: 10 },
-    { year: 2009, negative: -2, neutral: 20, positive: 12 },
-    { year: 2010, negative: -12, neutral: 20, positive: 8 },
+    { year: 2004, negative: -18, neutral: 10, positive: 6 },
+    { year: 2005, negative: -4, neutral: 100, positive: 4 },
+    { year: 2006, negative: -10, neutral: 40, positive: 6 },
+    { year: 2007, negative: -8, neutral: 80, positive: 8 },
+    { year: 2008, negative: -4, neutral: 50, positive: 10 },
+    { year: 2009, negative: -2, neutral: 60, positive: 12 },
+    { year: 2010, negative: -12, neutral: 90, positive: 8 },
     { year: 2011, negative: -4, neutral: 20, positive: 14 },
   ],
   updated: [
@@ -184,43 +186,12 @@ const statistics = $state([
     maxLabel: "80k",
     averageValue: 45000, // Estimated from image
   },
-  {
-    id: "household-income1",
-    title: "Median household income (USD)",
-    currentValueDisplay: "$30.5k",
-    currentValue: 30500,
-    minValue: 0,
-    maxValue: 80000,
-    minLabel: "0",
-    maxLabel: "80k",
-    averageValue: 45000, // Estimated from image
-  },
-  {
-    id: "household-income2",
-    title: "Median household income (USD)",
-    currentValueDisplay: "$30.5k",
-    currentValue: 30500,
-    minValue: 0,
-    maxValue: 80000,
-    minLabel: "0",
-    maxLabel: "80k",
-    averageValue: 45000, // Estimated from image
-  },
-  {
-    id: "household-income3",
-    title: "Median household income (USD)",
-    currentValueDisplay: "$30.5k",
-    currentValue: 30500,
-    minValue: 0,
-    maxValue: 80000,
-    minLabel: "0",
-    maxLabel: "80k",
-    averageValue: 45000, // Estimated from image
-  },
 ]);
 // Get current data based on selection
 const stackedBarData = $derived(datasets[currentDataset]);
-const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
+const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
+
+let selectedMapMetric = $state(dataFilters.metrics[0].value);
 </script>
 
 <div class="flex h-screen">
@@ -241,12 +212,12 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
     <!-- ------------------------------------------------------------------ -->
     <section
       aria-label="Line chart"
-      class="mb-2 h-[25vh] rounded border border-gray-200 p-5"
+      class="mb-2 h-[18vh] rounded border border-gray-200 px-5"
       style="background-color: hsla(206, 100%, 96%, 1);"
     >
       <header
         class="flex w-full justify-between"
-        style="margin-left: {lineChartMargin.left - 10}px;"
+        style="padding-left: {lineChartMargin.left - 15}px;"
       >
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
@@ -254,7 +225,7 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
         </h1>
         <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
-      <div class="w-fullitems-center flex h-[calc(25vh-50px)] justify-center">
+      <div class="w-fullitems-center flex h-[calc(18vh-50px)] justify-center">
         <Figure>
           <LineChart
             {data}
@@ -288,10 +259,12 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
       <!-- ------------------------------------------------------------------ -->
       <!-- ------------------------------------------------------------------ -->
       <div class="flex h-full flex-col">
-        <!-- Time range and controls -->
+        <!-- ------------------------------------------------------------------ -->
+        <!-- Metric Buttons and Quantile Buttons -->
+        <!-- ------------------------------------------------------------------ -->
         <div class="">
           <!-- Time range -->
-          <h3 class="mb-4 text-lg font-medium text-[#00a651]">
+          <h3 class="mb-2 text-lg font-medium text-[#00a651]">
             From {timeRange.from} to {timeRange.to}
           </h3>
 
@@ -300,33 +273,36 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
             <!-- ------------------------------------------------------------------ -->
             <!-- Metric Buttons -->
             <!-- ------------------------------------------------------------------ -->
-            <section aria-label="Metrics" class="flex flex-col gap-3">
-              {#each dataFilters.metrics as metric}
-                <label
-                  class="flex cursor-pointer items-center gap-2 text-sm select-none lg:text-lg"
-                >
-                  <div class="relative flex items-center">
-                    <input
-                      type="radio"
-                      name="metric"
-                      value={metric.value}
-                      checked={dataFilters.metric === metric.value}
-                      onchange={() => dataFilters.setMetric(metric.value)}
-                      class="h-4 w-4 appearance-none rounded-full border border-gray-300 checked:border-4 checked:border-black"
-                    />
+            <section aria-label="Metrics" class="flex flex-col">
+              <RadioGroup.Root
+                bind:value={selectedMapMetric}
+                name="metric"
+                class="flex h-full flex-col justify-between"
+              >
+                {#each dataFilters.metrics as metric (metric.value)}
+                  {@const id = `metric-${metric.value}`}
+                  <div class="flex items-center gap-2 transition-colors">
+                    <RadioGroup.Item {id} value={metric.value} />
+
+                    <Label
+                      for={id}
+                      class="flex w-full cursor-pointer items-center gap-2 text-sm"
+                      style={metric.value === selectedMapMetric ? "font-weight:800" : ""}
+                    >
+                      {metric.label}
+                      {#if metric.description}
+                        <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
+                          <span
+                            class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-xs"
+                          >
+                            <CircleHelp strokeWidth={1.5} />
+                          </span>
+                        </Tooltip>
+                      {/if}
+                    </Label>
                   </div>
-                  {metric.label}
-                  {#if metric.description}
-                    <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
-                      <span
-                        class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-xs"
-                      >
-                        <CircleHelp fill="var(--color-icy-blue)" strokeWidth={1.5} />
-                      </span>
-                    </Tooltip>
-                  {/if}
-                </label>
-              {/each}
+                {/each}
+              </RadioGroup.Root>
             </section>
 
             <!-- ------------------------------------------------------------------ -->
@@ -334,18 +310,20 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
             <!-- ------------------------------------------------------------------ -->
 
             <section aria-label="Legend" class="flex flex-col space-y-1">
-              <h4 class="mb-3 text-sm font-medium text-gray-800">Number of closed church</h4>
+              <h4 class="mb-1 text-sm font-medium text-gray-800">
+                {dataFilters.metrics.find((m) => m.value === selectedMapMetric)?.label}
+              </h4>
               <div class="flex gap-1.5">
-                {#each dataRanges as range}
+                {#each dataRanges as range, index}
                   <Button.Root
                     style="background-color: {range.color}; {highlightedGroup === range.label
                       ? 'filter: brightness(0.95);'
                       : ''}"
-                    class="relative flex h-11 min-w-[4rem] flex-1 items-center justify-center  text-sm  text-gray-700 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow {highlightedGroup ===
+                    class="relative flex h-9 min-w-[2rem] flex-1 items-center justify-center  text-sm  text-gray-700 shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow {highlightedGroup ===
                     range.label
                       ? 'shadow-md ring-2 ring-gray-800 ring-offset-2'
                       : ''}"
-                    onclick={() => highlightGroup(range.label)}
+                    onclick={() => highlightGroup(range.label, index)}
                   >
                     <span class="relative z-10" style="color: {range.textColor};"
                       >{range.label}</span
@@ -368,7 +346,7 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap />
+          <MapLibreMap {selectedMapMetric} />
         </section>
       </div>
 
@@ -387,10 +365,10 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
         >
           <div class="h-full w-full rounded-lg bg-white p-2">
             <Figure visuallyHiddenCaption={false}>
-              <!-- <StackedBar
+              <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
-                margin={{ top: 10, right: 0, bottom: 0, left: 40 }}
+                margin={{ top: 10, right: 0, bottom: 0, left: 35 }}
                 colors={{
                   negative: "hsla(211, 98%, 21%, .9)", // Bright blue
                   neutral: "hsla(0, 0%, 87%, .9)", // Light gray
@@ -410,7 +388,7 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
                 yTickCount={3}
                 animationDuration={350}
                 animationDelay={30}
-              /> -->
+              />
 
               {#snippet figcaption()}
                 <div class="mx-auto ml-[40px] max-w-2xl">
@@ -431,12 +409,13 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
         </section>
 
         <!-- ------------------------------------------------------------------ -->
-        <!-- Small line charts section -->
+        <!-- Metircs section -->
         <!-- ------------------------------------------------------------------ -->
         <div class="relative h-[calc(100%)] p-2">
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
-            <!-- <div class="max-w-2xl mx-auto space-y-10"> -->
+            <!-- Social determinants -->
+            <h4 class="text-lg font-semibold">Social Determinants</h4>
             {#each statistics as stat (stat.id)}
               <PercentageBar
                 title={stat.title}
@@ -451,7 +430,21 @@ const lineChartMargin = { top: 40, right: 10, bottom: 40, left: 60 };
                 uniqueIdBase={stat.id}
               />
             {/each}
-            <!-- </div> -->
+            <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
+            {#each statistics as stat (stat.id)}
+              <PercentageBar
+                title={stat.title}
+                currentValueDisplay={stat.currentValueDisplay}
+                currentValue={stat.currentValue}
+                minValue={stat.minValue}
+                maxValue={stat.maxValue}
+                minLabel={stat.minLabel}
+                maxLabel={stat.maxLabel}
+                averageValue={stat.averageValue}
+                averageLabel={stat.averageLabel}
+                uniqueIdBase={stat.id}
+              />
+            {/each}
           </div>
         </div>
       </div>

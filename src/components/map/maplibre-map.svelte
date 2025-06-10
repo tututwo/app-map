@@ -17,6 +17,7 @@ import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
 
+let { selectedMapMetric } = $props();
 const colorKey = "close_4_0005_r_100k";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
