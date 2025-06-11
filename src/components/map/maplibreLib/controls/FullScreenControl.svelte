@@ -38,7 +38,7 @@ onDestroy(() => {
 
 <style>
 :global(.maplibregl-ctrl button.maplibregl-ctrl-fullscreen .maplibregl-ctrl-icon) {
-  background-size: 25px;
+  background-size: 25px !important;
   z-index: 100000000;
 }
 </style>

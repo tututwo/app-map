@@ -171,7 +171,7 @@ const fayetteStats = $state([
       <button
         aria-label="Fly to the center of the map"
         class="flex! size-[29px] items-center justify-center rounded-md"
-        style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 25px; background-position: center; background-repeat: no-repeat;"
+        style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() =>
           flyToCounty({
             longitude: US_MAP_CENTER[0],
