@@ -172,7 +172,7 @@ function handleShareClick(option: ShareOption) {
 
 <Popover.Root bind:open>
   <Popover.Trigger
-    class="flex w-full cursor-pointer items-center gap-3 text-[15px] font-light text-white opacity-90 transition-opacity hover:opacity-100 {className}"
+    class="flex w-full cursor-pointer items-center gap-3 font-light text-white opacity-90 transition-opacity hover:opacity-100 {className}"
   >
     <i class="flex size-6 items-center justify-center">
       <ExternalLink color="white" strokeWidth={1.5} size={22} />

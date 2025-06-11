@@ -252,7 +252,7 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
     </section>
 
     <!-- Controls and charts section - takes remaining height -->
-    <div class="grid flex-1 grid-cols-[2fr_1fr] gap-5 px-5">
+    <div class="grid flex-1 grid-cols-[2fr_1fr] gap-5">
       <!-- ------------------------------------------------------------------ -->
       <!-- ------------------------------------------------------------------ -->
       <!-- Map, controls, and legend section -->
@@ -262,9 +262,9 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
         <!-- ------------------------------------------------------------------ -->
         <!-- Metric Buttons and Quantile Buttons -->
         <!-- ------------------------------------------------------------------ -->
-        <div class="">
+        <div class="px-5">
           <!-- Time range -->
-          <h3 class="mb-2 text-lg font-medium text-[#00a651]">
+          <h3 class="my-2 text-xl font-medium text-[#00a651]">
             From {timeRange.from} to {timeRange.to}
           </h3>
 
@@ -277,7 +277,7 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
               <RadioGroup.Root
                 bind:value={selectedMapMetric}
                 name="metric"
-                class="flex h-full flex-col justify-between"
+                class="flex h-full flex-col justify-between py-2"
               >
                 {#each dataFilters.metrics as metric (metric.value)}
                   {@const id = `metric-${metric.value}`}
@@ -383,9 +383,10 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
                 gridLineColor="hsla(0, 0%, 90%, 1)"
                 showYGridlines={true}
                 showXGridlines={false}
-                showChartBorder={true}
+                showChartBorder={false}
                 barPadding={0.3}
                 yTickCount={3}
+                yTickPosition="left"
                 animationDuration={350}
                 animationDelay={30}
               />

@@ -6,7 +6,7 @@ let { children } = $props();
 </script>
 
 <aside class="bg-yale-blue flex w-[min(230px,max(18vw,230px))] flex-col text-white">
-  <div class="flex h-full flex-col px-6 py-10">
+  <div class="flex h-full flex-col px-6 pt-8 pb-5">
     <!-- Yale Logo -->
     <div class="mb-14">
       <h1 class="font-serif text-4xl tracking-wide">Yale</h1>
@@ -41,16 +41,16 @@ let { children } = $props();
       <div class="mb-6 h-px w-full bg-white/30"></div>
 
       <!-- Action Buttons -->
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-4 text-sm">
         <SocialShare />
         <button
-          class="flex w-full items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
+          class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
         >
           <FileChartColumnIncreasing size={24} strokeWidth={1.5} color="white" />
           Export Report
         </button>
         <button
-          class="flex w-full items-center gap-3 text-[15px] font-light opacity-90 transition-opacity hover:opacity-100"
+          class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
         >
           <Download size={24} strokeWidth={1.5} color="white" />
           Download data

@@ -4,8 +4,15 @@ import { patchMapLibreGL } from "$lib/maplibre-patch";
 
 import { onMount } from "svelte";
 import * as d3 from "d3";
+
 import MapLibre from "$components/map/maplibreLib/MapLibre.svelte";
 import DeckGLOverlay from "$components/map/maplibreLib/DeckGLOverlay.svelte";
+import FullScreenControl from "$components/map/maplibreLib/controls/FullScreenControl.svelte";
+import GeolocateControl from "$components/map/maplibreLib/controls/GeolocateControl.svelte";
+import NavigationControl from "./maplibreLib/controls/NavigationControl.svelte";
+// import AttributionControl from "$components/map/maplibreLib/controls/AttributionControl.svelte";
+import CustomControl from "./maplibreLib/controls/CustomControl.svelte";
+
 import Tooltip from "$components/chart/Tooltip.svelte";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
@@ -16,14 +23,15 @@ import real_data from "../../data/real_data.csv";
 import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
-
+const US_MAP_CENTER = [-98.5795, 39.8283];
+const US_MAP_ZOOM = 3.5;
 let { selectedMapMetric } = $props();
 const colorKey = "close_4_0005_r_100k";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
 // --- Map State ---
-let mapCenter = $state<[number, number]>([-98.5795, 39.8283]);
-let mapZoom = $state(3.5);
+let mapCenter = $state<[number, number]>(US_MAP_CENTER as [number, number]);
+let mapZoom = $state(US_MAP_ZOOM);
 let mapBearing = $state(0);
 let mapPitch = $state(0);
 
@@ -158,6 +166,23 @@ const fayetteStats = $state([
     bearing={mapBearing}
     center={mapCenter}
   >
+    <NavigationControl showCompass={false} />
+    <CustomControl>
+      <button
+        aria-label="Fly to the center of the map"
+        class="flex! size-[29px] items-center justify-center rounded-md"
+        style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 25px; background-position: center; background-repeat: no-repeat;"
+        onclick={() =>
+          flyToCounty({
+            longitude: US_MAP_CENTER[0],
+            latitude: US_MAP_CENTER[1],
+            zoom: US_MAP_ZOOM,
+          })}
+      ></button>
+    </CustomControl>
+    <FullScreenControl />
+    <GeolocateControl />
+
     <DeckGLOverlay interleaved {layers} />
   </MapLibre>
 
@@ -165,6 +190,7 @@ const fayetteStats = $state([
     x={tooltipPosition?.x ?? 0}
     y={tooltipPosition?.y ?? 0}
     open={isTooltipOpen}
+    alignOffset={10}
     boundary={mapContainerElement}
     preferredSide="right"
     sideOffset={15}
