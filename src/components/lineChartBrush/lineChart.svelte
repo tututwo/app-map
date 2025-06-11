@@ -5,6 +5,7 @@ import { untrack, getContext } from "svelte";
 import { scale } from "svelte/transition";
 import { cubicOut } from "svelte/easing";
 import { Tween } from "svelte/motion";
+import Tooltip from "$components/chart/Tooltip.svelte";
 
 // Get responsive dimensions from Figure context
 const figure = getContext("Figure");
@@ -59,6 +60,8 @@ const brushPillPositions = $derived({
 // State variables
 let activePoint = $state(null);
 let hoveredPoint = $state(null);
+let tooltipPosition = $state({ x: 0, y: 0 });
+let isTooltipOpen = $derived(!!activePoint);
 
 // Current brush selection (in date values)
 let brushSelection = $state(enableBrushing ? initialBrushSelection : null);
@@ -121,6 +124,10 @@ function formatDate(date) {
 function showTooltip(event, point) {
   activePoint = point;
   hoveredPoint = point;
+  tooltipPosition = {
+    x: xScale(point.date) + margin.left,
+    y: yScale(point.close) + margin.top,
+  };
 }
 
 function hideTooltip() {
@@ -511,25 +518,26 @@ function isPointOutsideSelection(point) {
     </g>
   </svg>
 
-  <!-- Enhanced Tooltip -->
-  {#if activePoint}
-    <div
-      class="pointer-events-none absolute z-50 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl"
-      style="
-          left: {xScale(activePoint.date) + margin.left - 30}px; 
-          top: {yScale(activePoint.close) + margin.top - 60}px;
-          transform: translateX(-50%);
-        "
-      transition:scale={{ duration: 150, start: 0.9 }}
-    >
+  <Tooltip
+    x={tooltipPosition.x}
+    y={tooltipPosition.y}
+    open={isTooltipOpen}
+    boundary={svgContainer}
+    preferredSide="top"
+    sideOffset={15}
+    align="center"
+    showArrow={true}
+    class="!rounded-lg !border-none !bg-gray-900 !px-3 !py-2 !text-sm !text-white !shadow-xl"
+    arrowClass="!bg-gray-900"
+    inTransition={scale}
+    inTransitionParams={{ duration: 150, start: 0.9 }}
+  >
+    {#if activePoint}
       <div class="font-medium">{activePoint.year}</div>
       <div class="text-gray-300">Value: {activePoint.close}</div>
-      <!-- Tooltip arrow -->
-      <div
-        class="absolute top-full left-1/2 h-0 w-0 -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-t-gray-900 border-r-transparent border-l-transparent"
-      ></div>
-    </div>
-  {/if}
+      <!-- The arrow is now handled by the Tooltip component -->
+    {/if}
+  </Tooltip>
 
   <!-- Year range pills -->
   {#if enableBrushing && brushSelection && brushPillPositions.width > 0}

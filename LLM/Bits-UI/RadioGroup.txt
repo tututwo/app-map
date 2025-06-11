@@ -1,0 +1,230 @@
+# Radio Group Documentation
+
+Allows users to select a single option from a list of mutually exclusive choices.
+
+This is a documentation section that potentially contains examples, demos, and other useful information related to a specific part of Bits UI. When helping users with this documentation, you can ignore the classnames applied to the demos unless they are relevant to the user's issue.
+
+```svelte
+<script lang="ts">
+  import { Label, RadioGroup } from "bits-ui";
+</script>
+<RadioGroup.Root class="flex flex-col gap-4 text-sm font-medium">
+  <div
+    class="text-foreground group flex select-none items-center transition-all"
+  >
+    <RadioGroup.Item
+      id="amazing"
+      value="amazing"
+      class="border-border-input bg-background hover:border-dark-40 data-[state=checked]:border-6 data-[state=checked]:border-foreground size-5 shrink-0 cursor-default rounded-full border transition-all duration-100 ease-in-out"
+    />
+    <Label.Root for="amazing" class="pl-3">Amazing</Label.Root>
+  </div>
+  <div
+    class="text-foreground group flex select-none items-center transition-all"
+  >
+    <RadioGroup.Item
+      id="average"
+      value="average"
+      class="border-border-input bg-background hover:border-dark-40 data-[state=checked]:border-6 data-[state=checked]:border-foreground size-5 shrink-0 cursor-default rounded-full border transition-all duration-100 ease-in-out"
+    />
+    <Label.Root for="average" class="pl-3">Average</Label.Root>
+  </div>
+  <div
+    class="text-foreground group flex select-none items-center transition-all"
+  >
+    <RadioGroup.Item
+      id="terrible"
+      value="terrible"
+      class="border-border-input bg-background hover:border-dark-40 data-[state=checked]:border-6 data-[state=checked]:border-foreground size-5 shrink-0 cursor-default rounded-full border transition-all duration-100 ease-in-out"
+    />
+    <Label.Root for="terrible" class="pl-3">Terrible</Label.Root>
+  </div>
+</RadioGroup.Root>
+```
+
+## Structure
+
+```svelte
+<script lang="ts">
+ import { RadioGroup } from "bits-ui";
+</script>
+<RadioGroup.Root>
+ <RadioGroup.Item>
+  {#snippet children({ checked })}
+   {#if checked}
+    
+   {/if}
+  {/snippet}
+ </RadioGroup.Item>
+</RadioGroup.Root>
+```
+
+## Reusable Components
+
+It's recommended to use the `RadioGroup` primitives to create your own custom components that can be used throughout your application.
+
+In the example below, we're creating a custom `MyRadioGroup` component that takes in an array of items and renders a radio group with those items along with a [`Label`](/docs/components/label) component for each item.
+
+MyRadioGroup.svelte
+
+```svelte
+<script lang="ts">
+ import { RadioGroup, Label, type WithoutChildrenOrChild, useId } from "bits-ui";
+ type Item = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+ };
+ type Props = WithoutChildrenOrChild<RadioGroup.RootProps> & {
+  items: Item[];
+ };
+ let { value = $bindable(""), ref = $bindable(null), items, ...restProps }: Props = $props();
+</script>
+<RadioGroup.Root bind:value bind:ref {...restProps}>
+ {#each items as item}
+  {@const id = useId()}
+  <div>
+   <RadioGroup.Item {id} value={item.value} disabled={item.disabled}>
+    {#snippet children({ checked })}
+     {#if checked}
+      
+     {/if}
+    {/snippet}
+   </RadioGroup.Item>
+   <Label.Root for={id}>{item.label}</Label.Root>
+  </div>
+ {/each}
+</RadioGroup.Root>
+```
+
+You can then use the `MyRadioGroup` component in your application like so:
+
++page.svelte
+
+```svelte
+<script lang="ts">
+ import MyRadioGroup from "$lib/components/MyRadioGroup.svelte";
+ const myItems = [
+  { value: "apple", label: "Apple" },
+  { value: "banana", label: "Banana" },
+  { value: "coconut", label: "Coconut", disabled: true },
+ ];
+</script>
+<MyRadioGroup items={myItems} name="favoriteFruit" />
+```
+
+## Managing Value State
+
+This section covers how to manage the `value` state of the component.
+
+### Two-Way Binding
+
+Use `bind:value` for simple, automatic state synchronization:
+
+```svelte
+<script lang="ts">
+ import { RadioGroup } from "bits-ui";
+ let myValue = $state("");
+</script>
+<button onclick={() => (myValue = "A")}> Select A </button>
+<RadioGroup.Root bind:value={myValue}>
+</RadioGroup.Root>
+```
+
+### Fully Controlled
+
+Use a [Function Binding](https://svelte.dev/docs/svelte/bind#Function-bindings) for complete control over the state's reads and writes.
+
+```svelte
+<script lang="ts">
+ import { RadioGroup } from "bits-ui";
+ let myValue = $state("");
+ function getValue() {
+  return myValue;
+ }
+ function setValue(newValue: string) {
+  myValue = newValue;
+ }
+</script>
+<RadioGroup.Root bind:value={getValue, setValue}>
+</RadioGroup.Root>
+```
+
+## HTML Forms
+
+If you set the `name` prop on the `RadioGroup.Root` component, a hidden input element will be rendered to submit the value of the radio group to a form.
+
+```svelte
+<RadioGroup.Root name="favoriteFruit">
+</RadioGroup.Root>
+```
+
+### Required
+
+To make the hidden input element `required` you can set the `required` prop on the `RadioGroup.Root` component.
+
+```svelte
+<RadioGroup.Root required>
+</RadioGroup.Root>
+```
+
+## Disabling Items
+
+You can disable a radio group item by setting the `disabled` prop to `true`.
+
+```svelte
+<RadioGroup.Item value="apple" disabled>Apple</RadioGroup.Item>
+```
+
+## Orientation
+
+The `orientation` prop is used to determine the orientation of the radio group, which influences how keyboard navigation will work.
+
+When the `orientation` is set to `'vertical'`, the radio group will navigate through the items using the `ArrowUp` and `ArrowDown` keys. When the `orientation` is set to `'horizontal'`, the radio group will navigate through the items using the `ArrowLeft` and `ArrowRight` keys.
+
+```svelte
+<RadioGroup.Root orientation="vertical">
+</RadioGroup.Root>
+<RadioGroup.Root orientation="horizontal">
+</RadioGroup.Root>
+```
+
+## API Reference
+
+### RadioGroup. Root
+
+The radio group component used to group radio items under a common name for form submission.
+
+| Property                                                                                      | Type                                                                                                                                                                                                                                                  | Description                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value` $bindable | `string`                                                                                                                                                                                                                    | The value of the currently selected radio item. You can bind to this value to control the radio group's value from outside the component.`Default:  undefined`                 |
+| `onValueChange`                                             | `function`- (value: string) => void                                  | A callback that is fired when the radio group's value changes.`Default:  undefined`                                                                                            |
+| `disabled`                                                  | `boolean`                                                                                                                                                                                                                   | Whether or not the radio group is disabled. This prevents the user from interacting with it.`Default: false`                                                                      |
+| `required`                                                  | `boolean`                                                                                                                                                                                                                   | Whether or not the radio group is required.`Default: false`                                                                                                                       |
+| `name`                                                      | `string`                                                                                                                                                                                                                    | The name of the radio group used in form submission. If provided, a hidden input element will be rendered to submit the value of the radio group.`Default:  undefined`         |
+| `loop`                                                      | `boolean`                                                                                                                                                                                                                   | Whether or not the radio group should loop through the items when navigating with the arrow keys.`Default: false`                                                                 |
+| `orientation`                                               | `enum`- 'vertical' \| 'horizontal'                                   | The orientation of the radio group. This will determine how keyboard navigation will work within the component.`Default: 'vertical'`                                              |
+| `ref` $bindable                                | `HTMLDivElement`                                                                                                                                                                                                            | The underlying DOM element being rendered. You can bind to this to get a reference to the element.`Default:  undefined`                                                        |
+| `children`                                                  | `Snippet`                                                                                                                                                                                                                   | The children content to render.`Default:  undefined`                                                                                                                           |
+| `child`                                                     | `Snippet`- type SnippetProps = { props: Record\<string, unknown>; }; | Use render delegation to render your own element. See [Child Snippet](/docs/child-snippet) docs for more information.`Default:  undefined` | | Data Attribute                                   | Value                                                                                                                                                                               | Description                                                                                     |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-orientation` | `enum`- '' | The orientation of the radio group.                                      |
+| `data-radio-group-root`                                 | `''`                                                                                                                                                                       | Present on the root element. |
+
+### RadioGroup. Item
+
+An radio item, which must be a child of the `RadioGroup.Root` component.
+
+| Property                                                                                     | Type                                                                                                                                                                                                                                                  | Description                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value` required | `string`                                                                                                                                                                                                                    | The value of the radio item. This should be unique for each radio item in the group.`Default:  undefined`                                                                      |
+| `disabled`                                                 | `boolean`                                                                                                                                                                                                                   | Whether the radio item is disabled.`Default: false`                                                                                                                               |
+| `ref` $bindable                               | `HTMLButtonElement`                                                                                                                                                                                                         | The underlying DOM element being rendered. You can bind to this to get a reference to the element.`Default:  undefined`                                                        |
+| `children`                                                 | `Snippet`                                                                                                                                                                                                                   | The children content to render.`Default:  undefined`                                                                                                                           |
+| `child`                                                    | `Snippet`- type SnippetProps = { props: Record\<string, unknown>; }; | Use render delegation to render your own element. See [Child Snippet](/docs/child-snippet) docs for more information.`Default:  undefined` | | Data Attribute                                | Value                                                                                                                                                                               | Description                                                                                           |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-disabled` | `''`                                                                                                                                                                       | Present when the radio item is disabled.                                       |
+| `data-value`                                         | `''`                                                                                                                                                                       | The value of the radio item.                                                   |
+| `data-state`                                         | `enum`- '' | The radio item's checked state.                                                |
+| `data-orientation`                                   | `enum`- '' | The orientation of the parent radio group.                                     |
+| `data-radio-group-item`                              | `''`                                                                                                                                                                       | Present on the radio item element. |

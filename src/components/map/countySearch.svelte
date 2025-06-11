@@ -1,6 +1,6 @@
 <script lang="ts">
 import { Combobox } from "bits-ui";
-import { searchCounties } from "./searchCounty2010Census.js";
+import { searchCounties } from "$lib/utils/searchCounty2010Census.js";
 import { Debounced } from "runed";
 import type { ComponentProps } from "svelte";
 import Check from "lucide-svelte/icons/check";
@@ -32,7 +32,7 @@ let isLoading = $state(false);
 let selectedCountyKey = $state<string | undefined>(undefined); // Renamed to avoid conflict with selectedCounty object
 let open = $state(false);
 
-const debouncedSearchValue = new Debounced(() => searchValue, 300);
+const debouncedSearchValue = new Debounced(() => searchValue, 1000);
 
 $effect(async () => {
   const searchTerm = debouncedSearchValue.current;

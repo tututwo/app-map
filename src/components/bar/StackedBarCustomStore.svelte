@@ -31,7 +31,7 @@ import { scaleCanvas } from "layercake";
 import { findClosestPoint, isEqualRect } from "$lib/utility";
 
 import { hoveredTooltipStore } from "$lib/data/data";
-import Tooltip from "./Tooltip.svelte";
+import Tooltip from "$components/chart/Tooltip.svelte";
 const { data, width, height, xRange, xScale, yScale, zScale, zDomain, flatData, padding } =
   getContext("LayerCake");
 const { ctx } = getContext("canvas");
