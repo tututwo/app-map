@@ -48,7 +48,7 @@ export function topoToGeo(topoData, options = {}) {
 export function processCSVData(real_data) {
   // Create lookup maps for quick data access
 
-  const realDataMap = new Map(real_data.map((d) => [d.GEOID, d]));
+  const realDataMap = new Map(real_data.map((d) => [d.geoid, d]));
   return {
     realData: realDataMap,
     // Helper function to get all data for a county

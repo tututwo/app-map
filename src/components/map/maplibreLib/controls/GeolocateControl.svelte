@@ -83,19 +83,7 @@ onDestroy(() => {
       This global style will only be active when mapZoom > 3.5.
       Svelte handles adding/removing this from the document head automatically.
     */
-  :global(
-    body
-      > div
-      > div.flex.h-screen
-      > main
-      > div
-      > div:nth-child(1)
-      > section
-      > figure
-      > div
-      > div.maplibregl-canvas-container.maplibregl-interactive.maplibregl-touch-drag-pan.maplibregl-touch-zoom-rotate
-      > div.maplibregl-user-location-dot.maplibregl-marker.maplibregl-marker-anchor-center
-  ) {
+  :global(div.maplibregl-user-location-dot.maplibregl-marker.maplibregl-marker-anchor-center) {
     display: none !important;
   }
   </style>

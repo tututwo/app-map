@@ -1,3 +1,5 @@
+import counties_geoid from "$data/counties_geoid.csv";
+
 // searchCounty2010Census.js
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
@@ -5,6 +7,8 @@ const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 let currentAbortController = null;
 
 const REGION_TO_2010_COUNTY = {
+  // Connecticut planning regions to historical county names mapping
+  // The geocoding API returns planning region names, but we display historical county names
   "South Central Connecticut Planning Region": "New Haven County",
   "Western Connecticut Planning Region": "Fairfield County",
   "Lower Connecticut River Valley Planning Region": "Middlesex County",
@@ -14,6 +18,130 @@ const REGION_TO_2010_COUNTY = {
   "Northwest Hills Planning Region": "Litchfield County",
   "Central Connecticut Planning Region": "Hartford County",
 };
+
+// Parse CSV and create a Map for efficient lookups
+const GEOID_MAP = new Map();
+
+// Initialize the GEOID map from CSV data
+
+counties_geoid.forEach((row, index) => {
+  // Handle different CSV formats - could be array or object
+  let countyState, geoid;
+
+  if (Array.isArray(row)) {
+    countyState = row[0];
+    geoid = row[1];
+  } else if (typeof row === "object") {
+    // Object format (if using d3-dsv or similar parser)
+    const keys = Object.keys(row);
+    countyState = row[keys[0]];
+    geoid = row[keys[1]];
+  }
+
+  if (countyState && geoid) {
+    // Remove quotes if present
+    const cleanKey = countyState.replace(/^"|"$/g, "").trim();
+    const cleanGeoid = geoid.toString().trim();
+
+    // Store the cleaned key
+    GEOID_MAP.set(cleanKey, cleanGeoid);
+
+    // Debug: log CT entries
+    // if (cleanKey.includes("Connecticut") && index < 20) {
+    //   console.log(`Stored: "${cleanKey}" -> "${cleanGeoid}"`);
+    // }
+  }
+});
+
+// Helper function to get state abbreviation
+function getStateAbbreviation(stateName) {
+  const stateAbbreviations = {
+    Alabama: "AL",
+    Alaska: "AK",
+    Arizona: "AZ",
+    Arkansas: "AR",
+    California: "CA",
+    Colorado: "CO",
+    Connecticut: "CT",
+    Delaware: "DE",
+    Florida: "FL",
+    Georgia: "GA",
+    Hawaii: "HI",
+    Idaho: "ID",
+    Illinois: "IL",
+    Indiana: "IN",
+    Iowa: "IA",
+    Kansas: "KS",
+    Kentucky: "KY",
+    Louisiana: "LA",
+    Maine: "ME",
+    Maryland: "MD",
+    Massachusetts: "MA",
+    Michigan: "MI",
+    Minnesota: "MN",
+    Mississippi: "MS",
+    Missouri: "MO",
+    Montana: "MT",
+    Nebraska: "NE",
+    Nevada: "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    Ohio: "OH",
+    Oklahoma: "OK",
+    Oregon: "OR",
+    Pennsylvania: "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    Tennessee: "TN",
+    Texas: "TX",
+    Utah: "UT",
+    Vermont: "VT",
+    Virginia: "VA",
+    Washington: "WA",
+    "West Virginia": "WV",
+    Wisconsin: "WI",
+    Wyoming: "WY",
+  };
+
+  return stateAbbreviations[stateName] || stateName;
+}
+
+// Helper function to lookup GEOID
+function lookupGeoid(countyName, state) {
+  if (!countyName) return null;
+
+  // Get state abbreviation if we have full state name
+  const stateAbbr = state ? getStateAbbreviation(state) : null;
+
+  // Try different key formats
+  const keysToTry = [];
+
+  // Add keys with state abbreviation first (most specific)
+  if (stateAbbr) {
+    keysToTry.push(`${countyName}, ${stateAbbr}`);
+  }
+
+  // Add keys with full state name
+  if (state) {
+    keysToTry.push(`${countyName}, ${state}`);
+  }
+
+  // Add just the county name
+  keysToTry.push(countyName);
+
+  for (const key of keysToTry) {
+    if (GEOID_MAP.has(key)) {
+      return GEOID_MAP.get(key);
+    }
+  }
+
+  return null;
+}
 
 export async function searchCounties(query) {
   if (!query || query.length < 3) return [];
@@ -92,16 +220,24 @@ export async function searchCounties(query) {
       }
 
       if (countyName) {
+        // IMPORTANT: Look up GEOID using the ORIGINAL county/region name from the API
+        // For CT, this will be the planning region name (e.g., "South Central Connecticut Planning Region")
+        const geoid = lookupGeoid(countyName, state);
+
+        // Map to display name (for CT planning regions, this converts to historical county names)
         const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
+
         const displayName = state ? `${mapped2010County}, ${state}` : mapped2010County;
         const key = `${mapped2010County}_${state}`;
 
         if (!countyResults.find((r) => r.key === key)) {
           countyResults.push({
             key,
-            county: mapped2010County,
+            county: mapped2010County, // Display name (e.g., "New Haven County")
             state,
             displayName,
+            geoid: geoid, // GEOID from original region name (e.g., "09170")
+            originalCountyName: countyName, // Keep original for debugging
             originalLocation: location.display_name,
           });
         }

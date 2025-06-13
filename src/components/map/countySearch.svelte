@@ -11,29 +11,34 @@ export type County = {
   state: string | null;
   displayName: string;
   originalLocation: string;
+  geoid: string;
 };
 // Define props using Svelte 5's $props pattern
 interface CountySearchProps {
   placeholder?: string;
   onCountySelected?: (county: County) => void;
   class?: string;
+  geoid?: string;
+  displayName?: string | null;
 }
 
 let {
   placeholder = "All counties",
   onCountySelected,
   class: className = "",
+  geoid = $bindable(),
+  displayName,
 }: CountySearchProps = $props();
 
 // State management
 let searchValue = $state("");
 let suggestions = $state<County[]>([]);
 let isLoading = $state(false);
-let selectedCountyKey = $state<string | undefined>(undefined); // Renamed to avoid conflict with selectedCounty object
+let selectedCountyKey = $state<string | undefined>(undefined);
 let open = $state(false);
 
+const displayedValue = $derived(open ? searchValue : displayName || geoid || "");
 const debouncedSearchValue = new Debounced(() => searchValue, 1000);
-
 $effect(async () => {
   const searchTerm = debouncedSearchValue.current;
 
@@ -59,10 +64,11 @@ function handleValueChange(value: string | undefined) {
   if (!value) return;
 
   const selected = suggestions.find((s) => s.key === value);
-  if (selected) {
-    searchValue = selected.displayName;
-    selectedCountyKey = value;
 
+  if (selected) {
+    // This update will flow up to the parent, which will then
+    // update the `displayName` prop reactively.
+    geoid = selected.geoid;
     onCountySelected?.(selected);
   }
 }
@@ -93,17 +99,8 @@ function handleInput(e: Event) {
 
 function handleOpenChange(isOpen: boolean) {
   open = isOpen;
-  if (!isOpen && !selectedCountyKey) {
-    searchValue = "";
-  }
-  // If closing and there's a selected item, ensure input reflects its display name
-  if (!isOpen && selectedCountyKey) {
-    const currentSelection =
-      suggestions.find((s) => s.key === selectedCountyKey) ??
-      (searchValue === "" ? undefined : { displayName: searchValue }); // Fallback if suggestions are cleared
-    if (currentSelection) {
-      searchValue = currentSelection.displayName;
-    }
+  if (!isOpen) {
+    searchValue = ""; // On close, clear the search term.
   }
 }
 
@@ -112,6 +109,8 @@ type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
   | undefined
   ? P
   : never;
+
+$inspect(selectedCountyKey);
 </script>
 
 <Combobox.Root
@@ -122,10 +121,10 @@ type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
   onOpenChange={handleOpenChange}
   items={suggestions.map((s) => ({ value: s.key, label: s.displayName }))}
   class="group relative w-full {className}"
+  inputValue={displayedValue}
 >
   <div class="relative w-full">
     <Combobox.Input
-      value={searchValue}
       oninput={handleInput}
       {placeholder}
       class="w-full rounded-xs bg-white px-4 py-2 text-lg font-normal text-gray-800

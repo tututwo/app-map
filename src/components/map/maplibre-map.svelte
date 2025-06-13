@@ -19,14 +19,14 @@ import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 import { zoomToWhichCounty } from "../../data/calculateStateViews";
 import usmap from "../../data/counties-10m.json";
 // @ts-ignore
-import real_data from "../../data/real_data.csv";
 import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
 const US_MAP_CENTER = [-98.5795, 39.8283];
 const US_MAP_ZOOM = 3.5;
-let { data, selectedMapMetric } = $props();
-const colorKey = "n_medincome";
+let { selectedMapMetric, csvData: real_data, geoid = $bindable() } = $props();
+
+const colorKey = "closure";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
 // --- Map State ---
@@ -37,8 +37,9 @@ let mapPitch = $state(0);
 
 // --- Interaction State ---
 let hoveredCountyId = $state<string | null>(null);
-let clickedCountyId = $state<string | null>(null);
+
 const { realData, getCountyData } = processCSVData(real_data);
+
 // --- Tooltip State ---
 let tooltipPosition = $state<{ x: number; y: number } | null>(null);
 let hoveredCountyData = $derived(hoveredCountyId ? getCountyData(hoveredCountyId) : null);
@@ -59,11 +60,7 @@ const colorScale = d3
   .range(colors);
 
 // --- Data Processing ---
-// const geoData = topoToGeo(usmap);
-
-const geoData = data;
-
-console.log("calculated geojson", topoToGeo(usmap).features[0]);
+const geoData = topoToGeo(usmap);
 
 function flyToCounty(countyZoomData: {
   longitude: number;
@@ -99,22 +96,22 @@ let layers = $derived([
     autoHighlight: false,
 
     getFillColor: (d: any) => {
-      const countyFeatureId = d.properties?.geoid;
+      const countyFeatureId = d.id;
       const countyData = realData.get(countyFeatureId);
       return countyData
         ? toDeckGLColor(colorScale(parseFloat(countyData[colorKey])))
         : toDeckGLColor("#cccccc");
     },
     getLineColor: (d: any) => {
-      const countyFeatureId = d.properties?.geoid;
-      if (countyFeatureId === clickedCountyId || countyFeatureId === hoveredCountyId) {
+      const countyFeatureId = d.id;
+      if (countyFeatureId === geoid || countyFeatureId === hoveredCountyId) {
         return HIGHLIGHT_BORDER_COLOR;
       }
       return DEFAULT_BORDER_COLOR;
     },
     getLineWidth: (d: any) => {
-      const countyFeatureId = d.properties?.geoid;
-      if (countyFeatureId === clickedCountyId || countyFeatureId === hoveredCountyId) {
+      const countyFeatureId = d.id;
+      if (countyFeatureId === geoid || countyFeatureId === hoveredCountyId) {
         return HIGHLIGHT_BORDER_WIDTH;
       }
       return DEFAULT_BORDER_WIDTH;
@@ -124,31 +121,29 @@ let layers = $derived([
     lineWidthMaxPixels: 5,
     onClick: (info: any) => {
       if (info.object) {
-        const countyFeatureId = info.object.properties?.geoid || info.object.properties?.GEOID;
-        if (clickedCountyId === countyFeatureId) {
-          clickedCountyId = null;
-        } else {
-          clickedCountyId = countyFeatureId;
-          if (zoomToWhichCounty[countyFeatureId]) {
-            flyToCounty(zoomToWhichCounty[countyFeatureId]);
-          } else {
-            console.warn(`Zoom data not found for county ID: ${countyFeatureId}`);
-          }
-        }
+        const countyFeatureId = info.object.id;
+        // two way binding: pass the geoid to the parent component
+        geoid = countyFeatureId;
       }
     },
     onHover: (info: any) => {
-      hoveredCountyId = info.object
-        ? info.object.properties?.geoid || info.object.properties?.GEOID
-        : null;
+      hoveredCountyId = info.object ? info.object.id : null;
       tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
     },
     updateTriggers: {
-      getLineColor: [clickedCountyId, hoveredCountyId],
-      getLineWidth: [clickedCountyId, hoveredCountyId],
+      getLineColor: [geoid, hoveredCountyId],
+      getLineWidth: [geoid, hoveredCountyId],
     },
   }),
 ]);
+
+$effect(() => {
+  if (zoomToWhichCounty[geoid]) {
+    flyToCounty(zoomToWhichCounty[geoid]);
+  } else {
+    console.warn(`Zoom data not found for county ID: ${geoid}`);
+  }
+});
 
 // --- Tooltip State ---
 const fayetteStats = $state([

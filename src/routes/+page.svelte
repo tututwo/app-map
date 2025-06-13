@@ -31,7 +31,6 @@ import MapLibreMap from "$components/map/maplibre-map.svelte";
 // State management using Svelte 5 runes
 let { data } = $props();
 
-$inspect(data);
 let timeRange = $state({ from: 2003, to: 2011 });
 let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
@@ -198,17 +197,13 @@ const stackedBarData = $derived(datasets[currentDataset]);
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
+let geoid = $state("94404");
 </script>
 
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar>
-    <!-- <LocationInput
-      class="text-gray-800 shadow-sm"
-      value={dataFilters.county}
-      onSelect={(geoid) => dataFilters.setCounty(geoid)}
-    /> -->
-    <CountySearch />
+    <CountySearch bind:geoid />
   </Sidebar>
 
   <!-- Main Content -->
@@ -352,7 +347,7 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap data={data.geojson} {selectedMapMetric} />
+          <MapLibreMap {selectedMapMetric} csvData={data.data} bind:geoid />
         </section>
       </div>
 

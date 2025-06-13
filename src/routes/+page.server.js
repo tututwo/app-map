@@ -46,34 +46,40 @@ function filterGeojsonByPropertySuffix(geojson, suffix, alwaysInclude = ["geoid"
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ fetch, url }) {
-  // --- Use SvelteKit's fetch to get the remote data and cache it ---
-  if (!cachedGeojson) {
-    console.log("Fetching remote GeoJSON for the first time...");
-    const geojsonUrl =
-      "https://github.com/tututwo/app-map/raw/002766600dab4fe12acb4aae0646af17b74d5454/src/data/allMetricsByCounty_06042025.geojson";
-
-    try {
-      const response = await fetch(geojsonUrl);
-      if (!response.ok) {
-        // Throw a server-side error if the fetch fails
-        error(response.status, `Failed to fetch GeoJSON: ${response.statusText}`);
-      }
-      cachedGeojson = await response.json();
-      console.log("GeoJSON data has been cached in memory.");
-    } catch (err) {
-      console.error(err);
-      error(500, "There was an issue fetching or parsing the GeoJSON data.");
-    }
-  }
-
-  // Get the suffix from the URL search parameters
-  const suffix = url.searchParams.get("suffix") || "2002-2014";
-
-  // Perform the filtering on the cached data
-  const filteredGeojson = filterGeojsonByPropertySuffix(cachedGeojson, suffix);
+  const csvData = await fetch("/api/map_data?from=2001&to=2021&geoid");
+  const data = await csvData.json();
 
   return {
-    geojson: filteredGeojson,
-    currentSuffix: suffix,
+    data,
   };
+  // // --- Use SvelteKit's fetch to get the remote data and cache it ---
+  // if (!cachedGeojson) {
+
+  //   const geojsonUrl =
+  //     "https://github.com/tututwo/app-map/raw/002766600dab4fe12acb4aae0646af17b74d5454/src/data/allMetricsByCounty_06042025.geojson";
+
+  //   try {
+  //     const response = await fetch(geojsonUrl);
+  //     if (!response.ok) {
+  //       // Throw a server-side error if the fetch fails
+  //       error(response.status, `Failed to fetch GeoJSON: ${response.statusText}`);
+  //     }
+  //     cachedGeojson = await response.json();
+  //     console.log("GeoJSON data has been cached in memory.");
+  //   } catch (err) {
+  //     console.error(err);
+  //     error(500, "There was an issue fetching or parsing the GeoJSON data.");
+  //   }
+  // }
+
+  // // Get the suffix from the URL search parameters
+  // const suffix = url.searchParams.get("suffix") || "2002-2014";
+
+  // // Perform the filtering on the cached data
+  // const filteredGeojson = filterGeojsonByPropertySuffix(cachedGeojson, suffix);
+
+  // return {
+  //   geojson: filteredGeojson,
+  //   currentSuffix: suffix,
+  // };
 }
