@@ -15,6 +15,7 @@ interface Props extends maplibregl.GeolocateControlOptions {
   // Automatically call trigger() to start locating the user
   autoTrigger?: boolean;
   control?: maplibregl.GeolocateControl;
+  mapZoom?: number;
   // Events
   // https://maplibre.org/maplibre-gl-js/docs/API/classes/GeolocateControl/#events
   ontrackuserlocationend?: Listener<GeolocateEvent>;
@@ -36,6 +37,7 @@ let {
   ongeolocate,
   onerror,
   onoutofmaxbounds,
+  mapZoom,
   ...options
 }: Props = $props();
 
@@ -74,6 +76,30 @@ onDestroy(() => {
   }
 });
 </script>
+
+{#if mapZoom && mapZoom > 4}
+  <style>
+  /*
+      This global style will only be active when mapZoom > 3.5.
+      Svelte handles adding/removing this from the document head automatically.
+    */
+  :global(
+    body
+      > div
+      > div.flex.h-screen
+      > main
+      > div
+      > div:nth-child(1)
+      > section
+      > figure
+      > div
+      > div.maplibregl-canvas-container.maplibregl-interactive.maplibregl-touch-drag-pan.maplibregl-touch-zoom-rotate
+      > div.maplibregl-user-location-dot.maplibregl-marker.maplibregl-marker-anchor-center
+  ) {
+    display: none !important;
+  }
+  </style>
+{/if}
 
 <style>
 :global(.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon) {

@@ -25,8 +25,8 @@ import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 import { GeoJsonLayer } from "@deck.gl/layers";
 const US_MAP_CENTER = [-98.5795, 39.8283];
 const US_MAP_ZOOM = 3.5;
-let { selectedMapMetric } = $props();
-const colorKey = "close_4_0005_r_100k";
+let { data, selectedMapMetric } = $props();
+const colorKey = "n_medincome";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
 // --- Map State ---
@@ -38,7 +38,7 @@ let mapPitch = $state(0);
 // --- Interaction State ---
 let hoveredCountyId = $state<string | null>(null);
 let clickedCountyId = $state<string | null>(null);
-
+const { realData, getCountyData } = processCSVData(real_data);
 // --- Tooltip State ---
 let tooltipPosition = $state<{ x: number; y: number } | null>(null);
 let hoveredCountyData = $derived(hoveredCountyId ? getCountyData(hoveredCountyId) : null);
@@ -55,12 +55,15 @@ const DEFAULT_BORDER_WIDTH = 1; // Default border width
 
 const colorScale = d3
   .scaleQuantize()
-  .domain(d3.extent(real_data, (d) => d[colorKey]))
+  .domain(d3.extent(real_data, (d) => +d[colorKey]))
   .range(colors);
 
 // --- Data Processing ---
-const geoData = topoToGeo(usmap);
-const { realData, getCountyData } = processCSVData(real_data);
+// const geoData = topoToGeo(usmap);
+
+const geoData = data;
+
+console.log("calculated geojson", topoToGeo(usmap).features[0]);
 
 function flyToCounty(countyZoomData: {
   longitude: number;
@@ -70,6 +73,7 @@ function flyToCounty(countyZoomData: {
   pitch?: number;
 }) {
   mapCenter = [countyZoomData.longitude, countyZoomData.latitude];
+
   mapZoom = countyZoomData.zoom * 0.88;
   if (countyZoomData.bearing !== undefined) {
     mapBearing = countyZoomData.bearing;
@@ -95,21 +99,21 @@ let layers = $derived([
     autoHighlight: false,
 
     getFillColor: (d: any) => {
-      const countyFeatureId = d.id || d.properties?.GEOID;
+      const countyFeatureId = d.properties?.geoid;
       const countyData = realData.get(countyFeatureId);
       return countyData
         ? toDeckGLColor(colorScale(parseFloat(countyData[colorKey])))
         : toDeckGLColor("#cccccc");
     },
     getLineColor: (d: any) => {
-      const countyFeatureId = d.id || d.properties?.GEOID;
+      const countyFeatureId = d.properties?.geoid;
       if (countyFeatureId === clickedCountyId || countyFeatureId === hoveredCountyId) {
         return HIGHLIGHT_BORDER_COLOR;
       }
       return DEFAULT_BORDER_COLOR;
     },
     getLineWidth: (d: any) => {
-      const countyFeatureId = d.id || d.properties?.GEOID;
+      const countyFeatureId = d.properties?.geoid;
       if (countyFeatureId === clickedCountyId || countyFeatureId === hoveredCountyId) {
         return HIGHLIGHT_BORDER_WIDTH;
       }
@@ -120,7 +124,7 @@ let layers = $derived([
     lineWidthMaxPixels: 5,
     onClick: (info: any) => {
       if (info.object) {
-        const countyFeatureId = info.object.id || info.object.properties?.GEOID;
+        const countyFeatureId = info.object.properties?.geoid || info.object.properties?.GEOID;
         if (clickedCountyId === countyFeatureId) {
           clickedCountyId = null;
         } else {
@@ -134,7 +138,9 @@ let layers = $derived([
       }
     },
     onHover: (info: any) => {
-      hoveredCountyId = info.object ? info.object.id || info.object.properties?.GEOID : null;
+      hoveredCountyId = info.object
+        ? info.object.properties?.geoid || info.object.properties?.GEOID
+        : null;
       tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
     },
     updateTriggers: {
@@ -160,28 +166,29 @@ const fayetteStats = $state([
   <MapLibre
     class="h-full min-h-[200px] w-full"
     style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
-    zoom={mapZoom}
-    pitch={mapPitch}
     minZoom={2}
-    bearing={mapBearing}
-    center={mapCenter}
+    bind:zoom={mapZoom}
+    bind:pitch={mapPitch}
+    bind:bearing={mapBearing}
+    bind:center={mapCenter}
   >
-    <NavigationControl showCompass={false} />
-    <CustomControl>
+    <NavigationControl showCompass={false} position="top-left" />
+    <CustomControl position="top-left">
       <button
         aria-label="Fly to the center of the map"
         class="flex! size-[29px] items-center justify-center rounded-md"
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
-        onclick={() =>
+        onclick={() => {
           flyToCounty({
             longitude: US_MAP_CENTER[0],
             latitude: US_MAP_CENTER[1],
             zoom: US_MAP_ZOOM,
-          })}
+          });
+        }}
       ></button>
     </CustomControl>
-    <FullScreenControl />
-    <GeolocateControl />
+    <FullScreenControl position="top-left" />
+    <GeolocateControl position="top-left" {mapZoom} />
 
     <DeckGLOverlay interleaved {layers} />
   </MapLibre>

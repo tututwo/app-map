@@ -1,5 +1,9 @@
 <!-- @ts-nocheck -->
+
 <script lang="ts">
+import { invalidate } from "$app/navigation";
+import { page } from "$app/state";
+
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
@@ -25,7 +29,9 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 
 // State management using Svelte 5 runes
+let { data } = $props();
 
+$inspect(data);
 let timeRange = $state({ from: 2003, to: 2011 });
 let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
@@ -58,7 +64,7 @@ onMount(() => {
 // Brushable line chart
 
 // Data points
-const data = [
+const dataLineChart = [
   { date: "2001-01-01T00:00:00.000Z", close: 70, closed_per_100k: 0.2 },
   { date: "2003-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
   { date: "2005-01-01T00:00:00.000Z", close: 120, closed_per_100k: 0.3 },
@@ -228,7 +234,7 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
       <div class="w-fullitems-center flex h-[calc(18vh-50px)] justify-center">
         <Figure>
           <LineChart
-            {data}
+            data={dataLineChart}
             {initialBrushSelection}
             xTickPosition="top"
             yTickPosition="left"
@@ -346,7 +352,7 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap {selectedMapMetric} />
+          <MapLibreMap data={data.geojson} {selectedMapMetric} />
         </section>
       </div>
 
@@ -394,7 +400,9 @@ let selectedMapMetric = $state(dataFilters.metrics[0].value);
               {#snippet figcaption()}
                 <div class="mx-auto ml-[40px] max-w-2xl">
                   <p class="flex flex-wrap items-center gap-1 text-lg text-gray-800">
-                    <span class="rounded bg-emerald-500 px-2 py-1 font-medium text-white">New</span>
+                    <span class="rounded bg-emerald-500 px-2 py-1 font-medium text-white"
+                      >Reopening</span
+                    >
                     <span>,</span>
                     <span class="rounded bg-[#E9E9E9] px-2 py-1 font-medium text-gray-800"
                       >existing</span
