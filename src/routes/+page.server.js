@@ -1,43 +1,42 @@
 /// file: src/routes/+page.server.js
-import fs from "fs/promises";
-import path from "path";
+import { error } from "@sveltejs/kit";
 
-// --- OPTIMIZATION: In-memory cache for the parsed GeoJSON ---
-/** @type {object | null} */
+/** * @type {object | null}
+ * --- In-memory cache for the fetched GeoJSON data ---
+ */
 let cachedGeojson = null;
 
-// Your updated filter function
-function filterGeojsonByPropertySuffix(
-  geojson,
-  suffix,
-  alwaysInclude = ["geoid"],
-  filterFn = (feature) => feature.properties.decennial_census === 2010.0
-) {
-  if (!geojson || !Array.isArray(geojson.features) || geojson.features.length === 0) {
-    // Return a valid empty GeoJSON structure instead of throwing
+/**
+ * Filters a GeoJSON FeatureCollection based on a property suffix.
+ * @param {any} geojson The GeoJSON object to filter.
+ * @param {string} suffix The suffix to filter properties by.
+ * @param {string[]} alwaysInclude An array of property keys to always include.
+ * @returns {any} A new, filtered GeoJSON FeatureCollection.
+ */
+function filterGeojsonByPropertySuffix(geojson, suffix, alwaysInclude = ["geoid"]) {
+  if (!geojson || !Array.isArray(geojson.features)) {
     return { type: "FeatureCollection", features: [] };
   }
 
-  const allKeys = Object.keys(geojson.features[0].properties);
-  const suffixKeys = allKeys.filter((key) => key.endsWith(suffix));
+  // Memoize the keys for performance
+  const propertyKeys = Object.keys(geojson.features[0]?.properties || {});
+  const suffixKeys = propertyKeys.filter((key) => key.endsWith(suffix));
   const finalKeys = Array.from(new Set([...suffixKeys, ...alwaysInclude]));
 
-  const filteredFeatures = geojson.features
-    .filter((feature) => (typeof filterFn === "function" ? filterFn(feature) : true))
-    .map(({ type, geometry, properties }) => {
-      const filteredProps = {};
-      finalKeys.forEach((key) => {
-        if (key in properties) {
-          filteredProps[key] = properties[key];
-        }
-      });
+  const filteredFeatures = geojson.features.map(({ type, geometry, properties }) => {
+    const filteredProps = {};
+    for (const key of finalKeys) {
+      if (key in properties) {
+        filteredProps[key] = properties[key];
+      }
+    }
 
-      return {
-        type: "Feature",
-        geometry,
-        properties: filteredProps,
-      };
-    });
+    return {
+      type, // "Feature"
+      geometry,
+      properties: filteredProps,
+    };
+  });
 
   return {
     type: "FeatureCollection",
@@ -46,23 +45,33 @@ function filterGeojsonByPropertySuffix(
 }
 
 /** @type {import('./$types').PageServerLoad} */
-export async function load({ url }) {
-  // Read from cache or load from disk if cache is empty
+export async function load({ fetch, url }) {
+  // --- Use SvelteKit's fetch to get the remote data and cache it ---
   if (!cachedGeojson) {
-    console.log("Reading and parsing GeoJSON file for the first time...");
-    const geojsonPath = path.resolve(process.cwd(), "src/data/allMetricsByCounty_06042025.geojson");
-    const geojsonData = await fs.readFile(geojsonPath, "utf8");
-    cachedGeojson = JSON.parse(geojsonData);
-    console.log("GeoJSON data cached in memory.");
+    console.log("Fetching remote GeoJSON for the first time...");
+    const geojsonUrl =
+      "https://github.com/tututwo/app-map/raw/002766600dab4fe12acb4aae0646af17b74d5454/src/data/allMetricsByCounty_06042025.geojson";
+
+    try {
+      const response = await fetch(geojsonUrl);
+      if (!response.ok) {
+        // Throw a server-side error if the fetch fails
+        error(response.status, `Failed to fetch GeoJSON: ${response.statusText}`);
+      }
+      cachedGeojson = await response.json();
+      console.log("GeoJSON data has been cached in memory.");
+    } catch (err) {
+      console.error(err);
+      error(500, "There was an issue fetching or parsing the GeoJSON data.");
+    }
   }
 
-  // Get the suffix from the URL. Fallback to a default if not provided.
+  // Get the suffix from the URL search parameters
   const suffix = url.searchParams.get("suffix") || "2002-2014";
 
   // Perform the filtering on the cached data
   const filteredGeojson = filterGeojsonByPropertySuffix(cachedGeojson, suffix);
 
-  // Return only the necessary data to the client
   return {
     geojson: filteredGeojson,
     currentSuffix: suffix,
