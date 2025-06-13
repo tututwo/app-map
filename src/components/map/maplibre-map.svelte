@@ -24,7 +24,20 @@ import { topoToGeo, processCSVData, toDeckGLColor } from "../../lib/utils";
 import { GeoJsonLayer } from "@deck.gl/layers";
 const US_MAP_CENTER = [-98.5795, 39.8283];
 const US_MAP_ZOOM = 3.5;
-let { selectedMapMetric, csvData: real_data, geoid = $bindable() } = $props();
+const usMapGeoData: {
+  type: "FeatureCollection";
+  features: {
+    type: "Feature";
+    id: string;
+    geometry: {
+      type: "Polygon";
+      coordinates: [number, number][];
+    };
+    properties: Record<string, any>;
+  }[];
+} = topoToGeo(usmap);
+
+let { selectedMapMetric, data = [], geoid = $bindable() } = $props();
 
 const colorKey = "closure";
 const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
@@ -38,11 +51,26 @@ let mapPitch = $state(0);
 // --- Interaction State ---
 let hoveredCountyId = $state<string | null>(null);
 
-const { realData, getCountyData } = processCSVData(real_data);
+const mapData = $derived(new Map(data.map((d) => [d.geoid, d])));
+// merge mapData into geojson properties
+const geoData = $derived.by(() => {
+  const features = usMapGeoData.features.map((feature) => {
+    const countyData = mapData.get(feature.id);
+    return {
+      ...feature,
+      properties: { ...feature.properties, ...countyData },
+    };
+  });
+
+  return {
+    ...usMapGeoData,
+    features,
+  };
+});
 
 // --- Tooltip State ---
 let tooltipPosition = $state<{ x: number; y: number } | null>(null);
-let hoveredCountyData = $derived(hoveredCountyId ? getCountyData(hoveredCountyId) : null);
+let hoveredCountyData = $derived(hoveredCountyId ? mapData.get(hoveredCountyId) : null);
 let isTooltipOpen = $derived(!!hoveredCountyData);
 
 // --- Elements for Adaptive Positioning ---
@@ -54,13 +82,12 @@ const DEFAULT_BORDER_COLOR = [234, 234, 234, 250]; // Light gray
 const HIGHLIGHT_BORDER_WIDTH = 5.5; // Thicker border for highlight
 const DEFAULT_BORDER_WIDTH = 1; // Default border width
 
-const colorScale = d3
-  .scaleQuantize()
-  .domain(d3.extent(real_data, (d) => +d[colorKey]))
-  .range(colors);
-
-// --- Data Processing ---
-const geoData = topoToGeo(usmap);
+const colorScale = $derived.by(() => {
+  return d3
+    .scaleQuantize()
+    .domain(d3.extent(data, (d) => +d[colorKey]))
+    .range(colors);
+});
 
 function flyToCounty(countyZoomData: {
   longitude: number;
@@ -85,7 +112,7 @@ function handleMouseLeave() {
   tooltipPosition = null;
 }
 
-let layers = $derived([
+const layers = $derived([
   new GeoJsonLayer({
     id: "GeoJsonLayer",
     data: geoData,
@@ -95,12 +122,11 @@ let layers = $derived([
     pickable: true,
     autoHighlight: false,
 
-    getFillColor: (d: any) => {
-      const countyFeatureId = d.id;
-      const countyData = realData.get(countyFeatureId);
-      return countyData
-        ? toDeckGLColor(colorScale(parseFloat(countyData[colorKey])))
-        : toDeckGLColor("#cccccc");
+    getFillColor: (d) => {
+      const countyData = d.properties;
+      let color: string = colorScale(countyData[colorKey]) as any;
+      if (!color) color = "#cccccc";
+      return toDeckGLColor(color);
     },
     getLineColor: (d: any) => {
       const countyFeatureId = d.id;

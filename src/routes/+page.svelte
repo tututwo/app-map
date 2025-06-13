@@ -22,18 +22,31 @@ import * as RadioGroup from "$components/ui/radio-group/index.js";
 import { Label } from "$components/ui/label/index.js";
 
 // Visualizations
-import LineChart from "$components/lineChartBrush/lineChart.svelte";
+import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 import StackedBar from "$components/bar/stackedBar.svelte";
 
 // Map
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 
-// State management using Svelte 5 runes
-let { data } = $props();
-
-let timeRange = $state({ from: 2003, to: 2011 });
+let yearRange = $state<[number, number]>([2003, 2011]);
 let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
+
+let mapData = $state<any[]>([]);
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function fetchMapData(from: number, to: number) {
+  // wait for the brush transition animation to finish
+  // otherwise it lags
+  await sleep(300);
+  const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
+  mapData = await response.json();
+}
+
+$effect(() => {
+  fetchMapData(yearRange[0], yearRange[1]);
+});
 
 // Data ranges for the legend with corrected colors and widths
 const dataRanges = [
@@ -211,11 +224,7 @@ let geoid = $state("94404");
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section
-      aria-label="Line chart"
-      class="mb-2 h-[18vh] rounded border border-gray-200 px-5"
-      style="background-color: hsla(206, 100%, 96%, 1);"
-    >
+    <section aria-label="Line chart" class="mb-2 h-[20vh] rounded px-5">
       <header
         class="flex w-full justify-between"
         style="padding-left: {lineChartMargin.left - 15}px;"
@@ -226,24 +235,9 @@ let geoid = $state("94404");
         </h1>
         <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
-      <div class="w-fullitems-center flex h-[calc(18vh-50px)] justify-center">
-        <Figure>
-          <LineChart
-            data={dataLineChart}
-            {initialBrushSelection}
-            xTickPosition="top"
-            yTickPosition="left"
-            showChartBorder={true}
-            showXGridlines={true}
-            showYGridlines={true}
-            gridLineColor="hsla(0, 0%, 85%, 1)"
-            yTickCount={4}
-            circleRadius={6}
-            circleHoverRadius={9}
-            lineColor="hsla(0, 0%, 53%, 1)"
-            circleColor="hsla(211, 98%, 21%, 1)"
-            margin={lineChartMargin}
-          />
+      <div class="w-fullitems-center flex h-[calc(20vh-50px)] justify-center">
+        <Figure exclude="">
+          <LineChartBrush key="close" margin={lineChartMargin} bind:yearRange />
 
           {#snippet figcaption()}
             This is a caption for the line chart showing church closures over time.
@@ -266,7 +260,7 @@ let geoid = $state("94404");
         <div class="px-5">
           <!-- Time range -->
           <h3 class="my-2 text-xl font-medium text-[#00a651]">
-            From {timeRange.from} to {timeRange.to}
+            From {yearRange[0]} to {yearRange[1]}
           </h3>
 
           <!-- Controls grid with radio buttons and legend -->
@@ -347,7 +341,7 @@ let geoid = $state("94404");
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap {selectedMapMetric} csvData={data.data} bind:geoid />
+          <MapLibreMap {selectedMapMetric} data={mapData} bind:geoid />
         </section>
       </div>
 
