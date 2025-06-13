@@ -22,8 +22,8 @@ type IDatum = {
 type IProps = {
   data?: IDatum[];
   margin?: { top: number; right: number; bottom: number; left: number };
+  yearRange?: [number, number];
   key?: "close" | "closed_per_100k";
-  onchange?: (from: number, to: number) => void;
 };
 
 const exampleData = [
@@ -59,11 +59,20 @@ const MAX_YEAR_END = 2021;
 let {
   data = exampleData,
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
+  yearRange = $bindable([2003, 2011]),
   key = "close",
-  onchange = (from, to) => {
-    console.log("selected year range:", from, to);
-  },
 }: IProps = $props();
+
+// Visual styling props - matching lineChart.svelte aesthetic
+const chartBackgroundColor = "hsla(206, 100%, 96%, 1)";
+const lineColor = "hsla(0, 0%, 53%, 1)";
+const circleColor = "hsla(211, 99%, 21%, 1)";
+const circleHoverColor = "hsla(211, 99%, 35%, 1)";
+const gridLineColor = "hsla(0, 0%, 80%, 1)";
+const circleRadius = 6;
+const circleHoverRadius = 8;
+const tickLength = 6;
+const tickOffset = 20;
 
 // Get responsive dimensions from Figure context
 const figure: any = getContext("Figure");
@@ -103,10 +112,15 @@ const line = $derived(
 const pathData = $derived(line(data));
 
 // Brush state - store year range instead of pixel coordinates
-let brushGroup = $state<SVGGElement>();
+let brushGroupElm = $state<SVGGElement>();
 let brushSelection = $state<[number, number] | null>(null);
-let yearRangeSelection = $state<[number, number] | null>(null);
+let yearRangeSelection = $state<[number, number]>(yearRange);
 let movingHandle = $state<"start" | "end" | null>(null);
+
+const yearSpan = $derived(yearRangeSelection[1] - yearRangeSelection[0]);
+
+// Hover state for circles
+let hoveredPoint = $state<IDatum | null>(null);
 
 const brush = d3
   .brushX()
@@ -115,37 +129,57 @@ const brush = d3
     // svelte-ignore state_referenced_locally
     [innerWidth, innerHeight],
   ])
+  .handleSize(8)
   .keyModifiers(false)
   .on("brush", onBrush)
   .on("end", onBrushEnd);
 
 $effect(() => {
   // initialize brush
-  if (brushGroup) brush(d3.select(brushGroup));
+  if (brushGroupElm) {
+    const brushGroup = d3.select(brushGroupElm).call(brush);
+    brushGroup.select(".selection").attr("fill", "white").attr("fill-opacity", "1");
+    // prevent clicking on the overlay, so user cannot de-select the brushed range
+    brushGroup.select(".overlay").attr("pointer-events", "none");
+    brushGroup
+      .selectAll(".handle")
+      .attr("fill", "hsla(162, 100%, 38%, 1)")
+      .attr("stroke", "white")
+      .attr("stroke-width", 2)
+      .attr("rx", 2);
+  }
 });
 
+function redrawBrush() {
+  if (brushGroupElm && yearRangeSelection) {
+    const [year0, year1] = yearRangeSelection;
+    const x0 = xScale(year0);
+    const x1 = xScale(year1);
+    // redraw
+    d3.select(brushGroupElm).transition().call(brush.move, [x0, x1]);
+  }
+}
 // redraw brush when innerWidth or innerHeight changes
 $effect(() => {
-  if (!brushGroup) return;
+  if (!brushGroupElm) return;
   brush.extent([
     [0, 0],
     [innerWidth, innerHeight],
   ]);
   // HACK: somehow setting brush.extent doesn't touch the internal `state.extent`, so set it manually
   // @ts-ignore
-  brushGroup.__brush.extent = brush.extent()();
+  brushGroupElm.__brush.extent = brush.extent()();
 
   // MUST be untracked, otherwise it will cause a loop
-  untrack(() => {
-    if (brushGroup && yearRangeSelection) {
-      const [year0, year1] = yearRangeSelection;
-      const x0 = xScale(year0);
-      const x1 = xScale(year1);
-      // redraw
-      d3.select(brushGroup).transition().call(brush.move, [x0, x1]);
-    }
-  });
+  untrack(redrawBrush);
 });
+
+function updateYearRange(year0: number, year1: number) {
+  if (year0 !== yearRange[0] || year1 !== yearRange[1]) {
+    yearRange = [year0, year1];
+    yearRangeSelection = [year0, year1];
+  }
+}
 
 function onBrush(event: D3BrushEvent<IDatum>) {
   if (!event.selection) return;
@@ -169,6 +203,10 @@ function onBrush(event: D3BrushEvent<IDatum>) {
 
   // Update previous selection for next comparison
   brushSelection = [x0, x1];
+  // Convert pixel coordinates to years
+  let year0 = Math.round(xScale.invert(x0));
+  let year1 = Math.round(xScale.invert(x1));
+  yearRangeSelection = [year0, year1];
 }
 
 let _preventReEnter = false;
@@ -176,10 +214,11 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
   if (_preventReEnter) return (_preventReEnter = false);
 
   if (!event.selection) {
+    redrawBrush();
     // Clear selection
-    yearRangeSelection = null;
-    movingHandle = null;
-    brushSelection = null;
+    // yearRangeSelection = null;
+    // movingHandle = null;
+    // brushSelection = null;
     return;
   }
 
@@ -191,21 +230,29 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
   [year0, year1] = adjustYearRange(year0, year1);
 
   // Update state and notify parent
-  yearRangeSelection = [year0, year1];
-  onchange?.(year0, year1);
+  updateYearRange(year0, year1);
 
   // Update the brush position to reflect final constrained values
   const finalX0 = xScale(year0);
   const finalX1 = xScale(year1);
 
-  if (brushGroup && (Math.abs(finalX0 - x0) > 1 || Math.abs(finalX1 - x1) > 1)) {
+  if (brushGroupElm && (Math.abs(finalX0 - x0) > 1 || Math.abs(finalX1 - x1) > 1)) {
     _preventReEnter = true;
-    d3.select(brushGroup).transition().call(brush.move, [finalX0, finalX1]);
+    d3.select(brushGroupElm).transition().call(brush.move, [finalX0, finalX1]);
   }
 
   // Reset
   movingHandle = null;
   brushSelection = [finalX0, finalX1];
+}
+
+// Mouse event handlers for circle hover
+function handleCircleMouseEnter(point: IDatum) {
+  hoveredPoint = point;
+}
+
+function handleCircleMouseLeave() {
+  hoveredPoint = null;
 }
 
 function adjustYearRange(year0: number, year1: number) {
@@ -252,102 +299,156 @@ function adjustYearRange(year0: number, year1: number) {
 }
 </script>
 
-<svg {width} {height} class="overflow-visible">
-  <!-- Main chart group -->
-  <g transform="translate({margin.left}, {margin.top})">
-    <!-- Grid lines -->
-    <g class="grid opacity-20">
-      {#each xTicks as tick}
-        <line
-          x1={tick.x}
-          x2={tick.x}
-          y1={0}
-          y2={innerHeight}
-          stroke="currentColor"
-          stroke-width="0.5"
-        />
-      {/each}
-      {#each yTicks as tick}
-        <line
-          x1={0}
-          x2={innerWidth}
-          y1={tick.y}
-          y2={tick.y}
-          stroke="currentColor"
-          stroke-width="0.5"
-        />
-      {/each}
-    </g>
+<div class="relative h-full w-full">
+  <svg {width} {height} class="h-full w-full">
+    <!-- Chart area with margin -->
+    <g transform="translate({margin.left}, {margin.top})">
+      <!-- Background color -->
+      <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
 
-    <!-- Line chart -->
-    <path
-      d={pathData}
-      fill="none"
-      stroke="#3b82f6"
-      stroke-width="2"
-      class="transition-all duration-300"
-    />
+      <!-- Brush container (rendered before circles so circles are on top) -->
+      <g bind:this={brushGroupElm} class="brush-group"></g>
 
-    <!-- Data points -->
-    {#each data as point}
-      <circle
-        cx={xScale(point.year)}
-        cy={yScale(point[key])}
-        r="3"
-        fill="#3b82f6"
-        class="hover:r-4 transition-all duration-200"
+      <!-- X-axis grid lines -->
+      <g class="x-grid grid">
+        {#each xTicks as tick}
+          <line
+            x1={tick.x}
+            y1={0}
+            x2={tick.x}
+            y2={innerHeight}
+            stroke={gridLineColor}
+            stroke-width="1"
+            opacity="0.5"
+          />
+        {/each}
+      </g>
+
+      <!-- Y-axis grid lines -->
+      <g class="y-grid grid">
+        {#each yTicks as tick}
+          <line
+            x1={0}
+            y1={tick.y}
+            x2={innerWidth}
+            y2={tick.y}
+            stroke={gridLineColor}
+            stroke-width="1"
+            opacity="0.5"
+          />
+        {/each}
+      </g>
+
+      <!-- Chart border (enclosing rectangle) -->
+      <rect
+        x={0}
+        y={0}
+        width={innerWidth}
+        height={innerHeight}
+        fill="none"
+        stroke={gridLineColor}
+        stroke-width="1.5"
       />
-    {/each}
 
-    <!-- X-axis -->
-    <g transform="translate(0, {innerHeight})">
-      <line x1={0} x2={innerWidth} stroke="currentColor" stroke-width="1" />
-      {#each xTicks as tick}
-        <g transform="translate({tick.x}, 0)">
-          <line y1={0} y2={6} stroke="currentColor" />
-          <text y={20} text-anchor="middle" class="fill-current text-sm">{tick.value}</text>
-        </g>
-      {/each}
-      <text x={innerWidth / 2} y={50} text-anchor="middle" class="fill-current text-sm font-medium"
-        >Year</text
-      >
+      <!-- X-axis ticks and labels -->
+      <g class="x-axis-top">
+        {#each xTicks as tick}
+          <g transform="translate({tick.x}, 0)">
+            <line y1={0} y2={-tickLength} stroke="currentColor" class="text-gray-400" />
+            <text
+              y={-tickOffset}
+              text-anchor="middle"
+              dominant-baseline="middle"
+              class="fill-gray-600 text-xs font-medium"
+            >
+              {tick.value}
+            </text>
+          </g>
+        {/each}
+      </g>
+
+      <!-- Y-axis ticks and labels -->
+      <g class="y-axis-left">
+        {#each yTicks as tick}
+          <g transform="translate(0, {tick.y})">
+            <line x1={0} x2={-tickLength} stroke="currentColor" class="text-gray-400" />
+            <text
+              x={-tickOffset}
+              text-anchor="end"
+              dominant-baseline="middle"
+              class="fill-gray-600 text-xs font-medium"
+            >
+              {tick.value}
+            </text>
+          </g>
+        {/each}
+      </g>
+
+      <!-- Line path -->
+      <path
+        d={pathData}
+        class="fill-none stroke-2"
+        stroke={lineColor}
+        stroke-linejoin="round"
+        stroke-linecap="round"
+      />
+
+      <!-- Data points (rendered after brush so they're on top) -->
+      <g class="data-points" style="pointer-events: all;">
+        {#each data as point}
+          <circle
+            cx={xScale(point.year)}
+            cy={yScale(point[key])}
+            r={circleRadius}
+            fill={circleColor}
+            stroke="white"
+            stroke-width="2"
+            class="cursor-pointer transition-all duration-200 ease-out"
+            style="filter: none;"
+            role="button"
+            tabindex="0"
+            aria-label="Data point for {point.year}: {point[key]}"
+            onmouseenter={() => handleCircleMouseEnter(point)}
+            onmouseleave={handleCircleMouseLeave}
+            onfocus={() => handleCircleMouseEnter(point)}
+            onblur={handleCircleMouseLeave}
+          />
+        {/each}
+      </g>
     </g>
+  </svg>
 
-    <!-- Y-axis -->
-    <g>
-      <line y1={0} y2={innerHeight} stroke="currentColor" stroke-width="1" />
-      {#each yTicks as tick}
-        <g transform="translate(0, {tick.y})">
-          <line x1={-6} x2={0} stroke="currentColor" />
-          <text x={-10} dy="0.35em" text-anchor="end" class="fill-current text-sm"
-            >{tick.value}</text
-          >
-        </g>
-      {/each}
-      <text
-        x={-50}
-        y={innerHeight / 2}
-        text-anchor="middle"
-        transform="rotate(-90, {-50}, {innerHeight / 2})"
-        class="fill-current text-sm font-medium"
-      >
-        {key === "close" ? "Close" : "Closed per 100k"}
-      </text>
-    </g>
-  </g>
+  {#if brushSelection && yearRangeSelection}
+    <div
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
+      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + 5}px;`}
+      aria-hidden={!brushSelection}
+    >
+      from <strong>{yearRangeSelection[0]}</strong>
+    </div>
 
-  <!-- Brush -->
-  <g bind:this={brushGroup} class="brush" transform="translate({margin.left}, {margin.top})"></g>
-</svg>
+    <div
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
+      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + 5}px;`}
+      aria-hidden={!brushSelection}
+    >
+      to <strong>{yearRangeSelection[1]}</strong>
+    </div>
 
-<style>
-:global(.brush .selection) {
-  fill: rgba(59, 130, 246, 0.2);
-  stroke: #3b82f6;
-  stroke-width: 1;
-}
-
-:global(.brush .handle) {
-  fill: #3b82f6;
-}
-</style>
+    <div
+      class="absolute z-10 -translate-x-1/2 transform text-xs font-medium"
+      class:text-yale-green={yearSpan >= 5}
+      class:text-yale-red={yearSpan < 5}
+      style={`left: ${margin.left + (brushSelection[0] + brushSelection[1]) / 2}px; top: ${
+        margin.top + innerHeight + 5
+      }px;`}
+      aria-hidden={!brushSelection}
+    >
+      {#if yearSpan < 5}
+        Minimum 5 years
+      {:else}
+        {yearSpan} years
+      {/if}
+    </div>
+  {/if}
+</div>
