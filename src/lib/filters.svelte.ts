@@ -10,18 +10,34 @@ class DataFilters {
   /** 0: Number of closed church, 1: Density of closed church: per 100k population, 2: Density of closed church: per sqkm */
   metric = $state(0);
   metrics = [
-    { label: "Number of closed church", description: "", value: 0 },
     {
-      label: "Density of closed church: per 100k population",
-      description: "Density of closed church: per 100k population",
+      label: "Number of closed church",
+      description: "Number of closed churches",
+      value: 0,
+      key: "closure_count",
+      colors: ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+    },
+    {
+      label: "Rate of closed churches per 10,000 population",
+      description: "Persistence of open churches",
+      keyName: "closure_rate_per_10000",
       value: 1,
+      colors: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
     },
     {
-      label: "Density of closed church: per sqkm",
-      description: "Density of closed church: per sqkm",
+      label: "Persistence of open churches",
+      description: "Persistence of open churches",
+      keyName: "persistence",
       value: 2,
+      colors: ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
     },
-  ] as { label: string; description: string; value: 0 | 1 | 2 }[];
+  ] as {
+    label: string;
+    description: string;
+    keyName: string;
+    value: 0 | 1 | 2;
+    colors: string[];
+  }[];
 
   setCounty = (county: string) => {
     this.county = county;

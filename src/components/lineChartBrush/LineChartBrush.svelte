@@ -105,7 +105,7 @@ const line = $derived(
     .line<IDatum>()
     .x((d) => xScale(d.year))
     .y((d) => yScale(d[key]))
-    .curve(d3.curveMonotoneX)
+  // .curve(d3.curveMonotoneX)
 );
 
 // Path data

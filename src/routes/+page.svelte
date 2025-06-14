@@ -48,15 +48,6 @@ $effect(() => {
   fetchMapData(yearRange[0], yearRange[1]);
 });
 
-// Data ranges for the legend with corrected colors and widths
-const dataRanges = [
-  { label: "1-12", color: "#E9F6FF", textColor: "black" },
-  { label: "13-24", color: "#BCDDF9", textColor: "black" },
-  { label: "25-36", color: "#88A5EA", textColor: "black" },
-  { label: "37-48", color: "#B389DD", textColor: "white" },
-  { label: "49-60", color: "#CA5D99", textColor: "white" },
-];
-
 // Event handlers
 function handleLocationChange(e: { target: { value: string } }) {
   selectedLocation = e.target.value;
@@ -210,7 +201,19 @@ const stackedBarData = $derived(datasets[currentDataset]);
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
-let geoid = $state("94404");
+let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].keyName);
+let selectedMapColorPalette = $derived(dataFilters.metrics[selectedMapMetric].colors);
+
+// Data ranges for the legend with corrected colors and widths
+const dataRanges = $derived([
+  { label: "1-12", color: dataFilters.metrics[selectedMapMetric].colors[0], textColor: "black" },
+  { label: "13-24", color: dataFilters.metrics[selectedMapMetric].colors[1], textColor: "black" },
+  { label: "25-36", color: dataFilters.metrics[selectedMapMetric].colors[2], textColor: "black" },
+  { label: "37-48", color: dataFilters.metrics[selectedMapMetric].colors[3], textColor: "white" },
+  { label: "49-60", color: dataFilters.metrics[selectedMapMetric].colors[4], textColor: "white" },
+]);
+
+let geoid = $state("");
 </script>
 
 <div class="flex h-screen">
@@ -341,7 +344,12 @@ let geoid = $state("94404");
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap {selectedMapMetric} data={mapData} bind:geoid />
+          <MapLibreMap
+            {selectedMapColorKey}
+            colors={selectedMapColorPalette}
+            data={mapData}
+            bind:geoid
+          />
         </section>
       </div>
 

@@ -37,10 +37,14 @@ const usMapGeoData: {
   }[];
 } = topoToGeo(usmap);
 
-let { selectedMapMetric, data = [], geoid = $bindable() } = $props();
+let {
+  selectedMapColorKey,
+  data = [],
+  geoid = $bindable(),
+  colors = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+} = $props();
 
 const colorKey = "closure";
-const colors = ["#E9F6FF", "#BCDDF9", "#88A5EA", "#B389DD", "#CA5D99"];
 
 // --- Map State ---
 let mapCenter = $state<[number, number]>(US_MAP_CENTER as [number, number]);
@@ -68,6 +72,8 @@ const geoData = $derived.by(() => {
   };
 });
 
+$inspect(geoData);
+
 // --- Tooltip State ---
 let tooltipPosition = $state<{ x: number; y: number } | null>(null);
 let hoveredCountyData = $derived(hoveredCountyId ? mapData.get(hoveredCountyId) : null);
@@ -82,11 +88,14 @@ const DEFAULT_BORDER_COLOR = [234, 234, 234, 250]; // Light gray
 const HIGHLIGHT_BORDER_WIDTH = 5.5; // Thicker border for highlight
 const DEFAULT_BORDER_WIDTH = 1; // Default border width
 
-const colorScale = $derived.by(() => {
-  return d3
-    .scaleQuantize()
-    .domain(d3.extent(data, (d) => +d[colorKey]))
-    .range(colors);
+let colorScale = $derived.by(() => {
+  console.log("Recalculating colorScale with key:", selectedMapColorKey);
+  if (!selectedMapColorKey || data.length === 0) return () => "#ccc";
+
+  const domain = d3.extent(data, (d) => +d[selectedMapColorKey]);
+  if (domain[0] === undefined || domain[1] === undefined) return () => "#ccc";
+
+  return d3.scaleQuantize().domain(domain).range(colors);
 });
 
 function flyToCounty(countyZoomData: {
@@ -124,7 +133,8 @@ const layers = $derived([
 
     getFillColor: (d) => {
       const countyData = d.properties;
-      let color: string = colorScale(countyData[colorKey]) as any;
+      if (!selectedMapColorKey) return toDeckGLColor("#ccc");
+      let color: string = colorScale(countyData[selectedMapColorKey]) as any;
       if (!color) color = "#cccccc";
       return toDeckGLColor(color);
     },
@@ -157,6 +167,7 @@ const layers = $derived([
       tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
     },
     updateTriggers: {
+      getFillColor: [selectedMapColorKey, colors],
       getLineColor: [geoid, hoveredCountyId],
       getLineWidth: [geoid, hoveredCountyId],
     },
