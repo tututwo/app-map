@@ -3,7 +3,7 @@
 <script lang="ts">
 import { invalidate } from "$app/navigation";
 import { page } from "$app/state";
-
+import MetricData from "$data/sideMetricData.csv";
 import { onMount } from "svelte";
 import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
 
@@ -27,6 +27,8 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 
 // Map
 import MapLibreMap from "$components/map/maplibre-map.svelte";
+
+import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 
 let yearRange = $state<[number, number]>([2003, 2011]);
 let selectedLocation = $state("All locations");
@@ -65,23 +67,6 @@ onMount(() => {
 });
 
 // Brushable line chart
-
-// Data points
-const dataLineChart = [
-  { date: "2001-01-01T00:00:00.000Z", close: 70, closed_per_100k: 0.2 },
-  { date: "2003-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
-  { date: "2005-01-01T00:00:00.000Z", close: 120, closed_per_100k: 0.3 },
-  { date: "2007-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
-  { date: "2009-01-01T00:00:00.000Z", close: 30, closed_per_100k: 0.05 },
-  { date: "2011-01-01T00:00:00.000Z", close: 50, closed_per_100k: 0.1 },
-  { date: "2013-01-01T00:00:00.000Z", close: 20, closed_per_100k: 0.05 },
-  { date: "2015-01-01T00:00:00.000Z", close: 90, closed_per_100k: 0.2 },
-  { date: "2017-01-01T00:00:00.000Z", close: 120, closed_per_100k: 0.3 },
-  { date: "2019-01-01T00:00:00.000Z", close: 110, closed_per_100k: 0.25 },
-  { date: "2021-01-01T00:00:00.000Z", close: 80, closed_per_100k: 0.2 },
-  { date: "2023-01-01T00:00:00.000Z", close: 40, closed_per_100k: 0.1 },
-  { date: "2025-01-01T00:00:00.000Z", close: 20, closed_per_100k: 0.05 },
-];
 
 const initialBrushSelection = [
   new Date("2003-01-01T00:00:00.000Z"),
@@ -137,65 +122,7 @@ const datasets: Record<
     { year: 2011, negative: -4, neutral: 20, positive: 14 },
   ],
 };
-const statistics = $state([
-  {
-    id: "college-degree",
-    title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
-    currentValueDisplay: "17%",
-    currentValue: 17,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 35,
-    averageLabel: "US Average",
-  },
-  {
-    id: "median-rent",
-    title: "Median rent (USD)",
-    currentValueDisplay: "$2039",
-    currentValue: 2039,
-    minValue: 200,
-    maxValue: 10000,
-    minLabel: "200",
-    maxLabel: "10k",
-    averageValue: 5500, // Estimated from image
-    // No averageLabel for this one based on image, but line is present
-  },
-  {
-    id: "renters-percent",
-    title: "Percent of people who are renters",
-    currentValueDisplay: "87%",
-    currentValue: 87,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 70, // Estimated from image
-  },
-  {
-    id: "poverty-level",
-    title: "Percent below the federal poverty level",
-    currentValueDisplay: "17%",
-    currentValue: 17,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 30, // Estimated from image
-  },
-  {
-    id: "household-income",
-    title: "Median household income (USD)",
-    currentValueDisplay: "$30.5k",
-    currentValue: 30500,
-    minValue: 0,
-    maxValue: 80000,
-    minLabel: "0",
-    maxLabel: "80k",
-    averageValue: 45000, // Estimated from image
-  },
-]);
+
 // Get current data based on selection
 const stackedBarData = $derived(datasets[currentDataset]);
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
@@ -233,7 +160,106 @@ const dataRanges = $derived([
   },
 ]);
 
-let geoid = $state("");
+let geoid = $state("00000");
+
+// ----------------------------------------------------------------
+// ----------------------Metric Section----------------------
+// ----------------------------------------------------------------
+
+let selectedSideMetricData = $derived(MetricData.filter((d) => d.geoid === geoid));
+// Usage example:
+const fieldConfigs = [
+  {
+    id: "median-rent",
+    field: "n_med_rent",
+    title: "Median rent (USD)",
+    type: "currency",
+    range: [200, 10000],
+    labels: ["200", "10k"],
+    average: 1200,
+  },
+  {
+    id: "renters-percent",
+    field: "p_renter",
+    title: "Percent of people who are renters",
+    type: "percent",
+    range: [0, 100],
+    labels: ["0%", "100%"],
+    average: 36,
+  },
+  {
+    id: "poverty-level",
+    field: "p_poverty",
+    title: "Percent below the federal poverty level",
+    type: "percent",
+    range: [0, 100],
+    labels: ["0%", "100%"],
+    average: 12,
+    averageLabel: "US Average",
+  },
+];
+
+let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
+
+// const statistics = $state([
+//   {
+//     id: "college-degree",
+//     title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
+//     currentValueDisplay: "17%",
+//     currentValue: 17,
+//     minValue: 0,
+//     maxValue: 100,
+//     minLabel: "0%",
+//     maxLabel: "100%",
+//     averageValue: 35,
+//     averageLabel: "US Average",
+//   },
+//   {
+//     id: "median-rent",
+//     title: "Median rent (USD)",
+//     currentValueDisplay: "$2039",
+//     currentValue: 2039,
+//     minValue: 200,
+//     maxValue: 10000,
+//     minLabel: "200",
+//     maxLabel: "10k",
+//     averageValue: 5500, // Estimated from image
+//     // No averageLabel for this one based on image, but line is present
+//   },
+//   {
+//     id: "renters-percent",
+//     title: "Percent of people who are renters",
+//     currentValueDisplay: "87%",
+//     currentValue: 87,
+//     minValue: 0,
+//     maxValue: 100,
+//     minLabel: "0%",
+//     maxLabel: "100%",
+//     averageValue: 70, // Estimated from image
+//   },
+//   {
+//     id: "poverty-level",
+//     title: "Percent below the federal poverty level",
+//     currentValueDisplay: "17%",
+//     currentValue: 17,
+//     minValue: 0,
+//     maxValue: 100,
+//     minLabel: "0%",
+//     maxLabel: "100%",
+//     averageValue: 30, // Estimated from image
+//   },
+//   {
+//     id: "household-income",
+//     title: "Median household income (USD)",
+//     currentValueDisplay: "$30.5k",
+//     currentValue: 30500,
+//     minValue: 0,
+//     maxValue: 80000,
+//     minLabel: "0",
+//     maxLabel: "80k",
+//     averageValue: 45000, // Estimated from image
+//   },
+// ]);
 </script>
 
 <div class="flex h-screen">

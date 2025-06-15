@@ -214,6 +214,7 @@ $effect(() => {
           .attr("fill", (d) =>
             getSegmentColor(series.key, hoveredBar === d.data && hoveredSegment?.key === series.key)
           ),
+      // Inside the main animation $effect's .join()
       (exit) =>
         exit.transition(t).attr("y", yScale()(0)).attr("height", 0).style("opacity", 0).remove()
     );
@@ -258,17 +259,20 @@ $effect(() => {
 
     const t = d3.transition().duration(300).ease(d3.easeCubicOut);
 
-    // Update all bar positions and sizes
+    // Instead of selecting all segments at once, select the groups first
     d3.select(barsContainer)
-      .selectAll(".bar-segment")
-      .transition(t)
-      .attr("x", (d) => xScale(d.data.year))
-      .attr("width", xScale.bandwidth())
-      .attr("y", (d) => {
-        const series = d3.select(d3.select(this).node().parentNode).datum();
-        return Math.min(yScale()(d[0]), yScale()(d[1]));
-      })
-      .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
+      .selectAll(".bar-group") // Select the series group
+      .each(function (series) {
+        // Get the series data
+        d3.select(this)
+          .selectAll(".bar-segment") // Now select the bars within this group
+          .transition(t)
+          .attr("x", (d) => xScale(d.data.year))
+          .attr("width", xScale.bandwidth())
+          // Now we don't need to find the parent, because we already have `series`
+          .attr("y", (d) => Math.min(yScale()(d[0]), yScale()(d[1])))
+          .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
+      });
   }
 });
 </script>
