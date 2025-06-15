@@ -200,66 +200,6 @@ const fieldConfigs = [
 ];
 
 let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
-
-// const statistics = $state([
-//   {
-//     id: "college-degree",
-//     title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
-//     currentValueDisplay: "17%",
-//     currentValue: 17,
-//     minValue: 0,
-//     maxValue: 100,
-//     minLabel: "0%",
-//     maxLabel: "100%",
-//     averageValue: 35,
-//     averageLabel: "US Average",
-//   },
-//   {
-//     id: "median-rent",
-//     title: "Median rent (USD)",
-//     currentValueDisplay: "$2039",
-//     currentValue: 2039,
-//     minValue: 200,
-//     maxValue: 10000,
-//     minLabel: "200",
-//     maxLabel: "10k",
-//     averageValue: 5500, // Estimated from image
-//     // No averageLabel for this one based on image, but line is present
-//   },
-//   {
-//     id: "renters-percent",
-//     title: "Percent of people who are renters",
-//     currentValueDisplay: "87%",
-//     currentValue: 87,
-//     minValue: 0,
-//     maxValue: 100,
-//     minLabel: "0%",
-//     maxLabel: "100%",
-//     averageValue: 70, // Estimated from image
-//   },
-//   {
-//     id: "poverty-level",
-//     title: "Percent below the federal poverty level",
-//     currentValueDisplay: "17%",
-//     currentValue: 17,
-//     minValue: 0,
-//     maxValue: 100,
-//     minLabel: "0%",
-//     maxLabel: "100%",
-//     averageValue: 30, // Estimated from image
-//   },
-//   {
-//     id: "household-income",
-//     title: "Median household income (USD)",
-//     currentValueDisplay: "$30.5k",
-//     currentValue: 30500,
-//     minValue: 0,
-//     maxValue: 80000,
-//     minLabel: "0",
-//     maxLabel: "80k",
-//     averageValue: 45000, // Estimated from image
-//   },
-// ]);
 </script>
 
 <div class="flex h-screen">

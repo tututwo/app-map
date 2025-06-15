@@ -291,6 +291,11 @@ export const zoomToWhichState = {
 //   return zoomToWhichCounty;
 // }
 export const zoomToWhichCounty = {
+  "00000": {
+    longitude: -98.5795,
+    latitude: 39.8283,
+    zoom: 3.5,
+  },
   "10001": {
     longitude: -75.5308920708234,
     latitude: 39.132901807532214,

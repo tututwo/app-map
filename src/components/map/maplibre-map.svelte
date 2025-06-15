@@ -131,7 +131,7 @@ const baseLayer = $derived(
     transitions: {
       getFillColor: {
         type: "interpolation", // This is the default type
-        duration: 800, // Animation duration in milliseconds
+        duration: 300, // Animation duration in milliseconds
         easing: cubicOut, // A simple ease-out function
       },
     },
@@ -162,6 +162,7 @@ function flyToCounty(countyZoomData: {
   bearing?: number;
   pitch?: number;
 }) {
+  console.log("zoom to", geoid);
   mapCenter = [countyZoomData.longitude, countyZoomData.latitude];
   mapZoom = countyZoomData.zoom * 0.88;
   if (countyZoomData.bearing !== undefined) mapBearing = countyZoomData.bearing;
@@ -193,10 +194,15 @@ $effect(() => {
     class="h-full min-h-[200px] w-full"
     style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
     minZoom={2}
-    bind:zoom={mapZoom}
     bind:pitch={mapPitch}
     bind:bearing={mapBearing}
-    bind:center={mapCenter}
+    zoom={mapZoom}
+    center={mapCenter}
+    speed={2}
+    curve={1}
+    essential={true}
+    maxDuration={2300}
+    easing={cubicOut}
   >
     <NavigationControl showCompass={false} position="top-left" />
     <CustomControl position="top-left">
@@ -205,11 +211,7 @@ $effect(() => {
         class="flex! size-[29px] items-center justify-center rounded-md"
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() => {
-          flyToCounty({
-            longitude: US_MAP_CENTER[0],
-            latitude: US_MAP_CENTER[1],
-            zoom: US_MAP_ZOOM,
-          });
+          geoid = "00000";
         }}
       ></button>
     </CustomControl>
