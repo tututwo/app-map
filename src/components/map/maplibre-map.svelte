@@ -2,7 +2,7 @@
 // CRITICAL: Import and apply the patch BEFORE anything else
 import { patchMapLibreGL } from "$lib/maplibre-patch";
 
-import { onMount } from "svelte";
+import { cubicOut } from "svelte/easing";
 import * as d3 from "d3";
 
 import MapLibre from "$components/map/maplibreLib/MapLibre.svelte";
@@ -108,7 +108,7 @@ const baseLayer = $derived(
 
     getFillColor: (d) => {
       const countyData = d.properties;
-      if (!selectedMapColorKey) return toDeckGLColor("#ccc");
+      if (!selectedMapColorKey) return toDeckGLColor("#ccc", 200);
       let color: string = colorScale(countyData[selectedMapColorKey]) as any;
       return toDeckGLColor(color || "#cccccc");
     },
@@ -126,6 +126,14 @@ const baseLayer = $derived(
     },
     updateTriggers: {
       getFillColor: [selectedMapColorKey, selectedMapColorRange],
+    },
+    // --- ADD THIS BLOCK TO ENABLE ANIMATION ---
+    transitions: {
+      getFillColor: {
+        type: "interpolation", // This is the default type
+        duration: 800, // Animation duration in milliseconds
+        easing: cubicOut, // A simple ease-out function
+      },
     },
   })
 );
