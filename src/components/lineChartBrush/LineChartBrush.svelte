@@ -97,7 +97,7 @@ const yScale = $derived(
 
 // Axis ticks
 const xTicks = $derived(xScale.ticks().map((d) => ({ value: d, x: xScale(d) })));
-const yTicks = $derived(yScale.ticks(6).map((d) => ({ value: d, y: yScale(d) })));
+const yTicks = $derived(yScale.ticks(3).map((d) => ({ value: d, y: yScale(d) })));
 
 // Line generator
 const line = $derived(

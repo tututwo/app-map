@@ -14,6 +14,7 @@ class DataFilters {
       label: "Number of closed church",
       description: "Number of closed churches",
       value: 0,
+      legendText: ["1-12", "13-24", "25-36", "37-48", "49-60"],
       colorKey: "closure",
       colorRange: ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
       colorDomain: [0, 1],
@@ -21,24 +22,28 @@ class DataFilters {
     {
       label: "Rate of closed churches per 10,000 population",
       description: "Persistence of open churches",
-      colorKey: "closure_rate_per_10000",
+
       value: 1,
+      legendText: ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"],
+      colorKey: "closure_rate_per_10000",
       colorRange: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
       colorDomain: [0, 1],
     },
     {
       label: "Persistence of open churches",
       description: "Persistence of open churches",
-      colorKey: "persistence",
       value: 2,
+      legendText: ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"],
+      colorKey: "persistence",
       colorRange: ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
       colorDomain: [0, 1],
     },
   ] as {
     label: string;
     description: string;
-    colorKey: string;
     value: 0 | 1 | 2;
+    legendText: string[];
+    colorKey: string;
     colorRange: string[];
     colorDomain: [number, number];
   }[];

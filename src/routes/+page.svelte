@@ -29,6 +29,7 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 import MapLibreMap from "$components/map/maplibre-map.svelte";
 
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
+import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 
 let yearRange = $state<[number, number]>([2003, 2011]);
 let selectedLocation = $state("All locations");
@@ -132,33 +133,44 @@ let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].colorK
 let selectedMapColorDomain = $derived(dataFilters.metrics[selectedMapMetric].colorDomain);
 let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colorRange);
 // Data ranges for the legend with corrected colors and widths
-const dataRanges = $derived([
-  {
-    label: "1-12",
-    color: dataFilters.metrics[selectedMapMetric].colorRange[0],
-    textColor: "black",
-  },
-  {
-    label: "13-24",
-    color: dataFilters.metrics[selectedMapMetric].colorRange[1],
-    textColor: "black",
-  },
-  {
-    label: "25-36",
-    color: dataFilters.metrics[selectedMapMetric].colorRange[2],
-    textColor: "black",
-  },
-  {
-    label: "37-48",
-    color: dataFilters.metrics[selectedMapMetric].colorRange[3],
-    textColor: "white",
-  },
-  {
-    label: "49-60",
-    color: dataFilters.metrics[selectedMapMetric].colorRange[4],
-    textColor: "white",
-  },
-]);
+// Usage in your Svelte component:
+let dataRanges = $derived.by(() => {
+  const selectedMetric = dataFilters.metrics[selectedMapMetric];
+
+  return selectedMetric.legendText.map((label, index) => ({
+    label,
+    color: selectedMetric.colorRange[index],
+    // Use AAA compliant text color determination
+    textColor: getAccessibleTextColor(selectedMetric.colorRange[index], "normal"),
+  }));
+});
+// const dataRanges = $derived([
+//   {
+//     label: "1-12",
+//     color: dataFilters.metrics[selectedMapMetric].colorRange[0],
+//     textColor: "black",
+//   },
+//   {
+//     label: "13-24",
+//     color: dataFilters.metrics[selectedMapMetric].colorRange[1],
+//     textColor: "black",
+//   },
+//   {
+//     label: "25-36",
+//     color: dataFilters.metrics[selectedMapMetric].colorRange[2],
+//     textColor: "black",
+//   },
+//   {
+//     label: "37-48",
+//     color: dataFilters.metrics[selectedMapMetric].colorRange[3],
+//     textColor: "white",
+//   },
+//   {
+//     label: "49-60",
+//     color: dataFilters.metrics[selectedMapMetric].colorRange[4],
+//     textColor: "white",
+//   },
+// ]);
 
 let geoid = $state("00000");
 
