@@ -21,6 +21,7 @@ import usmap from "../../data/counties-10m.json";
 import { topoToGeo, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
+import type { Map } from "maplibre-gl";
 
 // --- Style constants ---
 const US_MAP_CENTER = [-98.5795, 39.8283];
@@ -51,6 +52,7 @@ let {
 const colorKey = "closure";
 
 // --- Map State (Source of Truth) ---
+let mapInstance = $state<Map | undefined>(undefined);
 let mapCenter = $state<[number, number]>(US_MAP_CENTER as [number, number]);
 let mapZoom = $state(US_MAP_ZOOM);
 let mapBearing = $state(0);
@@ -94,8 +96,6 @@ const highlightedFeature = $derived.by(() => {
 });
 
 // --- ARCHITECTURE: Layers are now derived state, not a single monolithic object ---
-
-// 1. The base layer handles all counties with default styling.
 const baseLayer = $derived(
   new GeoJsonLayer({
     id: "GeoJsonLayer-base",
@@ -105,8 +105,7 @@ const baseLayer = $derived(
     filled: true,
     pickable: true,
     autoHighlight: false,
-
-    getFillColor: (d) => {
+    getFillColor: (d: any) => {
       const countyData = d.properties;
       if (!selectedMapColorKey) return toDeckGLColor("#ccc", 200);
       let color: string = colorScale(countyData[selectedMapColorKey]) as any;
@@ -116,7 +115,6 @@ const baseLayer = $derived(
     getLineWidth: DEFAULT_BORDER_WIDTH,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.5,
-
     onClick: (info: any) => {
       if (info.object) geoid = info.object.id;
     },
@@ -127,18 +125,16 @@ const baseLayer = $derived(
     updateTriggers: {
       getFillColor: [selectedMapColorKey, selectedMapColorRange],
     },
-    // --- ADD THIS BLOCK TO ENABLE ANIMATION ---
     transitions: {
       getFillColor: {
-        type: "interpolation", // This is the default type
-        duration: 300, // Animation duration in milliseconds
-        easing: cubicOut, // A simple ease-out function
+        type: "interpolation",
+        duration: 300,
+        easing: cubicOut,
       },
     },
   })
 );
 
-// 2. The highlight layer is simple and only draws the border for the highlighted feature.
 const highlightLayer = $derived(
   new GeoJsonLayer({
     id: "GeoJsonLayer-highlight",
@@ -151,7 +147,6 @@ const highlightLayer = $derived(
   })
 );
 
-// 3. Combine the layers. Deck.gl renders them in order, ensuring highlight is on top.
 const layers = $derived([baseLayer, highlightLayer]);
 
 // --- Side Effects ---
@@ -162,11 +157,21 @@ function flyToCounty(countyZoomData: {
   bearing?: number;
   pitch?: number;
 }) {
-  console.log("zoom to", geoid);
-  mapCenter = [countyZoomData.longitude, countyZoomData.latitude];
-  mapZoom = countyZoomData.zoom * 0.88;
-  if (countyZoomData.bearing !== undefined) mapBearing = countyZoomData.bearing;
-  if (countyZoomData.pitch !== undefined) mapPitch = countyZoomData.pitch;
+  if (!mapInstance) return;
+
+  // Stop any existing animation before starting a new one
+  mapInstance.stop();
+
+  const flyToOptions: maplibregl.FlyToOptions = {
+    center: [countyZoomData.longitude, countyZoomData.latitude],
+    zoom: countyZoomData.zoom * 0.88,
+    bearing: countyZoomData.bearing ?? mapBearing,
+    pitch: countyZoomData.pitch ?? mapPitch,
+    duration: 1300, // You can adjust animation duration
+    essential: true, // Ensures animation runs even with prefers-reduced-motion
+  };
+
+  mapInstance.flyTo(flyToOptions);
 }
 
 function handleMouseLeave() {
@@ -176,11 +181,20 @@ function handleMouseLeave() {
 
 // Correct use of $effect for a side effect
 $effect(() => {
-  if (zoomToWhichCounty[geoid]) {
+  // A special case for the US view
+  if (geoid === "00000") {
+    if (mapInstance) {
+      mapInstance.stop(); // Stop current animation
+      mapInstance.flyTo({
+        center: US_MAP_CENTER,
+        zoom: US_MAP_ZOOM,
+        bearing: 0,
+        pitch: 0,
+        essential: true,
+      });
+    }
+  } else if (zoomToWhichCounty[geoid]) {
     flyToCounty(zoomToWhichCounty[geoid]);
-  } else {
-    // This console.warn is fine for debugging but you might want to handle it differently
-    // console.warn(`Zoom data not found for county ID: ${geoid}`);
   }
 });
 </script>
@@ -194,15 +208,12 @@ $effect(() => {
     class="h-full min-h-[200px] w-full"
     style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
     minZoom={2}
+    maxZoom={8}
     bind:pitch={mapPitch}
     bind:bearing={mapBearing}
-    zoom={mapZoom}
-    center={mapCenter}
-    speed={2}
-    curve={1}
-    essential={true}
-    maxDuration={2300}
-    easing={cubicOut}
+    bind:zoom={mapZoom}
+    bind:center={mapCenter}
+    bind:map={mapInstance}
   >
     <NavigationControl showCompass={false} position="top-left" />
     <CustomControl position="top-left">

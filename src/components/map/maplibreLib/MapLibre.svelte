@@ -43,14 +43,6 @@ interface Props extends Omit<maplibregl.MapOptions, "container">, MapEventProps 
   repaint?: boolean;
   vertices?: boolean;
   preserveDrawingBuffer?: boolean;
-  // Add the new FlyToOptions props
-  speed?: number;
-  curve?: number;
-  maxDuration?: number;
-  screenSpeed?: number;
-  duration?: number;
-  easing?: Function;
-  essential?: boolean;
   // Snippets
   children?: Snippet<[maplibregl.Map]>;
 }
@@ -163,17 +155,6 @@ let {
   touchZoomRotate,
   transformCameraUpdate,
   preserveDrawingBuffer = true,
-
-  // Destructure the new props
-  speed,
-  curve,
-  maxDuration,
-  screenSpeed,
-
-  // We will reuse these existing props for flyTo
-  duration,
-  easing,
-  essential,
   // Map Options (others)
   ...restOptions
 }: Props = $props();
@@ -402,7 +383,6 @@ $effect(() => {
 });
 
 // Map Options (reactive)
-// in <MapLibre.svelte>
 
 $effect(() => {
   // Reactive dependencies: props that define the camera's target view
@@ -414,24 +394,28 @@ $effect(() => {
 
   // Ensure the effect only runs after the initial setup and if the map instance exists and its style is loaded
   if (!firstRun && map && map.isStyleLoaded()) {
-    // ... (The existing logic for calculating 'needsViewUpdate' and 'targetCameraOptions' stays the same)
+    // Get the map's current camera state. map.getFreeCameraOptions() is good if available and you use it.
+    // Otherwise, get individual properties.
     const currentMapCenter = map.getCenter();
     const currentMapZoom = map.getZoom();
     const currentMapBearing = map.getBearing();
     const currentMapPitch = map.getPitch();
+    // You'd need a way to get currentMapPadding if it's part of FreeCameraOptions or a separate getter
 
     let targetCameraOptions: maplibregl.FlyToOptions = {};
     let needsViewUpdate = false;
 
+    // Helper to compare floating point numbers with a tolerance
     function propsChangedEnough(
       currentVal: number,
       targetVal: number | undefined,
       tolerance = 1e-5
     ) {
-      if (targetVal === undefined) return false;
+      if (targetVal === undefined) return false; // If the target prop isn't set, don't consider it a change
       return Math.abs(currentVal - targetVal) > tolerance;
     }
 
+    // Helper to compare LngLat objects
     function lngLatChangedEnough(
       currentVal: maplibregl.LngLat,
       targetValLngLatLike: maplibregl.LngLatLike | undefined,
@@ -445,72 +429,53 @@ $effect(() => {
       );
     }
 
+    // Check if 'center' prop has changed significantly
     if (center && lngLatChangedEnough(currentMapCenter, center)) {
       targetCameraOptions.center = center;
       needsViewUpdate = true;
     }
+    // Check if 'zoom' prop has changed significantly
     if (zoom !== undefined && propsChangedEnough(currentMapZoom, zoom)) {
       targetCameraOptions.zoom = zoom;
       needsViewUpdate = true;
     }
+    // Check if 'bearing' prop has changed significantly
     if (bearing !== undefined && propsChangedEnough(currentMapBearing, bearing)) {
       targetCameraOptions.bearing = bearing;
       needsViewUpdate = true;
     }
+    // Check if 'pitch' prop has changed significantly
     if (pitch !== undefined && propsChangedEnough(currentMapPitch, pitch)) {
       targetCameraOptions.pitch = pitch;
       needsViewUpdate = true;
     }
+    // Check for padding changes (simplified check, adapt if you have a more robust currentPadding value)
     if (padding) {
+      // This logic might need refinement based on how you track current padding
       targetCameraOptions.padding = padding;
-      needsViewUpdate = true;
+      needsViewUpdate = true; // Assuming any change to padding prop warrants an update
     }
 
     if (needsViewUpdate && Object.keys(targetCameraOptions).length > 0) {
-      // --- NEW LOGIC STARTS HERE ---
-
-      // 1. Gather all animation-related props
-      const animationOptions: maplibregl.FlyToOptions = {
-        speed,
-        curve,
-        duration,
-        maxDuration,
-        easing,
-        screenSpeed,
-        essential,
+      // Add default animation options if you defined them as props or have fixed values
+      // These can be overridden if targetCameraOptions (derived from props) already contains them.
+      const animationDefaults: Partial<maplibregl.AnimationOptions> = {
+        // speed: animationSpeed, // from component props or fixed
+        // curve: animationCurve, // from component props or fixed
+        // maxDuration: animationMaxDuration, // from component props or fixed
+        // easing: (t) => t, // example, MapLibre has its own default easing
       };
 
-      // 2. Filter out any props that are undefined so we don't override defaults
-      const definedAnimationOptions = Object.fromEntries(
-        Object.entries(animationOptions).filter(([, v]) => v !== undefined)
-      );
-
-      // 3. Combine the camera destination with the animation options
       const finalFlyToOptions: maplibregl.FlyToOptions = {
-        ...targetCameraOptions,
-        ...definedAnimationOptions,
+        ...animationDefaults, // Apply defaults first
+        ...targetCameraOptions, // Then specific targets, which might include their own animation params
       };
 
-      // --- END OF NEW LOGIC ---
-
-      // This logic remains the same as our previous fix
-      map.flyTo(finalFlyToOptions);
-
-      isFlyingProgrammatically = true;
-      map.once("moveend", () => {
-        isFlyingProgrammatically = false;
-        // ... (final state sync logic)
-        const tr = map.transform;
-        if (tr.zoom !== zoom) zoom = tr.zoom;
-        if (center) {
-          const _center = maplibregl.LngLat.convert(center);
-          if (_center.lat !== tr.center.lat || _center.lng !== tr.center.lng) {
-            center = formatLngLat(center, tr.center);
-          }
-        } else {
-          center = tr.center;
-        }
-      });
+      // Call map.flyTo with the consolidated options
+      // Check if map is already moving to avoid conflicting animations, though flyTo usually handles this.
+      if (!map.isMoving() && !map.isZooming() && !map.isRotating()) {
+        map.flyTo(finalFlyToOptions);
+      }
     }
   }
 });
