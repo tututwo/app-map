@@ -1,12 +1,28 @@
+<!-- @param 
+ 
+<!-- For Line Chart, we need to know:
+@from:
+@to 
+-->
+
+<!-- For map, we need to know:
+@from:
+@to 
+-->
 <script lang="ts">
 // CRITICAL: Apply MapLibre patch BEFORE importing any components that use MapLibre
 import "$lib/maplibre-patch";
 
 import { Download, FileText, X } from "lucide-svelte";
-import DataSection from "$components/pdf/PDFSection.svelte";
+
 import type { BarSegment } from "$lib/types";
 import { Button } from "bits-ui";
-import LineChart from "$components/lineChartBrush/lineChart.svelte";
+import Figure from "$components/chart/Figure.svelte";
+
+import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
+
+import PercentageBar from "$components/sideSection/percentageBar.svelte";
+import DataSection from "$components/pdf/PDFSection.svelte";
 
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
@@ -16,6 +32,12 @@ let mainContent = $state<HTMLElement | null>(null);
 let isExporting = $state(false);
 let exportError = $state<string | null>(null);
 
+let yearRange = $state<[number, number]>([2003, 2011]);
+const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
+
+// ----------------------------------------------------------------
+// ---------------Legend Data----------------------------
+// ----------------------------------------------------------------
 const totalChurchesData: BarSegment[] = $state([
   { range: "1-12", color: "bg-pink-200", textColor: "text-black" },
   { range: "13-24", color: "bg-pink-300", textColor: "text-black" },
@@ -117,6 +139,69 @@ async function exportToPDF() {
     isExporting = false;
   }
 }
+
+// ----------------------------------------------------------------
+// ---------------Social Determinants----------------------------
+// ----------------------------------------------------------------
+const statistics = $state([
+  {
+    id: "college-degree",
+    title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
+    currentValueDisplay: "17%",
+    currentValue: 17,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 35,
+    averageLabel: "US Average",
+  },
+  {
+    id: "median-rent",
+    title: "Median rent (USD)",
+    currentValueDisplay: "$2039",
+    currentValue: 2039,
+    minValue: 200,
+    maxValue: 10000,
+    minLabel: "200",
+    maxLabel: "10k",
+    averageValue: 5500, // Estimated from image
+    // No averageLabel for this one based on image, but line is present
+  },
+  {
+    id: "renters-percent",
+    title: "Percent of people who are renters",
+    currentValueDisplay: "87%",
+    currentValue: 87,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 70, // Estimated from image
+  },
+  {
+    id: "poverty-level",
+    title: "Percent below the federal poverty level",
+    currentValueDisplay: "17%",
+    currentValue: 17,
+    minValue: 0,
+    maxValue: 100,
+    minLabel: "0%",
+    maxLabel: "100%",
+    averageValue: 30, // Estimated from image
+  },
+  {
+    id: "household-income",
+    title: "Median household income (USD)",
+    currentValueDisplay: "$30.5k",
+    currentValue: 30500,
+    minValue: 0,
+    maxValue: 80000,
+    minLabel: "0",
+    maxLabel: "80k",
+    averageValue: 45000, // Estimated from image
+  },
+]);
 </script>
 
 <div class="flex min-h-screen items-start justify-center bg-gray-100 p-4 sm:p-8">
@@ -186,11 +271,15 @@ async function exportToPDF() {
       </h1>
 
       <div
-        class="mb-8 flex h-64 items-center justify-center rounded border border-gray-300 bg-gray-50 sm:h-80"
+        class="mb-8 flex h-48 items-center justify-center rounded border border-gray-300 bg-gray-50"
       >
-        <svg>
-          <line x1="0" y1="0" x2="100" y2="100" stroke="black" />
-        </svg>
+        <Figure exclude="">
+          <LineChartBrush key="close" margin={lineChartMargin} bind:yearRange />
+
+          {#snippet figcaption()}
+            This is a caption for the line chart showing church closures over time.
+          {/snippet}
+        </Figure>
         <!-- <span class="text-5xl font-bold text-gray-400 italic">Line Chart</span> -->
       </div>
 
@@ -200,34 +289,58 @@ async function exportToPDF() {
             title="Total number of closed church"
             mapPlaceholderText="Map"
             mapBorderColor="border-blue-500"
-            barData={totalChurchesData}
+            legendData={totalChurchesData}
             description={introText}
           />
           <DataSection
             title="Density of closed church: per 100k population"
             mapPlaceholderText="Map"
-            barData={densityPer100kData}
+            legendData={densityPer100kData}
             description={introText}
           />
           <DataSection
             title="Density of closed church: per sqkm"
             mapPlaceholderText="Map"
-            barData={densityPerSqkmData}
+            legendData={densityPerSqkmData}
             description={introText}
           />
         </div>
 
         <div class="space-y-8 lg:col-span-1">
-          <div class="h-full rounded-lg border border-gray-300 p-6">
-            <h2 class="mb-4 text-lg font-semibold text-gray-700">Social determinants</h2>
-            <div class="flex h-48 items-center justify-center rounded bg-gray-50">
-              <span class="text-2xl font-bold text-gray-400 italic">Right section 1</span>
-            </div>
-          </div>
-          <div class="h-full rounded-lg border border-gray-300 p-6">
-            <h2 class="mb-4 text-lg font-semibold text-gray-700">Demographics</h2>
-            <div class="flex h-48 items-center justify-center rounded bg-gray-50">
-              <span class="text-2xl font-bold text-gray-400 italic">Right section 1</span>
+          <div class="relative h-[calc(100%)] p-2">
+            <!-- Scrollable container -->
+            <div class="absolute inset-0 overflow-y-auto pr-1">
+              <!-- Social determinants -->
+              <h4 class="text-lg font-semibold">Social Determinants</h4>
+              {#each statistics as stat (stat.id)}
+                <PercentageBar
+                  title={stat.title}
+                  currentValueDisplay={stat.currentValueDisplay}
+                  currentValue={stat.currentValue}
+                  minValue={stat.minValue}
+                  maxValue={stat.maxValue}
+                  minLabel={stat.minLabel}
+                  maxLabel={stat.maxLabel}
+                  averageValue={stat.averageValue}
+                  averageLabel={stat.averageLabel}
+                  uniqueIdBase={stat.id}
+                />
+              {/each}
+              <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
+              {#each statistics as stat (stat.id)}
+                <PercentageBar
+                  title={stat.title}
+                  currentValueDisplay={stat.currentValueDisplay}
+                  currentValue={stat.currentValue}
+                  minValue={stat.minValue}
+                  maxValue={stat.maxValue}
+                  minLabel={stat.minLabel}
+                  maxLabel={stat.maxLabel}
+                  averageValue={stat.averageValue}
+                  averageLabel={stat.averageLabel}
+                  uniqueIdBase={stat.id}
+                />
+              {/each}
             </div>
           </div>
         </div>

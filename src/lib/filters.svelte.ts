@@ -14,29 +14,33 @@ class DataFilters {
       label: "Number of closed church",
       description: "Number of closed churches",
       value: 0,
-      key: "closure_count",
-      colors: ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+      colorKey: "closure",
+      colorRange: ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+      colorDomain: [0, 1],
     },
     {
       label: "Rate of closed churches per 10,000 population",
       description: "Persistence of open churches",
-      keyName: "closure_rate_per_10000",
+      colorKey: "closure_rate_per_10000",
       value: 1,
-      colors: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
+      colorRange: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
+      colorDomain: [0, 1],
     },
     {
       label: "Persistence of open churches",
       description: "Persistence of open churches",
-      keyName: "persistence",
+      colorKey: "persistence",
       value: 2,
-      colors: ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
+      colorRange: ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
+      colorDomain: [0, 1],
     },
   ] as {
     label: string;
     description: string;
-    keyName: string;
+    colorKey: string;
     value: 0 | 1 | 2;
-    colors: string[];
+    colorRange: string[];
+    colorDomain: [number, number];
   }[];
 
   setCounty = (county: string) => {

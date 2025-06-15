@@ -201,16 +201,36 @@ const stackedBarData = $derived(datasets[currentDataset]);
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
-let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].keyName);
-let selectedMapColorPalette = $derived(dataFilters.metrics[selectedMapMetric].colors);
-
+let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].colorKey);
+let selectedMapColorDomain = $derived(dataFilters.metrics[selectedMapMetric].colorDomain);
+let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colorRange);
 // Data ranges for the legend with corrected colors and widths
 const dataRanges = $derived([
-  { label: "1-12", color: dataFilters.metrics[selectedMapMetric].colors[0], textColor: "black" },
-  { label: "13-24", color: dataFilters.metrics[selectedMapMetric].colors[1], textColor: "black" },
-  { label: "25-36", color: dataFilters.metrics[selectedMapMetric].colors[2], textColor: "black" },
-  { label: "37-48", color: dataFilters.metrics[selectedMapMetric].colors[3], textColor: "white" },
-  { label: "49-60", color: dataFilters.metrics[selectedMapMetric].colors[4], textColor: "white" },
+  {
+    label: "1-12",
+    color: dataFilters.metrics[selectedMapMetric].colorRange[0],
+    textColor: "black",
+  },
+  {
+    label: "13-24",
+    color: dataFilters.metrics[selectedMapMetric].colorRange[1],
+    textColor: "black",
+  },
+  {
+    label: "25-36",
+    color: dataFilters.metrics[selectedMapMetric].colorRange[2],
+    textColor: "black",
+  },
+  {
+    label: "37-48",
+    color: dataFilters.metrics[selectedMapMetric].colorRange[3],
+    textColor: "white",
+  },
+  {
+    label: "49-60",
+    color: dataFilters.metrics[selectedMapMetric].colorRange[4],
+    textColor: "white",
+  },
 ]);
 
 let geoid = $state("");
@@ -306,7 +326,6 @@ let geoid = $state("");
             <!-- ------------------------------------------------------------------ -->
             <!-- Legend section -->
             <!-- ------------------------------------------------------------------ -->
-
             <section aria-label="Legend" class="flex flex-col space-y-1">
               <h4 class="mb-1 text-sm font-medium text-gray-800">
                 {dataFilters.metrics.find((m) => m.value === selectedMapMetric)?.label}
@@ -346,7 +365,8 @@ let geoid = $state("");
         >
           <MapLibreMap
             {selectedMapColorKey}
-            colors={selectedMapColorPalette}
+            {selectedMapColorDomain}
+            {selectedMapColorRange}
             data={mapData}
             bind:geoid
           />

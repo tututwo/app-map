@@ -6,14 +6,14 @@ let {
   title,
   mapPlaceholderText,
   mapBorderColor = "border-gray-300",
-  barData,
+  legendData,
   description,
   foo, // Added callback prop for event handling
 } = $props<{
   title: string;
   mapPlaceholderText: string;
   mapBorderColor?: string;
-  barData: BarSegment[];
+  legendData: BarSegment[];
   description: string;
   foo?: () => void; // Added type for callback prop
 }>();
@@ -27,7 +27,7 @@ let {
       <MapLibreMap />
     </div>
     <div>
-      <SegmentedBar data={barData} />
+      <SegmentedBar data={legendData} />
       <p class="mt-12 text-sm text-gray-600">
         {description}
       </p>
