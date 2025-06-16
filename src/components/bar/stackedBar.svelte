@@ -1,8 +1,9 @@
 <script>
 // @ts-nocheck
 import * as d3 from "d3";
-import { getContext, untrack } from "svelte";
+import { getContext } from "svelte";
 import { backOut } from "svelte/easing";
+import Tooltip from "$components/chart/Tooltip.svelte"; // Corrected import path
 
 // Get responsive dimensions from Figure context
 const figure = getContext("Figure");
@@ -14,56 +15,47 @@ let {
   data,
   yearRange = [2003, 2011],
   margin = { top: 40, right: 30, bottom: 50, left: 60 },
-  // Stack configuration
   keys = ["negative", "neutral", "positive"],
-  // Color scheme
   colors = {
     negative: "hsla(211, 99%, 45%, 1)",
     neutral: "hsla(0, 0%, 85%, 1)",
     positive: "hsla(145, 63%, 42%, 1)",
   },
-  // Hover colors
   hoverColors = {
     negative: "hsla(211, 99%, 35%, 1)",
     neutral: "hsla(0, 0%, 75%, 1)",
     positive: "hsla(145, 63%, 32%, 1)",
   },
-  // Grid and styling
   gridLineColor = "hsla(0, 0%, 90%, 1)",
   showXGridlines = false,
   showYGridlines = true,
   showChartBorder = true,
   chartBackgroundColor = "white",
-  // Axis configuration
   xTickPosition = "bottom",
   yTickPosition = "left",
   yTickCount = 5,
   tickLength = 6,
   tickOffset = 10,
-  // Bar configuration
   barPadding = 0.1,
-  // Animation configuration
   animationDuration = 750,
   yearStaggerDelay = 50,
   segmentStaggerDelay = 250,
-  // Tooltip configuration
-  enableTooltip = true,
 } = $props();
 
-// State variables
-let hoveredBar = $state(null);
-let hoveredSegment = $state(null);
+// State management for the integrated tooltip
+let tooltipData = $state(null);
+let tooltipX = $state(0);
+let tooltipY = $state(0);
+const tooltipOpen = $derived(!!tooltipData);
+
+// Element references
 let svgElement = $state(null);
+let containerElement = $state(null);
 
-// Track previous data for animation coordination
-let previousYears = [];
-let animationPromise = null;
-
-// Calculate chart dimensions
+// Data processing and scales
 const innerWidth = $derived(width - margin.left - margin.right);
 const innerHeight = $derived(height - margin.top - margin.bottom);
 
-// Process data
 const processedData = $derived(() => {
   if (!data || !data.length) return [];
   const filteredData = data.filter(({ year }) => year >= yearRange[0] && year <= yearRange[1]);
@@ -80,17 +72,13 @@ const processedData = $derived(() => {
   });
 });
 
-// Create the stack generator
 const stack = d3.stack().keys(keys).order(d3.stackOrderNone).offset(d3.stackOffsetDiverging);
-
-// Generate stacked data
 const stackedData = $derived(() => {
   const processed = processedData();
   if (!processed.length) return [];
   return stack(processed);
 });
 
-// Create scales
 const xScale = $derived(
   d3
     .scaleBand()
@@ -118,142 +106,100 @@ const yScale = $derived(() => {
 const zeroY = $derived(yScale()(0));
 const yTicks = $derived(yScale().ticks(yTickCount));
 
-function getSegmentColor(seriesKey, isHovered) {
-  const colorMap = isHovered ? hoverColors : colors;
-  return colorMap[seriesKey] || colors.neutral;
-}
+// Calculate the full bounds of each year's stack
+const stackBoundsByYear = $derived.by(() => {
+  const bounds = new Map();
+  const stacked = stackedData();
+  if (!stacked.length) return bounds;
 
-// Single effect to manage D3 transitions
+  processedData().forEach((yearData, index) => {
+    const year = yearData.year;
+    const y0Values = stacked.map((series) => series[index][0]);
+    const y1Values = stacked.map((series) => series[index][1]);
+
+    bounds.set(year, {
+      yMin: yScale()(d3.max(y1Values)),
+      yMax: yScale()(d3.min(y0Values)),
+    });
+  });
+  return bounds;
+});
+
 $effect(() => {
   if (!svgElement || !stackedData().length) return;
-
   const svg = d3.select(svgElement);
-  const barsGroup = svg.select(".bars");
 
-  // Get current years and determine animation strategy
-  const currentYears = processedData().map((d) => d.year);
-  const exitingYears = previousYears.filter((year) => !currentYears.includes(year));
-  const hasExiting = exitingYears.length > 0;
-
-  // Calculate max exit duration if needed
-  let maxExitDuration = 0;
-  if (hasExiting) {
-    const maxExitIndex = exitingYears.length - 1;
-    const maxSeriesIndex = keys.length - 1;
-    maxExitDuration =
-      animationDuration + maxExitIndex * yearStaggerDelay + maxSeriesIndex * segmentStaggerDelay;
-  }
-
-  // Cancel any pending animation
-  if (animationPromise) {
-    animationPromise.cancel = true;
-  }
-
-  // Create new animation promise
-  const currentAnimation = { cancel: false };
-  animationPromise = currentAnimation;
-
-  // Update bars using D3's data join
+  // --- Rendering Layer (Visible Bars) ---
+  const barsGroup = svg.select(".bars-visual");
   const barGroups = barsGroup.selectAll(".bar-group").data(stackedData(), (d) => d.key);
-
-  // Remove exiting groups
-  barGroups.exit().transition().duration(animationDuration).style("opacity", 0).remove();
-
-  // Enter new groups
+  barGroups.exit().remove();
   const enterGroups = barGroups.enter().append("g").attr("class", "bar-group");
-
-  // Update all groups
   const allGroups = barGroups.merge(enterGroups);
 
-  // Handle bars within each group
-  allGroups.each(function (series, seriesIndex) {
-    if (currentAnimation.cancel) return;
-
+  allGroups.each(function (series) {
     const group = d3.select(this);
     const bars = group.selectAll(".bar-segment").data(series, (d) => d.data.year);
 
-    // Exit
-    bars.exit().each(function (d, i) {
-      const exitIndex = exitingYears.indexOf(d.data.year);
-      if (exitIndex === -1) return;
+    bars.exit().remove();
 
-      const reverseSeriesIndex = keys.length - 1 - seriesIndex;
-      const delay = exitIndex * yearStaggerDelay + reverseSeriesIndex * segmentStaggerDelay;
-
-      d3.select(this)
-        .transition()
-        .duration(animationDuration)
-        .ease(backOut)
-        .delay(delay)
-        .attr("y", yScale()(d[0]))
-        .attr("height", 0)
-        .style("opacity", 0)
-        .remove();
-    });
-
-    // Enter
-    const enterBars = bars
+    bars
       .enter()
       .append("rect")
       .attr("class", "bar-segment")
       .attr("x", (d) => xScale(d.data.year))
       .attr("width", xScale.bandwidth())
-      .attr("y", (d) => yScale()(d[0]))
-      .attr("height", 0)
-      .attr("fill", getSegmentColor(series.key, false))
-      .style("cursor", "pointer")
-      .on("mouseenter", function (event, d) {
-        untrack(() => {
-          hoveredBar = d.data;
-          hoveredSegment = { key: series.key, value: d.data[series.key] };
-        });
-        d3.select(this).attr("fill", getSegmentColor(series.key, true));
-      })
-      .on("mouseleave", function () {
-        untrack(() => {
-          hoveredBar = null;
-          hoveredSegment = null;
-        });
-        d3.select(this).attr("fill", getSegmentColor(series.key, false));
-      });
-
-    // Animate enter
-    enterBars
-      .transition()
-      .duration(animationDuration)
-      .ease(backOut)
-      .delay((d, i) => maxExitDuration + i * yearStaggerDelay + seriesIndex * segmentStaggerDelay)
       .attr("y", (d) => Math.min(yScale()(d[0]), yScale()(d[1])))
-      .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
-
-    // Update
-    bars
+      .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])))
+      .attr("fill", (d) => colors[series.key])
+      .style("pointer-events", "none")
+      .merge(bars)
       .transition()
       .duration(animationDuration)
-      .ease(backOut)
-      .delay(maxExitDuration)
       .attr("x", (d) => xScale(d.data.year))
       .attr("width", xScale.bandwidth())
       .attr("y", (d) => Math.min(yScale()(d[0]), yScale()(d[1])))
       .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
   });
 
-  // Update previous years for next run
-  previousYears = [...currentYears];
+  // --- Interaction Layer (Invisible Hover Rectangles) ---
+  const interactionGroup = svg.select(".bars-interaction");
+  const hoverRects = interactionGroup.selectAll(".hover-area").data(processedData(), (d) => d.year);
 
-  // Cleanup function
-  return () => {
-    if (animationPromise === currentAnimation) {
-      animationPromise = null;
-    }
-  };
+  hoverRects.exit().remove();
+
+  hoverRects
+    .enter()
+    .append("rect")
+    .attr("class", "hover-area")
+    .attr("fill", "transparent")
+    .style("cursor", "pointer")
+    .on("mouseenter", (event, d) => {
+      const [x, y] = d3.pointer(event, containerElement);
+      tooltipX = x;
+      tooltipY = y;
+      tooltipData = d;
+    })
+    .on("mouseleave", () => {
+      tooltipData = null;
+    })
+    .merge(hoverRects)
+    .transition()
+    .duration(animationDuration)
+    .attr("x", (d) => xScale(d.year))
+    .attr("width", xScale.bandwidth())
+    .attr("y", (d) => stackBoundsByYear.get(d.year)?.yMin ?? 0)
+    .attr("height", (d) => {
+      const bounds = stackBoundsByYear.get(d.year);
+      return bounds ? bounds.yMax - bounds.yMin : 0;
+    });
 });
 </script>
 
-<div class="relative h-full w-full">
+<div class="relative h-full w-full" bind:this={containerElement}>
   <svg bind:this={svgElement} {width} {height} class="h-full w-full">
     <g transform={`translate(${margin.left},${margin.top})`}>
-      <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
+      <rect x={0} y={0} {innerWidth} {innerHeight} fill={chartBackgroundColor} />
+
       {#if showYGridlines}
         <g class="y-grid">
           {#each yTicks as tick}
@@ -269,6 +215,7 @@ $effect(() => {
           {/each}
         </g>
       {/if}
+
       <line
         x1={0}
         y1={zeroY}
@@ -278,6 +225,7 @@ $effect(() => {
         stroke-width="2"
         shape-rendering="crispEdges"
       />
+
       {#if showXGridlines}
         <g class="x-grid">
           {#each processedData() as d}
@@ -294,19 +242,23 @@ $effect(() => {
           {/each}
         </g>
       {/if}
+
       {#if showChartBorder}
         <rect
           x={0}
           y={0}
-          width={innerWidth}
-          height={innerHeight}
+          {innerWidth}
+          {innerHeight}
           fill="none"
           stroke={gridLineColor}
           stroke-width="1.5"
           shape-rendering="crispEdges"
         />
       {/if}
-      <g class="bars"></g>
+
+      <g class="bars-visual"></g>
+      <g class="bars-interaction"></g>
+
       {#if xTickPosition !== "none"}
         {#if xTickPosition === "bottom" || xTickPosition === "both"}
           <g class="x-axis" transform={`translate(0,${innerHeight})`}>
@@ -345,6 +297,7 @@ $effect(() => {
           </g>
         {/if}
       {/if}
+
       {#if yTickPosition !== "none"}
         {#if yTickPosition === "left" || yTickPosition === "both"}
           <g class="y-axis">
@@ -383,6 +336,47 @@ $effect(() => {
       {/if}
     </g>
   </svg>
+
+  {#if containerElement}
+    <Tooltip
+      open={tooltipOpen}
+      x={tooltipX}
+      y={tooltipY}
+      boundary={containerElement}
+      preferredSide="right"
+      align="start"
+      sideOffset={15}
+      showArrow={true}
+    >
+      {#snippet children()}
+        {#if tooltipData}
+          <div class="w-40 font-sans text-sm">
+            <p class="mb-2 font-bold text-gray-900 dark:text-gray-50">
+              Year: {tooltipData.year}
+            </p>
+            <div class="space-y-1 border-t border-gray-200 pt-2 dark:border-gray-700">
+              {#each keys as key}
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-700 capitalize dark:text-gray-300">{key}:</span>
+                  <span class="font-medium text-gray-900 dark:text-gray-50">
+                    {tooltipData[key].toLocaleString()}
+                  </span>
+                </div>
+              {/each}
+              <div
+                class="flex items-center justify-between border-t border-gray-200/50 pt-1 font-semibold dark:border-gray-700/50"
+              >
+                <span class="text-gray-700 capitalize dark:text-gray-300">Total:</span>
+                <span class="font-medium text-gray-900 dark:text-gray-50">
+                  {tooltipData.total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        {/if}
+      {/snippet}
+    </Tooltip>
+  {/if}
 </div>
 
 <style>
