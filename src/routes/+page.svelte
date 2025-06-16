@@ -165,7 +165,7 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
 
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
-  <Sidebar>
+  <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>
     <CountySearch bind:geoid />
   </Sidebar>
 

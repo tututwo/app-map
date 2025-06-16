@@ -26,6 +26,7 @@ import DataSection from "$components/pdf/PDFSection.svelte";
 
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
+import { onMount } from "svelte";
 
 // State management for PDF export
 let mainContent = $state<HTMLElement | null>(null);
@@ -33,6 +34,27 @@ let isExporting = $state(false);
 let exportError = $state<string | null>(null);
 
 let yearRange = $state<[number, number]>([2003, 2011]);
+let geoid = $state("00000");
+let mapData = $state<any[]>([]);
+
+onMount(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  yearRange[0] = parseInt(urlParams.get("from") ?? "2003");
+  yearRange[1] = parseInt(urlParams.get("to") ?? "2011");
+  geoid = urlParams.get("geoid") ?? "00000";
+});
+
+async function fetchMapData(from: number, to: number) {
+  // wait for the brush transition animation to finish
+  // otherwise it lags
+  const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
+  mapData = await response.json();
+}
+
+$effect(() => {
+  fetchMapData(yearRange[0], yearRange[1]);
+});
+
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 // ----------------------------------------------------------------
@@ -291,18 +313,33 @@ const statistics = $state([
             mapBorderColor="border-blue-500"
             legendData={totalChurchesData}
             description={introText}
+            mapColorKey="closure"
+            mapColorRange={["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"]}
+            mapColorDomain={[0, 1]}
+            {mapData}
+            {geoid}
           />
           <DataSection
-            title="Density of closed church: per 100k population"
+            title="Rate of closed churches per 10,000 population"
             mapPlaceholderText="Map"
             legendData={densityPer100kData}
             description={introText}
+            mapColorKey="closure_rate_per_10000"
+            mapColorRange={["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"]}
+            mapColorDomain={[0, 1]}
+            {mapData}
+            {geoid}
           />
           <DataSection
-            title="Density of closed church: per sqkm"
+            title="Persistence of open churches"
             mapPlaceholderText="Map"
             legendData={densityPerSqkmData}
             description={introText}
+            mapColorKey="persistence"
+            mapColorRange={["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"]}
+            mapColorDomain={[0, 1]}
+            {mapData}
+            {geoid}
           />
         </div>
 

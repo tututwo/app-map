@@ -8,15 +8,23 @@ let {
   mapBorderColor = "border-gray-300",
   legendData,
   description,
-  foo, // Added callback prop for event handling
-} = $props<{
+  mapColorKey = "closure",
+  mapColorDomain = [0, 1],
+  mapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+  mapData,
+  geoid,
+}: {
   title: string;
   mapPlaceholderText: string;
   mapBorderColor?: string;
   legendData: BarSegment[];
   description: string;
-  foo?: () => void; // Added type for callback prop
-}>();
+  mapColorKey: string;
+  mapColorDomain: [number, number];
+  mapColorRange: string[];
+  mapData: any[];
+  geoid: string;
+} = $props();
 </script>
 
 <section class="rounded-lg border border-gray-300 p-6">
@@ -26,10 +34,11 @@ let {
       <!-- <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span> -->
       <MapLibreMap
         hideControls={true}
-        selectedMapColorKey="closure"
-        selectedMapColorDomain={[]}
-        selectedMapColorRange={[]}
-        data={[]}
+        selectedMapColorKey={mapColorKey}
+        selectedMapColorDomain={mapColorDomain}
+        selectedMapColorRange={mapColorRange}
+        data={mapData}
+        {geoid}
       />
     </div>
     <div>
