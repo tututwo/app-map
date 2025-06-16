@@ -37,6 +37,9 @@ let highlightedGroup = $state<string | null>(null);
 
 let mapData = $state<any[]>([]);
 let lineChartData = $state<{ year: number; close: number }[]>([]);
+let stackedBarData = $state<
+  { year: number; negative: number; neutral: number; positive: number }[]
+>([]);
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,6 +75,24 @@ $effect(() => {
   fetchLineChartData(geoidToFetch);
 });
 
+async function fetchStackedBarData(geoidParam?: string) {
+  try {
+    const url = `/api/stacked_bar_chart_data?geoid=${geoidParam}`;
+    const response = await fetch(url);
+    stackedBarData = await response.json();
+  } catch (error) {
+    console.error("Error fetching stacked bar data:", error);
+    // Keep existing data on error
+  }
+}
+
+$effect(() => {
+  // Fetch stacked bar data when geoid changes
+  // If geoid is "00000" (default), fetch aggregated data for all locations
+  const geoidToFetch = geoid === "00000" ? "" : geoid;
+  fetchStackedBarData(geoidToFetch);
+});
+
 // Event handlers
 function handleLocationChange(e: { target: { value: string } }) {
   selectedLocation = e.target.value;
@@ -82,65 +103,6 @@ function highlightGroup(range: string, i: number) {
   selectedQuantile = i;
 }
 
-// Brushable line chart
-
-const initialBrushSelection = [
-  new Date("2003-01-01T00:00:00.000Z"),
-  new Date("2011-01-01T00:00:00.000Z"),
-];
-
-let currentDataset = $state("original");
-// Multiple datasets to demonstrate animations
-const datasets: Record<
-  string,
-  Array<{ year: number; negative: number; neutral: number; positive: number }>
-> = {
-  original: [
-    { year: 2003, negative: -10, neutral: 20, positive: 4 },
-    { year: 2004, negative: -18, neutral: 10, positive: 6 },
-    { year: 2005, negative: -4, neutral: 100, positive: 4 },
-    { year: 2006, negative: -10, neutral: 40, positive: 6 },
-    { year: 2007, negative: -8, neutral: 80, positive: 8 },
-    { year: 2008, negative: -4, neutral: 50, positive: 10 },
-    { year: 2009, negative: -2, neutral: 60, positive: 12 },
-    { year: 2010, negative: -12, neutral: 90, positive: 8 },
-    { year: 2011, negative: -4, neutral: 20, positive: 14 },
-  ],
-  updated: [
-    { year: 2003, negative: -5, neutral: 15, positive: 8 },
-    { year: 2004, negative: -12, neutral: 18, positive: 10 },
-    { year: 2005, negative: -8, neutral: 22, positive: 6 },
-    { year: 2006, negative: -15, neutral: 25, positive: 4 },
-    { year: 2007, negative: -3, neutral: 18, positive: 12 },
-    { year: 2008, negative: -6, neutral: 20, positive: 15 },
-    { year: 2009, negative: -10, neutral: 22, positive: 8 },
-    { year: 2010, negative: -8, neutral: 19, positive: 10 },
-    { year: 2011, negative: -2, neutral: 21, positive: 18 },
-  ],
-  extended: [
-    { year: 2003, negative: -10, neutral: 20, positive: 4 },
-    { year: 2004, negative: -18, neutral: 20, positive: 6 },
-    { year: 2005, negative: -4, neutral: 20, positive: 4 },
-    { year: 2006, negative: -10, neutral: 20, positive: 6 },
-    { year: 2007, negative: -8, neutral: 20, positive: 8 },
-    { year: 2008, negative: -4, neutral: 20, positive: 10 },
-    { year: 2009, negative: -2, neutral: 20, positive: 12 },
-    { year: 2010, negative: -12, neutral: 20, positive: 8 },
-    { year: 2011, negative: -4, neutral: 20, positive: 14 },
-    { year: 2012, negative: -6, neutral: 18, positive: 16 },
-    { year: 2013, negative: -3, neutral: 22, positive: 12 },
-    { year: 2014, negative: -8, neutral: 24, positive: 10 },
-  ],
-  reduced: [
-    { year: 2005, negative: -4, neutral: 20, positive: 4 },
-    { year: 2007, negative: -8, neutral: 20, positive: 8 },
-    { year: 2009, negative: -2, neutral: 20, positive: 12 },
-    { year: 2011, negative: -4, neutral: 20, positive: 14 },
-  ],
-};
-
-// Get current data based on selection
-const stackedBarData = $derived(datasets[currentDataset]);
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
