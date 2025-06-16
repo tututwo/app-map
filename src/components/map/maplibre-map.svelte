@@ -239,11 +239,15 @@ $effect(() => {
     alignOffset={10}
     boundary={mapContainerElement}
     preferredSide="right"
-    sideOffset={15}
+    sideOffset={30}
     showArrow={false}
   >
     {#if hoveredCountyData}
-      <MapTooltipCard data={hoveredCountyData} {colorKey} locationName={hoveredCountyData.name} />
+      <MapTooltipCard
+        data={hoveredCountyData}
+        autoGenerate={true}
+        excludeFields={["geoid", "name", "reopening"]}
+      />
     {/if}
   </Tooltip>
 </figure>
