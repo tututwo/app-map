@@ -61,6 +61,7 @@ const MIN_YEAR_SPAN = 5;
 const MIN_YEAR_START = 2001;
 const MAX_YEAR_END = 2021;
 const ALERT_COLOR = "hsla(353, 90%, 65%, 0.5)";
+const FROM_TO_TEXT_VERTICAL_OFFSET = 5;
 // Component props
 let {
   data = exampleData,
@@ -526,7 +527,7 @@ function adjustYearRange(year0: number, year1: number) {
   {#if brushSelection && yearRangeSelection}
     <div
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
-      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + 50}px;`}
+      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
       from <strong>{yearRangeSelection[0]}</strong>
@@ -534,7 +535,7 @@ function adjustYearRange(year0: number, year1: number) {
 
     <div
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
-      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + 50}px;`}
+      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
       to <strong>{yearRangeSelection[1]}</strong>
@@ -545,7 +546,7 @@ function adjustYearRange(year0: number, year1: number) {
       class:text-yale-green={!isSelectionInvalid}
       class:text-yale-red={isSelectionInvalid}
       style={`left: ${margin.left + (brushSelection[0] + brushSelection[1]) / 2}px; top: ${
-        margin.top + innerHeight + 50
+        margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET
       }px;`}
       aria-hidden={!brushSelection}
     >

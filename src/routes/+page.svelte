@@ -121,33 +121,6 @@ let dataRanges = $derived.by(() => {
     textColor: getAccessibleTextColor(selectedMetric.colorRange[index], "normal"),
   }));
 });
-// const dataRanges = $derived([
-//   {
-//     label: "1-12",
-//     color: dataFilters.metrics[selectedMapMetric].colorRange[0],
-//     textColor: "black",
-//   },
-//   {
-//     label: "13-24",
-//     color: dataFilters.metrics[selectedMapMetric].colorRange[1],
-//     textColor: "black",
-//   },
-//   {
-//     label: "25-36",
-//     color: dataFilters.metrics[selectedMapMetric].colorRange[2],
-//     textColor: "black",
-//   },
-//   {
-//     label: "37-48",
-//     color: dataFilters.metrics[selectedMapMetric].colorRange[3],
-//     textColor: "white",
-//   },
-//   {
-//     label: "49-60",
-//     color: dataFilters.metrics[selectedMapMetric].colorRange[4],
-//     textColor: "white",
-//   },
-// ]);
 
 let geoid = $state("00000");
 
@@ -310,7 +283,7 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
 
               <div class="flex items-center justify-center gap-2 pt-1">
                 <Pointer class="h-4 w-4 text-gray-500" strokeWidth={2} />
-                <span class="text-sm text-gray-600">Select a group to highlight</span>
+                <span class="text-sm text-gray-600">Select a category to highlight</span>
               </div>
             </section>
           </div>
@@ -350,6 +323,7 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
               <StackedBar
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
+                {yearRange}
                 margin={{ top: 10, right: 0, bottom: 0, left: 35 }}
                 colors={{
                   negative: "hsla(211, 98%, 21%, .9)", // Bright blue
@@ -369,8 +343,6 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
                 barPadding={0.3}
                 yTickCount={3}
                 yTickPosition="left"
-                animationDuration={350}
-                animationDelay={30}
               />
 
               {#snippet figcaption()}
