@@ -24,7 +24,13 @@ let {
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
     <div class="border {mapBorderColor} flex h-48 items-center justify-center rounded bg-gray-50">
       <!-- <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span> -->
-      <MapLibreMap />
+      <MapLibreMap
+        hideControls={true}
+        selectedMapColorKey="closure"
+        selectedMapColorDomain={[]}
+        selectedMapColorRange={[]}
+        data={[]}
+      />
     </div>
     <div>
       <SegmentedBar data={legendData} />

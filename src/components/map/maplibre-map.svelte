@@ -47,6 +47,7 @@ let {
   selectedMapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   data = [],
   geoid = $bindable(),
+  hideControls = false,
 } = $props();
 
 const colorKey = "closure";
@@ -202,6 +203,7 @@ $effect(() => {
 <figure
   bind:this={mapContainerElement}
   class="relative h-full w-full"
+  class:hide-map-controls={hideControls}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
@@ -251,3 +253,9 @@ $effect(() => {
     {/if}
   </Tooltip>
 </figure>
+
+<style>
+.hide-map-controls :global(.maplibregl-control-container) {
+  display: none;
+}
+</style>

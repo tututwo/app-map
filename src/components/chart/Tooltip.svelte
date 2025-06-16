@@ -12,7 +12,7 @@ type Align = "start" | "center" | "end";
 // A helper type for transition functions
 type TransitionFn = (node: Element, params?: any) => TransitionConfig;
 
-interface TooltipProps extends Omit<HTMLDivElement> {
+interface TooltipProps {
   x: number;
   y: number;
   open: boolean;
