@@ -208,12 +208,14 @@ let brushGroupElm = $state<SVGGElement>();
 let brushSelection = $state<[number, number] | null>(null);
 let yearRangeSelection = $state<[number, number]>(yearRange);
 let movingHandle = $state<"start" | "end" | null>(null);
+
+// +++ ADD STATE FOR THE TOOLTIP AND SVG BOUNDARY +++
+let svgBoundary = $state<SVGSVGElement | undefined>();
+let activeTooltip = $state<{ point: IDatum; x: number; y: number } | null>(null);
+
 // +++ ADD THIS NEW STATE VARIABLE +++
 let isSelectionInvalid = $state(false);
 const yearSpan = $derived(yearRangeSelection[1] - yearRangeSelection[0]);
-
-// Hover state for circles
-let hoveredPoint = $state<IDatum | null>(null);
 
 const brush = d3
   .brushX()
@@ -351,13 +353,18 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
   brushSelection = [finalX0, finalX1];
 }
 
-// Mouse event handlers for circle hover
 function handleCircleMouseEnter(point: IDatum) {
-  hoveredPoint = point;
+  // Populate the activeTooltip state with the point's data and coordinates
+  activeTooltip = {
+    point,
+    x: xScale(point.year),
+    y: yScale(point[key]),
+  };
 }
 
 function handleCircleMouseLeave() {
-  hoveredPoint = null;
+  // Clear the state on mouse leave to hide the tooltip
+  activeTooltip = null;
 }
 
 // Update your existing adjustYearRange function
@@ -406,7 +413,7 @@ function adjustYearRange(year0: number, year1: number) {
 </script>
 
 <div class="relative h-full w-full">
-  <svg {width} {height} class="h-full w-full">
+  <svg {width} {height} class="h-full w-full" bind:this={svgBoundary}>
     <!-- Chart area with margin -->
     <g transform="translate({margin.left}, {margin.top})">
       <!-- Background color -->
@@ -556,5 +563,23 @@ function adjustYearRange(year0: number, year1: number) {
         {yearSpan} years
       {/if}
     </div>
+  {/if}
+
+  {#if activeTooltip}
+    <Tooltip
+      open={!!activeTooltip}
+      boundary={svgBoundary}
+      x={activeTooltip.x}
+      y={activeTooltip.y}
+      preferredSide="top"
+      sideOffset={0}
+    >
+      {#snippet children()}
+        <div class="flex flex-col text-left font-sans">
+          <span class="font-bold">Year: {activeTooltip.point.year}</span>
+          <span class="capitalize">{key}: {activeTooltip.point[key]}</span>
+        </div>
+      {/snippet}
+    </Tooltip>
   {/if}
 </div>
