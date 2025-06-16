@@ -36,9 +36,12 @@ let selectedLocation = $state("All locations");
 let highlightedGroup = $state<string | null>(null);
 
 let mapData = $state<any[]>([]);
+let lineChartData = $state<{ year: number; close: number }[]>([]);
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 async function fetchMapData(from: number, to: number) {
   // wait for the brush transition animation to finish
   // otherwise it lags
@@ -49,6 +52,24 @@ async function fetchMapData(from: number, to: number) {
 
 $effect(() => {
   fetchMapData(yearRange[0], yearRange[1]);
+});
+
+async function fetchLineChartData(geoidParam?: string) {
+  try {
+    const url = `/api/line_chart_data?geoid=${geoidParam}`;
+    const response = await fetch(url);
+    lineChartData = await response.json();
+  } catch (error) {
+    console.error("Error fetching line chart data:", error);
+    // Keep existing data on error
+  }
+}
+
+$effect(() => {
+  // Fetch line chart data when geoid changes
+  // If geoid is "00000" (default), fetch aggregated data for all locations
+  const geoidToFetch = geoid === "00000" ? "" : geoid;
+  fetchLineChartData(geoidToFetch);
 });
 
 // Event handlers
@@ -231,7 +252,12 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
       </header>
       <div class="w-fullitems-center flex h-[calc(20vh-50px)] justify-center">
         <Figure exclude="">
-          <LineChartBrush key="close" margin={lineChartMargin} bind:yearRange />
+          <LineChartBrush
+            key="close"
+            margin={lineChartMargin}
+            bind:yearRange
+            data={lineChartData}
+          />
 
           {#snippet figcaption()}
             This is a caption for the line chart showing church closures over time.

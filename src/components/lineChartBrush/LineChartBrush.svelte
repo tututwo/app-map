@@ -18,55 +18,42 @@ import { gsap } from "gsap";
 
 import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
 
-const ANIMATION_DURATION = 0.9;
 gsap.registerPlugin(MorphSVGPlugin);
-// Function to generate random data
-function generateRandomData() {
-  return Array.from({ length: 21 }, (_, i) => ({
-    year: 2001 + i,
-    close: Math.floor(Math.random() * 150) + 10, // Random between 10-160
-    closed_per_100k: Math.round(Math.random() * 0.4 * 100) / 100, // Random between 0-0.4
-  }));
-}
-// Button click handler
-function randomizeData() {
-  data = generateRandomData();
-}
+
 type IDatum = {
   year: number;
   close: number;
-  closed_per_100k: number;
 };
 
 type IProps = {
   data?: IDatum[];
   margin?: { top: number; right: number; bottom: number; left: number };
   yearRange?: [number, number];
-  key?: "close" | "closed_per_100k";
+  key?: "close";
 };
 
 const exampleData = [
-  { year: 2001, close: 70, closed_per_100k: 0.2 },
-  { year: 2002, close: 50, closed_per_100k: 0.1 },
-  { year: 2003, close: 40, closed_per_100k: 0.1 },
-  { year: 2004, close: 60, closed_per_100k: 0.1 },
-  { year: 2005, close: 100, closed_per_100k: 0.3 },
-  { year: 2006, close: 120, closed_per_100k: 0.3 },
-  { year: 2007, close: 40, closed_per_100k: 0.1 },
-  { year: 2008, close: 10, closed_per_100k: 0.05 },
-  { year: 2009, close: 30, closed_per_100k: 0.05 },
-  { year: 2010, close: 50, closed_per_100k: 0.1 },
-  { year: 2011, close: 50, closed_per_100k: 0.1 },
-  { year: 2012, close: 20, closed_per_100k: 0.05 },
-  { year: 2013, close: 20, closed_per_100k: 0.05 },
-  { year: 2014, close: 20, closed_per_100k: 0.05 },
-  { year: 2015, close: 90, closed_per_100k: 0.2 },
-  { year: 2016, close: 120, closed_per_100k: 0.3 },
-  { year: 2017, close: 40, closed_per_100k: 0.1 },
-  { year: 2018, close: 10, closed_per_100k: 0.05 },
-  { year: 2019, close: 30, closed_per_100k: 0.05 },
-  { year: 2020, close: 90, closed_per_100k: 0.2 },
-  { year: 2021, close: 120, closed_per_100k: 0.3 },
+  { year: 2001, close: 70 },
+  { year: 2002, close: 50 },
+  { year: 2003, close: 40 },
+  { year: 2004, close: 60 },
+  { year: 2005, close: 100 },
+  { year: 2006, close: 120 },
+  { year: 2007, close: 40 },
+  { year: 2008, close: 10 },
+  { year: 2009, close: 30 },
+  { year: 2010, close: 50 },
+  { year: 2011, close: 50 },
+  { year: 2012, close: 20 },
+  { year: 2013, close: 20 },
+  { year: 2014, close: 20 },
+  { year: 2015, close: 90 },
+  { year: 2016, close: 120 },
+  { year: 2017, close: 40 },
+  { year: 2018, close: 10 },
+  { year: 2019, close: 30 },
+  { year: 2020, close: 90 },
+  { year: 2021, close: 120 },
 ];
 
 // Configurable parameters
@@ -159,7 +146,7 @@ let isInitialRender = true;
 let chartTimeline: gsap.core.Timeline | null = null;
 
 $effect(() => {
-  if (!pathElement) return;
+  if (!pathElement || !data.length) return;
 
   const newPath = line(data);
   const newCirclesData = data.map((point) => ({
@@ -418,12 +405,6 @@ function adjustYearRange(year0: number, year1: number) {
 </script>
 
 <div class="relative h-full w-full">
-  <button
-    onclick={randomizeData}
-    class="rounded bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600"
-  >
-    Randomize Data
-  </button>
   <svg {width} {height} class="h-full w-full">
     <!-- Chart area with margin -->
     <g transform="translate({margin.left}, {margin.top})">
