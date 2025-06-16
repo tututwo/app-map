@@ -317,6 +317,7 @@ const statistics = $state([
             mapColorRange={["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"]}
             mapColorDomain={[0, 1]}
             {mapData}
+            {geoid}
           />
           <DataSection
             title="Rate of closed churches per 10,000 population"
@@ -327,6 +328,7 @@ const statistics = $state([
             mapColorRange={["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"]}
             mapColorDomain={[0, 1]}
             {mapData}
+            {geoid}
           />
           <DataSection
             title="Persistence of open churches"
@@ -337,6 +339,7 @@ const statistics = $state([
             mapColorRange={["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"]}
             mapColorDomain={[0, 1]}
             {mapData}
+            {geoid}
           />
         </div>
 

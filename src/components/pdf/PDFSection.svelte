@@ -12,6 +12,7 @@ let {
   mapColorDomain = [0, 1],
   mapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   mapData,
+  geoid,
 }: {
   title: string;
   mapPlaceholderText: string;
@@ -22,6 +23,7 @@ let {
   mapColorDomain: [number, number];
   mapColorRange: string[];
   mapData: any[];
+  geoid: string;
 } = $props();
 </script>
 
@@ -36,6 +38,7 @@ let {
         selectedMapColorDomain={mapColorDomain}
         selectedMapColorRange={mapColorRange}
         data={mapData}
+        {geoid}
       />
     </div>
     <div>
