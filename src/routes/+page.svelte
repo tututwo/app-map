@@ -5,7 +5,7 @@ import { invalidate } from "$app/navigation";
 import { page } from "$app/state";
 import MetricData from "$data/sideMetricData.csv";
 import { onMount } from "svelte";
-import { Pointer, CircleHelp, Download, ArrowRight } from "lucide-svelte";
+import { Pointer, CircleHelp } from "lucide-svelte";
 
 // Custom UI
 import CountySearch from "$components/map/countySearch.svelte";
@@ -60,12 +60,6 @@ function highlightGroup(range: string, i: number) {
   highlightedGroup = range;
   selectedQuantile = i;
 }
-
-// Initialize any components on mount
-onMount(() => {
-  // This would initialize charts, maps, etc.
-  console.log("Dashboard mounted");
-});
 
 // Brushable line chart
 
@@ -177,7 +171,6 @@ let geoid = $state("00000");
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
-
 let selectedSideMetricData = $derived(MetricData.filter((d) => d.geoid === geoid));
 // Usage example:
 const fieldConfigs = [

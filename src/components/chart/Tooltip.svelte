@@ -30,6 +30,7 @@ interface Props {
   children?: Snippet;
   class?: string;
   arrowClass?: string;
+  description?: string;
 }
 
 let {
@@ -52,6 +53,7 @@ let {
   children,
   class: className = "",
   arrowClass = "",
+  description,
 }: Props = $props();
 
 let tooltipElement = $state<HTMLElement | null>(null);

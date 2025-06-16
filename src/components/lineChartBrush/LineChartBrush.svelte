@@ -5,6 +5,7 @@
  * - year start, end
  * - chart height, width
  */
+
 import * as d3 from "d3";
 import { untrack, getContext, onMount } from "svelte";
 import { scale } from "svelte/transition";
@@ -13,6 +14,24 @@ import { Tween } from "svelte/motion";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import type { D3BrushEvent } from "d3-brush";
 
+import { gsap } from "gsap";
+
+import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
+
+const ANIMATION_DURATION = 0.9;
+gsap.registerPlugin(MorphSVGPlugin);
+// Function to generate random data
+function generateRandomData() {
+  return Array.from({ length: 21 }, (_, i) => ({
+    year: 2001 + i,
+    close: Math.floor(Math.random() * 150) + 10, // Random between 10-160
+    closed_per_100k: Math.round(Math.random() * 0.4 * 100) / 100, // Random between 0-0.4
+  }));
+}
+// Button click handler
+function randomizeData() {
+  data = generateRandomData();
+}
 type IDatum = {
   year: number;
   close: number;
@@ -54,7 +73,7 @@ const exampleData = [
 const MIN_YEAR_SPAN = 5;
 const MIN_YEAR_START = 2001;
 const MAX_YEAR_END = 2021;
-
+const ALERT_COLOR = "hsla(353, 90%, 65%, 0.5)";
 // Component props
 let {
   data = exampleData,
@@ -107,16 +126,102 @@ const line = $derived(
     .y((d) => yScale(d[key]))
   // .curve(d3.curveMonotoneX)
 );
+function flashWarningEffect() {
+  if (!brushGroupElm) return;
 
+  const selectionRect = d3.select(brushGroupElm).select(".selection").node();
+  if (!selectionRect) return;
+
+  // This tween will animate the fill to a light red and then automatically
+  // animate back to the original color thanks to yoyo: true.
+  gsap.to(selectionRect, {
+    fill: ALERT_COLOR, // A light, non-jarring red
+    duration: 0.15,
+    yoyo: true, // Go back to the original value
+    repeat: 1, // Play the tween forward, then backward (yoyo) once
+  });
+}
 // Path data
-const pathData = $derived(line(data));
+//! IMPORTANT: this is not used, because we use gsap to animate the path. instead of relying on svelte's reactivity to update the path immediately;
+//! IMPORTANT:  we created an effect to update the path and circles with gsap MANUALLY when data changes.
+// let pathData = $derived(line(data));
 
+// --- 2. THE PATH ELEMENT REF IS STILL NEEDED (Already done) ---
+let pathElement = $state<SVGPathElement>();
+
+// +++ 3. ADD A STATE ARRAY FOR THE CIRCLE ELEMENTS +++
+let circleElements = $state<Array<SVGCircleElement | undefined>>([]);
+
+// +++ Add a flag to track the first run +++
+let isInitialRender = true;
+
+// +++ 4. Declare a variable to hold the timeline instance +++
+let chartTimeline: gsap.core.Timeline | null = null;
+
+$effect(() => {
+  if (!pathElement) return;
+
+  const newPath = line(data);
+  const newCirclesData = data.map((point) => ({
+    cx: xScale(point.year),
+    cy: yScale(point[key]),
+  }));
+
+  if (isInitialRender) {
+    // Initial render is the same: use gsap.set() for instant positioning
+    gsap.set(pathElement, { attr: { d: newPath } });
+    newCirclesData.forEach((circleData, i) => {
+      const circleEl = circleElements[i];
+      if (circleEl) {
+        gsap.set(circleEl, { attr: circleData });
+      }
+    });
+    isInitialRender = false;
+  } else {
+    // --- 2. Implement the Timeline logic for updates ---
+
+    // First, if there's an old timeline running, kill it.
+    if (chartTimeline) {
+      chartTimeline.kill();
+    }
+
+    // Create a new timeline with shared defaults
+    chartTimeline = gsap.timeline({
+      defaults: {
+        duration: 0.8,
+        ease: "power2.inOut",
+      },
+    });
+
+    // Add the path animation to the timeline
+    chartTimeline.to(pathElement, {
+      morphSVG: newPath,
+    });
+
+    // Loop and add the circle animations to the timeline
+    newCirclesData.forEach((circleData, i) => {
+      const circleEl = circleElements[i];
+      if (circleEl) {
+        // Add the tween and use the "<" position parameter
+        // to make it start at the same time as the previous tween
+        chartTimeline.to(
+          circleEl,
+          {
+            attr: circleData,
+          },
+          "<"
+        );
+      }
+    });
+  }
+});
 // Brush state - store year range instead of pixel coordinates
 let brushGroupElm = $state<SVGGElement>();
 let brushSelection = $state<[number, number] | null>(null);
 let yearRangeSelection = $state<[number, number]>(yearRange);
 let movingHandle = $state<"start" | "end" | null>(null);
-
+// +++ ADD THIS NEW STATE VARIABLE +++
+let isSelectionInvalid = $state(false);
 const yearSpan = $derived(yearRangeSelection[1] - yearRangeSelection[0]);
 
 // Hover state for circles
@@ -207,8 +312,20 @@ function onBrush(event: D3BrushEvent<IDatum>) {
   let year0 = Math.round(xScale.invert(x0));
   let year1 = Math.round(xScale.invert(x1));
   yearRangeSelection = [year0, year1];
-}
 
+  // +++ ADD THIS LIVE VALIDITY CHECK +++
+  const yearSpan = yearRangeSelection[1] - yearRangeSelection[0];
+  isSelectionInvalid = yearSpan < MIN_YEAR_SPAN;
+}
+// Add this new effect to your <script> block
+
+$effect(() => {
+  // If the selection has *just* become invalid, trigger the flash.
+  // This effect will only re-run when isSelectionInvalid changes value.
+  if (isSelectionInvalid) {
+    flashWarningEffect();
+  }
+});
 let _preventReEnter = false;
 function onBrushEnd(event: D3BrushEvent<IDatum>) {
   if (_preventReEnter) return (_preventReEnter = false);
@@ -255,6 +372,7 @@ function handleCircleMouseLeave() {
   hoveredPoint = null;
 }
 
+// Update your existing adjustYearRange function
 function adjustYearRange(year0: number, year1: number) {
   // Apply constraints based on which handle was moving
   if (year1 - year0 < MIN_YEAR_SPAN) {
@@ -300,6 +418,12 @@ function adjustYearRange(year0: number, year1: number) {
 </script>
 
 <div class="relative h-full w-full">
+  <button
+    onclick={randomizeData}
+    class="rounded bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600"
+  >
+    Randomize Data
+  </button>
   <svg {width} {height} class="h-full w-full">
     <!-- Chart area with margin -->
     <g transform="translate({margin.left}, {margin.top})">
@@ -386,7 +510,8 @@ function adjustYearRange(year0: number, year1: number) {
 
       <!-- Line path -->
       <path
-        d={pathData}
+        bind:this={pathElement}
+        d=""
         class="fill-none stroke-2"
         stroke={lineColor}
         stroke-linejoin="round"
@@ -395,15 +520,14 @@ function adjustYearRange(year0: number, year1: number) {
 
       <!-- Data points (rendered after brush so they're on top) -->
       <g class="data-points" style="pointer-events: all;">
-        {#each data as point}
+        {#each data as point, i}
           <circle
-            cx={xScale(point.year)}
-            cy={yScale(point[key])}
+            bind:this={circleElements[i]}
             r={circleRadius}
             fill={circleColor}
             stroke="white"
             stroke-width="2"
-            class="cursor-pointer transition-all duration-200 ease-out"
+            class="cursor-pointer"
             style="filter: none;"
             role="button"
             tabindex="0"
@@ -421,7 +545,7 @@ function adjustYearRange(year0: number, year1: number) {
   {#if brushSelection && yearRangeSelection}
     <div
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
-      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + 5}px;`}
+      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + 50}px;`}
       aria-hidden={!brushSelection}
     >
       from <strong>{yearRangeSelection[0]}</strong>
@@ -429,22 +553,22 @@ function adjustYearRange(year0: number, year1: number) {
 
     <div
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
-      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + 5}px;`}
+      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + 50}px;`}
       aria-hidden={!brushSelection}
     >
       to <strong>{yearRangeSelection[1]}</strong>
     </div>
-
+    <!-- use +50 to control where the "from to" texts are -->
     <div
       class="absolute z-10 -translate-x-1/2 transform text-xs font-medium"
-      class:text-yale-green={yearSpan >= 5}
-      class:text-yale-red={yearSpan < 5}
+      class:text-yale-green={!isSelectionInvalid}
+      class:text-yale-red={isSelectionInvalid}
       style={`left: ${margin.left + (brushSelection[0] + brushSelection[1]) / 2}px; top: ${
-        margin.top + innerHeight + 5
+        margin.top + innerHeight + 50
       }px;`}
       aria-hidden={!brushSelection}
     >
-      {#if yearSpan < 5}
+      {#if isSelectionInvalid}
         Minimum 5 years
       {:else}
         {yearSpan} years
