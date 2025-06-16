@@ -209,9 +209,12 @@ let brushSelection = $state<[number, number] | null>(null);
 let yearRangeSelection = $state<[number, number]>(yearRange);
 let movingHandle = $state<"start" | "end" | null>(null);
 
-// +++ ADD STATE FOR THE TOOLTIP AND SVG BOUNDARY +++
-let svgBoundary = $state<SVGSVGElement | undefined>();
-let activeTooltip = $state<{ point: IDatum; x: number; y: number } | null>(null);
+// +++ IMPROVED TOOLTIP STATE - Following stacked bar chart pattern +++
+let svgBoundary = $state<HTMLElement | null>();
+let tooltipData = $state<IDatum | null>(null);
+let tooltipX = $state(0);
+let tooltipY = $state(0);
+const tooltipOpen = $derived(!!tooltipData);
 
 // +++ ADD THIS NEW STATE VARIABLE +++
 let isSelectionInvalid = $state(false);
@@ -353,18 +356,21 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
   brushSelection = [finalX0, finalX1];
 }
 
+// +++ IMPROVED TOOLTIP HANDLERS +++
 function handleCircleMouseEnter(point: IDatum) {
-  // Populate the activeTooltip state with the point's data and coordinates
-  activeTooltip = {
-    point,
-    x: xScale(point.year),
-    y: yScale(point[key]),
-  };
+  // Calculate positions first
+  const x = xScale(point.year) + margin.left;
+  const y = yScale(point[key]) + margin.top;
+
+  // Set all tooltip state at once
+  tooltipX = x;
+  tooltipY = y;
+  tooltipData = point;
 }
 
 function handleCircleMouseLeave() {
-  // Clear the state on mouse leave to hide the tooltip
-  activeTooltip = null;
+  // Clear the tooltip data
+  tooltipData = null;
 }
 
 // Update your existing adjustYearRange function
@@ -412,8 +418,8 @@ function adjustYearRange(year0: number, year1: number) {
 }
 </script>
 
-<div class="relative h-full w-full">
-  <svg {width} {height} class="h-full w-full" bind:this={svgBoundary}>
+<div class="relative h-full w-full" bind:this={svgBoundary}>
+  <svg {width} {height} class="h-full w-full">
     <!-- Chart area with margin -->
     <g transform="translate({margin.left}, {margin.top})">
       <!-- Background color -->
@@ -565,20 +571,23 @@ function adjustYearRange(year0: number, year1: number) {
     </div>
   {/if}
 
-  {#if activeTooltip}
+  {#if svgBoundary}
     <Tooltip
-      open={!!activeTooltip}
+      open={tooltipOpen}
       boundary={svgBoundary}
-      x={activeTooltip.x}
-      y={activeTooltip.y}
+      x={tooltipX}
+      y={tooltipY}
       preferredSide="top"
-      sideOffset={0}
+      sideOffset={10}
+      showArrow={true}
     >
       {#snippet children()}
-        <div class="flex flex-col text-left font-sans">
-          <span class="font-bold">Year: {activeTooltip.point.year}</span>
-          <span class="capitalize">{key}: {activeTooltip.point[key]}</span>
-        </div>
+        {#if tooltipData}
+          <div class="flex flex-col text-left font-sans">
+            <span class="font-bold">Year: {tooltipData.year}</span>
+            <span class="capitalize">{key}: {tooltipData[key]}</span>
+          </div>
+        {/if}
       {/snippet}
     </Tooltip>
   {/if}
