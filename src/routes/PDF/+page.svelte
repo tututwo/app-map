@@ -359,13 +359,14 @@ const statistics = $state([
         Closed Churches in {counties_geoid.find((c) => c.geoid === geoid)?.name} ({yearRange[0]}-{yearRange[1]})
       </h1>
 
-      <div class="mb-8 flex h-48 items-center justify-center rounded border border-gray-300">
+      <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
         <Figure exclude="">
           <LineChartBrush
             key="close"
             margin={lineChartMargin}
             bind:yearRange
             data={lineChartData}
+            disableBrushing={true}
           />
 
           {#snippet figcaption()}
@@ -380,7 +381,7 @@ const statistics = $state([
           <DataSection
             title="Total number of closed church"
             mapPlaceholderText="Map"
-            mapBorderColor="border-blue-500"
+            mapBorderColor="border-blue-100"
             legendData={dataRanges[0]}
             description={introText}
             mapColorKey="closure"

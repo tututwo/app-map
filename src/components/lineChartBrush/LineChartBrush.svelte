@@ -30,6 +30,7 @@ type IProps = {
   key?: "close";
   yAxisTickCount?: number;
   extendYAxis?: boolean;
+  disableBrushing?: boolean;
 };
 
 const exampleData = [
@@ -74,6 +75,7 @@ let {
   key = "close",
   yAxisTickCount = 2,
   extendYAxis = false,
+  disableBrushing = false,
 }: IProps = $props();
 
 // Visual styling props - matching lineChart.svelte aesthetic
@@ -292,6 +294,7 @@ const brush = d3
   ])
   .handleSize(5)
   .keyModifiers(false)
+  .filter((event) => !disableBrushing)
   .on("brush", onBrush)
   .on("end", onBrushEnd);
 

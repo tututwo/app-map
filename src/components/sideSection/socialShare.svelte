@@ -181,9 +181,9 @@ function handleShareClick(option: ShareOption) {
   </Popover.Trigger>
   <Popover.Portal>
     <Popover.Content
-      class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 w-64 rounded-lg border-none bg-[#286DC0] p-0 text-white shadow-xl"
-      sideOffset={5}
-      align="center"
+      class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 w-[min(200px,max(18vw,200px))] border-none bg-[#286DC0] p-0 text-white shadow-xl"
+      sideOffset={0}
+      align="start"
     >
       <Popover.Arrow class="fill-[#286DC0]" width={16} height={8} />
       <div class="p-2">
@@ -200,7 +200,7 @@ function handleShareClick(option: ShareOption) {
         {#each shareOptions as option (option.label)}
           <button
             onclick={() => handleShareClick(option)}
-            class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors hover:bg-[#01356B] focus:bg-[#01356B] focus:outline-none"
+            class="flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-[#01356B] focus:outline-none"
           >
             <option.icon class="h-5 w-5" />
             <span>{option.label}</span>
@@ -223,5 +223,8 @@ function handleShareClick(option: ShareOption) {
   display: inline-block !important;
   opacity: 0 !important;
   pointer-events: none !important;
+}
+:global(#bits-37 > svg > polygon) {
+  fill: #286dc0 !important;
 }
 </style>

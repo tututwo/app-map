@@ -243,7 +243,7 @@ $effect(() => {
 
 // Default tooltip styles that can be overridden
 const defaultTooltipClass =
-  "pointer-events-none fixed z-50 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50";
+  "pointer-events-none fixed z-50 border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50";
 
 const defaultArrowClass = "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950";
 </script>
