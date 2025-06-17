@@ -294,13 +294,10 @@ function retryDataFetch() {
     <!-- ------------------------------------------------------------------ -->
     <section
       aria-label="Line chart"
-      class="mb-2 h-[20vh] rounded px-5"
+      class="mb-2 h-[22vh] rounded px-5 pt-6"
       style="background-color: #EBF6FF;"
     >
-      <header
-        class="flex w-full justify-between"
-        style="padding-left: {lineChartMargin.left - 15}px;"
-      >
+      <header class="flex w-full justify-between" style="padding-left: {lineChartMargin.left}px;">
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
           <span class="font-bold">{displayName || "all locations"}</span> over time
@@ -384,7 +381,7 @@ function retryDataFetch() {
             <!-- Legend section -->
             <!-- ------------------------------------------------------------------ -->
             <section aria-label="Legend" class="flex flex-col space-y-1">
-              <h4 class="mb-1 text-sm font-medium text-gray-800">
+              <h4 class="mb-1 text-sm font-medium text-gray-500">
                 {dataFilters.metrics.find((m) => m.value === selectedMapMetric)?.label}
               </h4>
               <div class="flex gap-1.5">
@@ -485,7 +482,7 @@ function retryDataFetch() {
                     <span class=" bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
                     <span>churches</span>
                   </p>
-                  <Tooltip description={"reopening is....; exisiting is....;"} class="mr-3 size-4">
+                  <Tooltip description={"reopening is....; exisiting is....;"} class="size-4 pr-3">
                     <span
                       class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
                     >

@@ -7,7 +7,7 @@ let { from, to, geoid, children }: { from: number; to: number; geoid: string; ch
 </script>
 
 <aside class="bg-yale-blue flex w-[min(230px,max(18vw,230px))] flex-col text-white">
-  <div class="flex h-full flex-col px-6 pt-8 pb-5">
+  <div class="flex h-full flex-col px-6 pt-6 pb-5">
     <!-- Yale Logo -->
     <div class="mb-14">
       <h1 class="font-serif text-4xl tracking-wide">Yale</h1>

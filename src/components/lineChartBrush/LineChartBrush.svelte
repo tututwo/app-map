@@ -30,6 +30,7 @@ type IProps = {
   margin?: { top: number; right: number; bottom: number; left: number };
   yearRange?: [number, number];
   key?: "close";
+  yAxisTickCount?: number;
 };
 
 const exampleData = [
@@ -61,13 +62,18 @@ const MIN_YEAR_SPAN = 5;
 const MIN_YEAR_START = 2001;
 const MAX_YEAR_END = 2021;
 const ALERT_COLOR = "hsla(353, 90%, 65%, 0.5)";
-const FROM_TO_TEXT_VERTICAL_OFFSET = 5;
+const FROM_TO_TEXT_VERTICAL_OFFSET = 0;
+
+// Add tick formatter for y-axis
+const yTickFormatter = d3.format("~s"); // SI-prefix with trimmed zeros
+
 // Component props
 let {
   data = exampleData,
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
   yearRange = $bindable([2003, 2011]),
   key = "close",
+  yAxisTickCount = 1,
 }: IProps = $props();
 
 // Visual styling props - matching lineChart.svelte aesthetic
@@ -94,17 +100,48 @@ const xScale = $derived(
   d3.scaleLinear().domain([MIN_YEAR_START, MAX_YEAR_END]).range([0, innerWidth])
 );
 
-const yScale = $derived(
-  d3
-    .scaleLinear()
-    .domain(d3.extent(data, (d) => d[key]) as [number, number])
-    .nice()
-    .range([innerHeight, 0])
-);
+const yScale = $derived.by(() => {
+  // Get the data extent
+  const [minValue, maxValue] = d3.extent(data, (d) => d[key]) as [number, number];
+
+  // Create a temporary scale to get nice tick values
+  const tempScale = d3.scaleLinear().domain([minValue, maxValue]).nice().range([innerHeight, 0]);
+
+  // Get the tick values using the same count we'll use for display
+  const ticks = tempScale.ticks(yAxisTickCount);
+  const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
+
+  // Get the nice domain and extend by one tick interval
+  const [niceMin, niceMax] = tempScale.domain();
+  const extendedMax = niceMax + tickInterval;
+
+  // Return the final scale with extended domain
+  return d3.scaleLinear().domain([niceMin, extendedMax]).range([innerHeight, 0]);
+});
 
 // Axis ticks
 const xTicks = $derived(xScale.ticks().map((d) => ({ value: d, x: xScale(d) })));
-const yTicks = $derived(yScale.ticks(3).map((d) => ({ value: d, y: yScale(d) })));
+const yTicks = $derived.by(() => {
+  // Get the domain from yScale
+  const [min, max] = yScale.domain();
+
+  // Calculate the tick interval (same as used in yScale)
+  const tempScale = d3.scaleLinear().domain([min, max]).range([innerHeight, 0]);
+
+  const ticks = tempScale.ticks(yAxisTickCount + 1); // Add 1 to account for the extended tick
+
+  // Make sure we include nice round numbers
+  const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
+  const finalTicks = [];
+
+  // Generate ticks from min to max (inclusive) with consistent interval
+  for (let tick = min; tick <= max; tick += tickInterval) {
+    finalTicks.push(tick);
+  }
+
+  // Map to the format expected by the template
+  return finalTicks.map((d) => ({ value: d, y: yScale(d) }));
+});
 
 // Line generator
 const line = $derived(
@@ -430,11 +467,11 @@ function adjustYearRange(year0: number, year1: number) {
 
       <!-- X-axis grid lines -->
       <g class="x-grid grid">
-        {#each xTicks as tick}
+        {#each data as point}
           <line
-            x1={tick.x}
+            x1={xScale(point.year)}
             y1={0}
-            x2={tick.x}
+            x2={xScale(point.year)}
             y2={innerHeight}
             stroke={gridLineColor}
             stroke-width="1"
@@ -473,7 +510,6 @@ function adjustYearRange(year0: number, year1: number) {
       <g class="x-axis-top">
         {#each xTicks as tick}
           <g transform="translate({tick.x}, 0)">
-            <line y1={0} y2={-tickLength} stroke="currentColor" class="text-gray-400" />
             <text
               y={-tickOffset}
               text-anchor="middle"
@@ -489,15 +525,14 @@ function adjustYearRange(year0: number, year1: number) {
       <!-- Y-axis ticks and labels -->
       <g class="y-axis-left">
         {#each yTicks as tick}
-          <g transform="translate(0, {tick.y})">
-            <line x1={0} x2={-tickLength} stroke="currentColor" class="text-gray-400" />
+          <g transform="translate(5, {tick.y})">
             <text
               x={-tickOffset}
               text-anchor="end"
               dominant-baseline="middle"
               class="fill-gray-600 text-xs font-medium"
             >
-              {tick.value}
+              {yTickFormatter(tick.value)}
             </text>
           </g>
         {/each}
@@ -540,7 +575,7 @@ function adjustYearRange(year0: number, year1: number) {
 
   {#if brushSelection && yearRangeSelection}
     <div
-      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-xs px-2 py-1 whitespace-nowrap shadow-md"
       style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
@@ -548,7 +583,7 @@ function adjustYearRange(year0: number, year1: number) {
     </div>
 
     <div
-      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 text-xs whitespace-nowrap shadow-md"
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-xs px-2 py-1 whitespace-nowrap shadow-md"
       style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
