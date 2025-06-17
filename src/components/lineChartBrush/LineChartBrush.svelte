@@ -60,7 +60,7 @@ const exampleData = [
 const MIN_YEAR_SPAN = 5;
 const MIN_YEAR_START = 2001;
 const MAX_YEAR_END = 2021;
-const ALERT_COLOR = "hsla(353, 90%, 65%, 0.5)";
+const ALERT_COLOR = "hsla(0, 0%, 53%, 1)";
 const FROM_TO_TEXT_VERTICAL_OFFSET = 10;
 
 // Add tick formatter for y-axis
@@ -183,7 +183,7 @@ function flashWarningEffect() {
   // animate back to the original color thanks to yoyo: true.
   gsap.to(selectionRect, {
     fill: ALERT_COLOR, // A light, non-jarring red
-    duration: 0.15,
+    duration: 0.1,
     yoyo: true, // Go back to the original value
     repeat: 1, // Play the tween forward, then backward (yoyo) once
   });
@@ -496,7 +496,7 @@ $effect(() => {
         opacity: 1,
         y: 0,
         duration: 2,
-        delay: 0.3,
+        delay: 0.5,
         ease: "power3.out",
       }
     );
@@ -662,10 +662,10 @@ $effect(() => {
     <div
       bind:this={instructionElement}
       class="absolute flex translate-y-1/2 transform items-center gap-1.5
-           text-xs font-normal tracking-wide whitespace-nowrap text-gray-500"
+           text-xs font-normal tracking-wide whitespace-nowrap text-gray-700"
       style={`
       left: ${margin.left + brushSelection[1] + 80}px; 
-      top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET + 2}px; 
+      top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET - 2}px; 
       opacity: 0;
     `}
       aria-hidden={!brushSelection}

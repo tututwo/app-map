@@ -165,7 +165,7 @@ function highlightGroup(range: string, i: number) {
 }
 
 const lineChartMargin = { top: 25, right: 10, bottom: 20, left: 40 };
-
+const stackedBarMargin = { top: 10, right: 0, bottom: 10, left: 35 };
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
 let selectedMapMetricString = $derived(String(selectedMapMetric));
 let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].colorKey);
@@ -450,7 +450,7 @@ function retryDataFetch() {
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
                 {yearRange}
-                margin={{ top: 10, right: 0, bottom: 10, left: 35 }}
+                margin={stackedBarMargin}
                 colors={{
                   negative: "hsla(211, 98%, 21%, .9)", // Bright blue
                   neutral: "hsla(0, 0%, 87%, .9)", // Light gray
@@ -481,7 +481,7 @@ function retryDataFetch() {
                     <span class=" bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
                     <span>churches</span>
                   </p>
-                  <Tooltip description={"reopening is....; exisiting is....;"} class="size-4 pr-3">
+                  <Tooltip description={"reopening is....; exisiting is....;"} class="mr-6 size-4">
                     <span
                       class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
                     >
