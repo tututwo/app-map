@@ -18,6 +18,8 @@ interface Props {
   statConfigs?: StatConfig[];
   excludeFields?: string[];
   autoGenerate?: boolean;
+  selectedMapColorKey?: string;
+  selectedMapColorKeyBackgroundColor?: string;
 }
 
 let {
@@ -26,6 +28,8 @@ let {
   reportLink = "#",
   excludeFields = ["geoid", "name"], // Fields to exclude from auto-generation
   autoGenerate = false, // Set to true to auto-generate from all numeric fields
+  selectedMapColorKey = "closure",
+  selectedMapColorKeyBackgroundColor = "#00C288",
   statConfigs = [
     {
       key: "closure",
@@ -86,6 +90,7 @@ const stats = $derived.by(() => {
       .map(([key, value]) => ({
         label: formatLabel(key),
         value: formatValue(value),
+        actualDataKey: key,
       }));
   } else {
     // Use configured stats
@@ -94,6 +99,7 @@ const stats = $derived.by(() => {
       .map((config) => ({
         label: config.label,
         value: config.format ? config.format(data[config.key]) : data[config.key] || "N/A",
+        actualDataKey: config.key,
       }))
       .filter((stat) => stat.value !== "N/A" && stat.value !== undefined);
   }
@@ -105,10 +111,22 @@ const stats = $derived.by(() => {
 
   <div class="mb-4 grid grid-cols-3">
     {#each stats as stat (stat.label)}
-      <div class="text-center">
-        <p class="text-xs text-gray-600">{stat.label}</p>
-        <p class="text-2xl font-bold text-black">{stat.value}</p>
-      </div>
+      {#if stat.actualDataKey === selectedMapColorKey}
+        <div class="text-center">
+          <p class="text-xs text-gray-600">{stat.label}</p>
+          <p
+            class="text-2xl font-bold text-white"
+            style="background-color: {selectedMapColorKeyBackgroundColor};"
+          >
+            {stat.value}
+          </p>
+        </div>
+      {:else}
+        <div class="text-center">
+          <p class="text-xs text-gray-600">{stat.label}</p>
+          <p class="text-2xl font-bold text-black">{stat.value}</p>
+        </div>
+      {/if}
     {/each}
   </div>
 

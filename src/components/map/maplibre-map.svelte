@@ -50,7 +50,7 @@ let {
   hideControls = false,
 } = $props();
 
-const colorKey = "closure";
+let isAtUSView = $derived(geoid === "00000");
 
 // --- Map State (Source of Truth) ---
 let mapInstance = $state<Map | undefined>(undefined);
@@ -204,6 +204,7 @@ $effect(() => {
   bind:this={mapContainerElement}
   class="relative h-full w-full"
   class:hide-map-controls={hideControls}
+  class:at-us-view={isAtUSView}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
@@ -249,6 +250,8 @@ $effect(() => {
         data={hoveredCountyData}
         autoGenerate={true}
         excludeFields={["geoid", "name", "reopening"]}
+        {selectedMapColorKey}
+        selectedMapColorKeyBackgroundColor={selectedMapColorRange[4]}
       />
     {/if}
   </Tooltip>
@@ -257,5 +260,11 @@ $effect(() => {
 <style>
 .hide-map-controls :global(.maplibregl-control-container) {
   display: none;
+}
+.at-us-view
+  :global(
+    .maplibregl-user-location-dot.maplibregl-marker.maplibregl-marker-anchor-center.__web-inspector-hide-shortcut__
+  ) {
+  display: none !important;
 }
 </style>

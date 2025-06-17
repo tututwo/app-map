@@ -37,6 +37,7 @@ let isLoading = $state(false);
 let selectedCountyKey = $state<string | undefined>(undefined);
 let open = $state(false);
 
+$inspect(displayName);
 const displayedValue = $derived(open ? searchValue : displayName || geoid || "");
 const debouncedSearchValue = new Debounced(() => searchValue, 1000);
 $effect(async () => {
@@ -66,9 +67,12 @@ function handleValueChange(value: string | undefined) {
   const selected = suggestions.find((s) => s.key === value);
 
   if (selected) {
+    console.log("value", value);
+    console.log("selected", selected);
     // This update will flow up to the parent, which will then
     // update the `displayName` prop reactively.
     geoid = selected.geoid;
+    displayName = selected.displayName;
     onCountySelected?.(selected);
   }
 }
@@ -118,7 +122,7 @@ type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
   onValueChange={handleValueChange}
   onOpenChange={handleOpenChange}
   items={suggestions.map((s) => ({ value: s.key, label: s.displayName }))}
-  class="group relative w-full {className}"
+  class="group relative w-full {className} text-xs"
   inputValue={displayedValue}
 >
   <div class="relative w-full">
