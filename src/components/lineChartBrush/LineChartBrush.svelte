@@ -507,7 +507,8 @@ function adjustYearRange(year0: number, year1: number) {
       <path
         bind:this={pathElement}
         d=""
-        class="fill-none stroke-2"
+        fill="none"
+        stroke-width="2"
         stroke={lineColor}
         stroke-linejoin="round"
         stroke-linecap="round"

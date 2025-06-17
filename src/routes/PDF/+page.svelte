@@ -25,7 +25,7 @@ import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
-import html2canvas from "html2canvas-pro";
+import { toJpeg } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { onMount } from "svelte";
 
@@ -123,21 +123,24 @@ async function exportToPDF() {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // 3. Capture the canvas now that the DOM is updated
-    const canvas = await html2canvas(mainContent, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
+    const imgData = await toJpeg(mainContent, {
+      pixelRatio: 2,
       backgroundColor: "#ffffff",
-      ignoreElements: (element) => element.classList.contains("maplibregl-control-container"),
+      filter: (element) => !element.classList?.contains("maplibregl-control-container"),
     });
 
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "pt", "a4");
 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
+
+    // we need to get image dimension
+    const tempImage = new Image();
+    tempImage.src = imgData;
+    await new Promise((resolve) => (tempImage.onload = resolve));
+
     const imgWidth = pageWidth - 40;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const imgHeight = (tempImage.height * imgWidth) / tempImage.width;
 
     pdf.addImage(imgData, "PNG", 20, 20, imgWidth, Math.min(imgHeight, pageHeight - 40));
 
