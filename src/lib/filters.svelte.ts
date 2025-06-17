@@ -24,7 +24,7 @@ class DataFilters {
       description: "Persistence of open churches",
 
       value: 1,
-      legendText: ["0-20%", "20-40%", "40-60%", "60-80%", "80-100%"],
+      legendText: ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"],
       colorKey: "closure_rate_per_10000",
       colorRange: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
       colorDomain: [0, 1],

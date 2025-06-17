@@ -34,7 +34,7 @@ let {
     {
       key: "closure",
       label: "Closure Rate",
-      format: (value) => (value * 100).toFixed(1) + "%",
+      format: (value) => (value * 100).toFixed(1),
       condition: (data) => data.closure !== undefined,
     },
     {
@@ -46,13 +46,13 @@ let {
     {
       key: "persistence",
       label: "Persistence",
-      format: (value) => (value * 100).toFixed(1) + "%",
+      format: (value) => (value * 100).toFixed(1),
       condition: (data) => data.persistence !== undefined,
     },
     {
       key: "reopening",
       label: "Reopening",
-      format: (value) => (value * 100).toFixed(1) + "%",
+      format: (value) => (value * 100).toFixed(1),
       condition: (data) => data.reopening !== undefined,
     },
   ],
@@ -71,7 +71,7 @@ function formatValue(value: any): string | number {
   if (typeof value === "number") {
     // If it's a small decimal (likely a rate), convert to percentage
     if (value > 0 && value < 1) {
-      return (value * 100).toFixed(1) + "%";
+      return (value * 100).toFixed(1);
     }
     // Otherwise, round to 2 decimal places
     return value.toFixed(2);

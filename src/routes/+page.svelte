@@ -198,6 +198,7 @@ const fieldConfigs = [
     range: [200, 10000],
     labels: ["200", "10k"],
     average: 1200,
+    averageLabel: "US Average",
   },
   {
     id: "renters-percent",
@@ -216,11 +217,45 @@ const fieldConfigs = [
     range: [0, 100],
     labels: ["0%", "100%"],
     average: 12,
-    averageLabel: "US Average",
   },
 ];
 
 let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
+// Demographic stats
+const demographicFieldConfigs = [
+  {
+    id: "black-population",
+    field: "n_pop_black",
+    title: "Black population",
+    type: "number",
+    range: [200, 10000],
+    labels: ["200", "10k"],
+    average: 1200,
+    averageLabel: "US Average",
+  },
+  {
+    id: "hispanic-population",
+    field: "n_pop_hisp",
+    title: "Hispanic population",
+    type: "number",
+    range: [0, 10000],
+    labels: ["0", "10k"],
+    average: 1200,
+  },
+  {
+    id: "renter-population-percent",
+    field: "p_renter",
+    title: "Percent of people who are renters",
+    type: "percent",
+    range: [0, 100],
+    labels: ["0%", "100%"],
+    average: 36,
+  },
+];
+
+let demographicStatistics = $derived(
+  createSideMetricData(selectedSideMetricData[0], demographicFieldConfigs)
+);
 
 // Add an effect to sync displayName with default geoid
 $effect(() => {
@@ -517,7 +552,7 @@ function retryDataFetch() {
               />
             {/each}
             <h4 class="mt-8 text-lg font-semibold">Demographics</h4>
-            {#each statistics as stat (stat.id)}
+            {#each demographicStatistics as stat (stat.id)}
               <PercentageBar
                 title={stat.title}
                 currentValueDisplay={stat.currentValueDisplay}

@@ -662,23 +662,25 @@ $effect(() => {
       to <strong>{yearRangeSelection[1]}</strong>
     </div>
 
-    <div
-      bind:this={instructionElement}
-      class="absolute flex translate-y-1/2 transform items-center gap-1.5
+    {#if !disableBrushing}
+      <div
+        bind:this={instructionElement}
+        class="absolute flex translate-y-1/2 transform items-center gap-1.5
            text-xs font-normal tracking-wide whitespace-nowrap text-gray-700"
-      style={`
+        style={`
       left: ${margin.left + brushSelection[1] + 80}px; 
       top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET - 2}px; 
       opacity: 0;
     `}
-      aria-hidden={!brushSelection}
-      role="tooltip"
-    >
-      <ArrowLeftToLine class="h-3.5 w-3.5 translate-y-1/2 opacity-70" />
-      <span class="translate-y-1/2 uppercase" style="letter-spacing: 0.05em;"
-        >Drag to adjust range</span
+        aria-hidden={!brushSelection}
+        role="tooltip"
       >
-    </div>
+        <ArrowLeftToLine class="h-3.5 w-3.5 translate-y-1/2 opacity-70" />
+        <span class="translate-y-1/2 uppercase" style="letter-spacing: 0.05em;"
+          >Drag to adjust range</span
+        >
+      </div>
+    {/if}
     <!-- use +50 to control where the "from to" texts are -->
     <div
       class="absolute z-10 -translate-x-1/2 transform text-xs font-medium"
