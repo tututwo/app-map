@@ -29,6 +29,11 @@ import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 import { onMount } from "svelte";
 
+import counties_geoid from "$data/counties_geoid.csv";
+import { dataFilters } from "$lib/filters.svelte.js";
+import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
+
+import { scaleQuantize } from "d3-scale";
 // State management for PDF export
 let mainContent = $state<HTMLElement | null>(null);
 let isExporting = $state(false);
@@ -40,6 +45,7 @@ let pdfOverrideWidths = $state<Record<string, number>>({});
 let yearRange = $state<[number, number]>([2003, 2011]);
 let geoid = $state("00000");
 let mapData = $state<any[]>([]);
+let lineChartData = $state<{ year: number; close: number }[]>([]);
 
 onMount(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -48,17 +54,40 @@ onMount(() => {
   geoid = urlParams.get("geoid") ?? "00000";
 });
 
+const n = 5;
+
+// build a quantize scale that clamps out-of-range values
+const whichQuantile = (domain: [number, number]) =>
+  scaleQuantize<number, number>()
+    .domain(domain)
+    .range(Array.from({ length: n }, (_, i) => i + 1)); // [1,2,3,4,5]
+
 async function fetchMapData(from: number, to: number) {
   // wait for the brush transition animation to finish
   // otherwise it lags
   const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
   mapData = await response.json();
 }
-
+async function fetchLineChartData(geoidParam?: string) {
+  try {
+    const url = `/api/line_chart_data?geoid=${geoidParam}`;
+    const response = await fetch(url);
+    lineChartData = await response.json();
+  } catch (error) {
+    console.error("Error fetching line chart data:", error);
+    // Keep existing data on error
+  }
+}
 $effect(() => {
   fetchMapData(yearRange[0], yearRange[1]);
 });
 
+$effect(() => {
+  // Fetch line chart data when geoid changes
+  // If geoid is "00000" (default), fetch aggregated data for all locations
+  const geoidToFetch = geoid === "00000" ? "" : geoid;
+  fetchLineChartData(geoidToFetch);
+});
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 // ----------------------------------------------------------------
@@ -102,6 +131,35 @@ const densityPerSqkmData: BarSegment[] = $state([
   { range: "37-48", color: "bg-purple-500", textColor: "text-white" },
   { range: "49-60", color: "bg-purple-600", textColor: "text-white" },
 ]);
+// Usage in your Svelte component:
+
+let dataRanges = $derived.by(() => {
+  let threeMetrics = $state([0, 1, 2]);
+
+  return threeMetrics.map((metric) => {
+    const m = dataFilters.metrics[metric];
+    const quantize = whichQuantile(m.colorDomain as [number, number]);
+
+    // find the raw value (could be 0, undefined, etc.)
+    const rec = mapData.find((d) => d.geoid === geoid);
+    const raw = rec?.[m.colorKey];
+
+    // if raw is nullish, force it to domain[0]; otherwise leave 0 ↦ 0
+    const value = raw ?? m.colorDomain[0];
+
+    // 1..n → subtract 1 for a 0-based index
+    const quantileIndex = quantize(value) - 1;
+
+    return m.legendText.map((range, i) => ({
+      // only attach popupValue on the matching bucket
+      ...(i === quantileIndex && { popupValue: value.toFixed(2) }),
+
+      range,
+      color: m.colorRange[i],
+      textColor: getAccessibleTextColor(m.colorRange[i], "normal"),
+    }));
+  });
+});
 
 const introText = $state(
   "Intro text goes here. consectetur adipiscing elit. Quisque maximus risus laoreet lacus venenatis, nec ultrices odio sodales. Phasellus nulla dui, faucibus id rhoncus quis."
@@ -293,14 +351,19 @@ const statistics = $state([
 
     <main bind:this={mainContent}>
       <h1 class="mb-2 text-2xl font-bold text-gray-800">
-        Closed Churches in Fayette, Illinois (2003-2011)
+        Closed Churches in {counties_geoid.find((c) => c.geoid === geoid)?.name} ({yearRange[0]}-{yearRange[1]})
       </h1>
 
       <div
         class="mb-8 flex h-48 items-center justify-center rounded border border-gray-300 bg-gray-50"
       >
         <Figure exclude="">
-          <LineChartBrush key="close" margin={lineChartMargin} bind:yearRange />
+          <LineChartBrush
+            key="close"
+            margin={lineChartMargin}
+            bind:yearRange
+            data={lineChartData}
+          />
 
           {#snippet figcaption()}
             This is a caption for the line chart showing church closures over time.
@@ -315,7 +378,7 @@ const statistics = $state([
             title="Total number of closed church"
             mapPlaceholderText="Map"
             mapBorderColor="border-blue-500"
-            legendData={totalChurchesData}
+            legendData={dataRanges[0]}
             description={introText}
             mapColorKey="closure"
             mapColorRange={["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"]}
@@ -326,7 +389,7 @@ const statistics = $state([
           <DataSection
             title="Rate of closed churches per 10,000 population"
             mapPlaceholderText="Map"
-            legendData={densityPer100kData}
+            legendData={dataRanges[1]}
             description={introText}
             mapColorKey="closure_rate_per_10000"
             mapColorRange={["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"]}
@@ -337,7 +400,7 @@ const statistics = $state([
           <DataSection
             title="Persistence of open churches"
             mapPlaceholderText="Map"
-            legendData={densityPerSqkmData}
+            legendData={dataRanges[2]}
             description={introText}
             mapColorKey="persistence"
             mapColorRange={["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"]}

@@ -121,6 +121,7 @@ let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colo
 let dataRanges = $derived.by(() => {
   const selectedMetric = dataFilters.metrics[selectedMapMetric];
 
+  console.log(selectedMapMetric);
   return selectedMetric.legendText.map((label, index) => ({
     label,
     color: selectedMetric.colorRange[index],

@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { BarSegment } from "$lib/types";
-
+import { cn } from "$lib/utils";
 let { data } = $props<{ data: BarSegment[] }>();
 
 // Default text color if not specified, ensuring it's dark for good contrast on unknown light bgs
@@ -10,12 +10,18 @@ const defaultTextColor = "text-black";
 <div class="relative z-0 w-full pt-10 pb-8">
   <div class="flex h-10 w-full rounded shadow">
     {#each data as segment, i}
-      <div class="flex-1 {segment.color} relative flex items-center justify-center">
-        <span class="text-sm font-medium {segment.textColor || defaultTextColor}">
+      <div
+        class={cn("relative flex flex-1 items-center justify-center", segment.color)}
+        style={`background-color: ${segment.color};`}
+      >
+        <span
+          class={cn("text-sm font-medium", segment.textColor, defaultTextColor)}
+          style={`color: ${segment.textColor};`}
+        >
           {segment.range}
         </span>
 
-        {#if segment.popupValue}
+        {#if segment.popupValue !== undefined && segment.popupValue !== null}
           <div class="absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2">
             <div
               class="rounded-md bg-blue-800 px-3 py-1.5 text-lg font-bold whitespace-nowrap text-white shadow-lg"
