@@ -2,7 +2,7 @@
 // @ts-nocheck
 import * as d3 from "d3";
 import { getContext, untrack } from "svelte";
-import { expoOut, cubicOut } from "svelte/easing"; // expoOut: firm bamboo growth, cubicOut: smooth exit
+import { expoOut, cubicOut } from "svelte/easing";
 import { fade } from "svelte/transition";
 import Tooltip from "$components/chart/Tooltip.svelte";
 
@@ -16,40 +16,32 @@ let {
   data,
   yearRange = [2003, 2011],
   margin = { top: 40, right: 30, bottom: 50, left: 60 },
-  // Stack configuration
   keys = ["negative", "neutral", "positive"],
-  // Color scheme
   colors = {
     negative: "hsla(211, 99%, 45%, 1)",
     neutral: "hsla(0, 0%, 85%, 1)",
     positive: "hsla(145, 63%, 42%, 1)",
   },
-  // Hover colors
   hoverColors = {
     negative: "hsla(211, 99%, 35%, 1)",
     neutral: "hsla(0, 0%, 75%, 1)",
     positive: "hsla(145, 63%, 32%, 1)",
   },
-  // Grid and styling
   gridLineColor = "hsla(0, 0%, 90%, 1)",
   showXGridlines = false,
   showYGridlines = true,
   showChartBorder = true,
   chartBackgroundColor = "white",
-  // Axis configuration
   xTickPosition = "bottom",
   yTickPosition = "left",
   yTickCount = 5,
   tickLength = 6,
   tickOffset = 10,
-  // Bar configuration
   barPadding = 0.1,
-  // Animation configuration
-  animationDuration = 800, // Total animation duration for updates
-  segmentDuration = 400, // Each bamboo segment grows in 200ms
+  animationDuration = 800,
+  segmentDuration = 400,
   yearStaggerDelay = 100,
-  segmentStaggerDelay = 100, // Small delay, segments complete before next starts
-  // Tooltip configuration
+  segmentStaggerDelay = 100,
   enableTooltip = true,
 } = $props();
 
@@ -58,15 +50,16 @@ let hoveredBar = $state(null);
 let hoveredSegment = $state(null);
 let svgElement = $state(null);
 let containerElement = $state(null);
-
-// State management for tooltip
 let tooltipData = $state(null);
 let tooltipX = $state(0);
 let tooltipY = $state(0);
 const tooltipOpen = $derived(!!tooltipData);
 
-// Track previous data for animation coordination
+// --- MODIFICATION START ---
+// Track previous data state for animation coordination
 let previousYears = [];
+let previousDataLength = 0; // NEW: Track the number of data points
+// --- MODIFICATION END ---
 let animationPromise = null;
 
 // Calculate chart dimensions
@@ -128,7 +121,6 @@ const yScale = $derived(() => {
 const zeroY = $derived(yScale()(0));
 const yTicks = $derived(yScale().ticks(yTickCount));
 
-// Calculate the full bounds of each year's stack
 const stackBoundsByYear = $derived.by(() => {
   const bounds = new Map();
   const stacked = stackedData();
@@ -158,52 +150,55 @@ $effect(() => {
 
   const svg = d3.select(svgElement);
   const barsGroup = svg.select(".bars-visual");
+  const currentData = processedData();
+  const currentYears = currentData.map((d) => d.year);
 
-  // Get current years and determine animation strategy
-  const currentYears = processedData().map((d) => d.year);
-  const exitingYears = previousYears.filter((year) => !currentYears.includes(year));
+  // --- MODIFICATION START ---
+  // Determine animation strategy: update in-place or full exit/enter
+  const isUpdateInPlace = currentData.length === previousDataLength;
+
+  const exitingYears = isUpdateInPlace
+    ? []
+    : previousYears.filter((year) => !currentYears.includes(year));
+  // --- MODIFICATION END ---
+
   const hasExiting = exitingYears.length > 0;
-
-  // Calculate max exit duration if needed
   let maxExitDuration = 0;
   if (hasExiting) {
     const maxExitIndex = exitingYears.length - 1;
     const maxSeriesIndex = keys.length - 1;
-    // Exit animations are quicker with segmentDuration
     maxExitDuration =
       segmentDuration + maxExitIndex * yearStaggerDelay + maxSeriesIndex * segmentStaggerDelay;
   }
 
-  // Cancel any pending animation
   if (animationPromise) {
     animationPromise.cancel = true;
   }
 
-  // Create new animation promise
   const currentAnimation = { cancel: false };
   animationPromise = currentAnimation;
 
-  // Update bars using D3's data join
   const barGroups = barsGroup.selectAll(".bar-group").data(stackedData(), (d) => d.key);
 
-  // Remove exiting groups
   barGroups.exit().transition().duration(animationDuration).style("opacity", 0).remove();
 
-  // Enter new groups
   const enterGroups = barGroups.enter().append("g").attr("class", "bar-group");
-
-  // Update all groups
   const allGroups = barGroups.merge(enterGroups);
 
-  // Handle bars within each group
   allGroups.each(function (series, seriesIndex) {
     if (currentAnimation.cancel) return;
 
     const group = d3.select(this);
-    const bars = group.selectAll(".bar-segment").data(series, (d) => d.data.year);
 
-    // Exit
+    // --- MODIFICATION START ---
+    // Use a conditional key function for the data join
+    const barKeyFn = isUpdateInPlace ? (d, i) => i : (d) => d.data.year;
+    const bars = group.selectAll(".bar-segment").data(series, barKeyFn);
+    // --- MODIFICATION END ---
+
+    // Exit (only runs when data length changes)
     bars.exit().each(function (d, i) {
+      if (isUpdateInPlace) return; // Safeguard
       const exitIndex = exitingYears.indexOf(d.data.year);
       if (exitIndex === -1) return;
 
@@ -212,46 +207,32 @@ $effect(() => {
 
       d3.select(this)
         .transition()
-        .duration(segmentDuration) // Quick exit to match enter duration
-        .ease(cubicOut) // Smooth exit without bounce
+        .duration(segmentDuration)
+        .ease(cubicOut)
         .delay(delay)
-        .attr("y", (d) => {
-          // Exit to the starting edge
-          const y0 = yScale()(d[0]);
-          const y1 = yScale()(d[1]);
-          return d[1] >= d[0] ? y0 : y1;
-        })
+        .attr("y", (d) => (d[1] >= d[0] ? yScale()(d[0]) : yScale()(d[1])))
         .attr("height", 0)
         .style("opacity", 0)
         .remove();
     });
 
-    // Enter
+    // Enter (only runs when data length changes)
     const enterBars = bars
       .enter()
       .append("rect")
       .attr("class", "bar-segment")
       .attr("x", (d) => xScale(d.data.year))
       .attr("width", xScale.bandwidth())
-      .attr("y", (d) => {
-        // For enter animation, position at the starting edge
-        const y0 = yScale()(d[0]);
-        const y1 = yScale()(d[1]);
-        // For positive bars, start from bottom; for negative, start from top
-        return d[1] >= d[0] ? y0 : y1;
-      })
+      .attr("y", (d) => (d[1] >= d[0] ? yScale()(d[0]) : yScale()(d[1])))
       .attr("height", 0)
       .attr("fill", getSegmentColor(series.key, false))
-      .style("pointer-events", "none"); // Visual layer doesn't handle interactions
+      .style("pointer-events", "none");
 
-    // Animate enter - bars grow from their base with proper bamboo timing
     enterBars
       .transition()
-      .duration(segmentDuration) // Each segment grows quickly!
-      .ease(expoOut) // Firm bamboo-like growth without bounce
+      .duration(segmentDuration)
+      .ease(expoOut)
       .delay((d, i) => {
-        // Bamboo timing: each segment completes ~80% before next starts
-        // This creates clear 节节高 (segment by segment) growth
         const yearDelay = i * yearStaggerDelay;
         const segmentDelay = seriesIndex * (segmentDuration * 0.8 + segmentStaggerDelay);
         return maxExitDuration + yearDelay + segmentDelay;
@@ -259,22 +240,24 @@ $effect(() => {
       .attr("y", (d) => Math.min(yScale()(d[0]), yScale()(d[1])))
       .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
 
-    // Update (for existing bars that are repositioning)
+    // Update (runs for all existing & updating bars)
     bars
       .transition()
-      .duration(animationDuration) // Use full duration for updates
-      .ease(expoOut) // Consistent bamboo-like effect
-      .delay(maxExitDuration)
+      .duration(animationDuration)
+      .ease(expoOut)
+      .delay(maxExitDuration) // Will be 0 if isUpdateInPlace is true
       .attr("x", (d) => xScale(d.data.year))
       .attr("width", xScale.bandwidth())
       .attr("y", (d) => Math.min(yScale()(d[0]), yScale()(d[1])))
       .attr("height", (d) => Math.abs(yScale()(d[0]) - yScale()(d[1])));
   });
 
-  // Update previous years for next run
+  // --- MODIFICATION START ---
+  // Update previous state trackers for the next run
   previousYears = [...currentYears];
+  previousDataLength = currentData.length;
+  // --- MODIFICATION END ---
 
-  // Cleanup function
   return () => {
     if (animationPromise === currentAnimation) {
       animationPromise = null;
@@ -288,7 +271,14 @@ $effect(() => {
 
   const svg = d3.select(svgElement);
   const interactionGroup = svg.select(".bars-interaction");
-  const hoverRects = interactionGroup.selectAll(".hover-area").data(processedData(), (d) => d.year);
+  const currentData = processedData();
+
+  // --- MODIFICATION START ---
+  // Apply the same conditional keying logic to the hover rectangles
+  const isUpdateInPlace = currentData.length === previousDataLength;
+  const hoverKeyFn = isUpdateInPlace ? (d, i) => i : (d) => d.year;
+  const hoverRects = interactionGroup.selectAll(".hover-area").data(currentData, hoverKeyFn);
+  // --- MODIFICATION END ---
 
   hoverRects.exit().remove();
 
@@ -309,7 +299,10 @@ $effect(() => {
       tooltipData = null;
       hoveredBar = null;
     })
-    .merge(hoverRects)
+    .merge(hoverRects) // This now correctly merges the updating rectangles
+    .transition() // Add a transition for smooth position/size updates
+    .duration(animationDuration)
+    .ease(expoOut)
     .attr("x", (d) => xScale(d.year))
     .attr("width", xScale.bandwidth())
     .attr("y", (d) => stackBoundsByYear.get(d.year)?.yMin ?? 0)

@@ -13,6 +13,7 @@
 // CRITICAL: Apply MapLibre patch BEFORE importing any components that use MapLibre
 import "$lib/maplibre-patch";
 
+import { untrack, tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
 
 import type { BarSegment } from "$lib/types";
@@ -32,6 +33,9 @@ import { onMount } from "svelte";
 let mainContent = $state<HTMLElement | null>(null);
 let isExporting = $state(false);
 let exportError = $state<string | null>(null);
+
+// --- ADD THIS ---
+let pdfOverrideWidths = $state<Record<string, number>>({});
 
 let yearRange = $state<[number, number]>([2003, 2011]);
 let geoid = $state("00000");
@@ -109,41 +113,37 @@ async function exportToPDF() {
     return;
   }
 
+  isExporting = true; // This will now trigger forceStatic in the children
+  exportError = null;
+
   try {
-    isExporting = true;
-    exportError = null;
+    // 2. Wait for Svelte to apply the new widths to the components
+    await tick();
+    // HACK: Wait a brief moment for the browser to paint the changes before capturing.
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Wait for maps and other dynamic content to fully load
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
+    // 3. Capture the canvas now that the DOM is updated
     const canvas = await html2canvas(mainContent, {
-      scale: 2, // Higher quality
-      useCORS: true, // Handle external resources
-      allowTaint: true, // Allow cross-origin images
-      width: mainContent.offsetWidth,
-      height: mainContent.offsetHeight,
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
       backgroundColor: "#ffffff",
-      logging: true, // Enable logging for debugging
-      foreignObjectRendering: false, // Better compatibility with WebGL
+      ignoreElements: (element) => element.classList.contains("maplibregl-control-container"),
     });
 
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "pt", "a4");
 
-    // Calculate dimensions to fit A4
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth - 40; // 20pt margin on each side
+    const imgWidth = pageWidth - 40;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Add the image with margins
     pdf.addImage(imgData, "PNG", 20, 20, imgWidth, Math.min(imgHeight, pageHeight - 40));
 
-    // If content is taller than page, add additional pages
     if (imgHeight > pageHeight - 40) {
       let remainingHeight = imgHeight - (pageHeight - 40);
       let yOffset = -(pageHeight - 40);
-
       while (remainingHeight > 0) {
         pdf.addPage();
         const currentPageHeight = Math.min(remainingHeight, pageHeight - 40);
@@ -158,7 +158,7 @@ async function exportToPDF() {
     console.error("PDF export failed:", error);
     exportError = `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`;
   } finally {
-    isExporting = false;
+    isExporting = false; // This will return the components to their anim
   }
 }
 
@@ -361,6 +361,8 @@ const statistics = $state([
                   averageValue={stat.averageValue}
                   averageLabel={stat.averageLabel}
                   uniqueIdBase={stat.id}
+                  overrideWidth={pdfOverrideWidths[stat.id]}
+                  forceStatic={isExporting}
                 />
               {/each}
               <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
@@ -376,6 +378,8 @@ const statistics = $state([
                   averageValue={stat.averageValue}
                   averageLabel={stat.averageLabel}
                   uniqueIdBase={stat.id}
+                  overrideWidth={pdfOverrideWidths[stat.id]}
+                  forceStatic={isExporting}
                 />
               {/each}
             </div>

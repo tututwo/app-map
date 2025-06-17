@@ -17,6 +17,8 @@ interface Props {
   description?: string;
   additionalInfo?: Snippet;
   animationDuration?: number;
+  overrideWidth?: number | null;
+  forceStatic?: boolean; // <-- Add this
 }
 
 let {
@@ -33,6 +35,8 @@ let {
   description = undefined,
   additionalInfo = undefined,
   animationDuration = 500,
+  overrideWidth = null,
+  forceStatic = false,
 }: Props = $props();
 
 // Use a simple const instead of $state for static values
@@ -70,8 +74,8 @@ const animatedAveragePercent =
 
 // Update tween targets when values change
 $effect(() => {
-  // Respect user's motion preferences
-  const duration = prefersReducedMotion.current ? 0 : animationDuration;
+  // Respect user's motion preferences or static mode
+  const duration = prefersReducedMotion.current || forceStatic ? 0 : animationDuration;
 
   animatedValuePercent.set(valuePercent, { duration });
 
@@ -79,6 +83,18 @@ $effect(() => {
     animatedAveragePercent.set(averagePercent, { duration });
   }
 });
+// --- ADD THIS DERIVED STATE ---
+// This will decide what width to display and what will-change style to use.
+// --- AND THIS ONE ---
+const displayWidth = $derived(
+  forceStatic ? valuePercent : overrideWidth !== null ? overrideWidth : animatedValuePercent.current
+);
+
+const displayAveragePercent = $derived(
+  forceStatic && averagePercent !== undefined
+    ? averagePercent
+    : (animatedAveragePercent?.current ?? 0)
+);
 
 // Computed values for accessibility
 const progressBarAriaLabel = $derived(
@@ -91,6 +107,8 @@ const valuePercentRounded = $derived(Math.round(animatedValuePercent.current));
 const averagePercentRounded = $derived(
   animatedAveragePercent ? Math.round(animatedAveragePercent.current) : undefined
 );
+
+// This effect is removed as it's a duplicate of the one above
 </script>
 
 <article class="w-full" role="region" aria-labelledby={titleId} aria-describedby={descriptionId}>
@@ -124,10 +142,11 @@ const averagePercentRounded = $derived(
         <span class="absolute bottom-0 left-0 text-xs font-medium text-gray-600">
           {minLabel}
         </span>
-        {#if animatedAveragePercent && averageLabel}
+        {#if averagePercent !== undefined && averageLabel}
           <span
             class="absolute bottom-1 text-xs font-light whitespace-nowrap text-gray-600 transition-all"
-            style="left: {animatedAveragePercent.current}%; transform: translateX(-50%); transition-duration: {prefersReducedMotion.current
+            style="left: {displayAveragePercent}%; transition-duration: {prefersReducedMotion.current ||
+            forceStatic
               ? '0ms'
               : `${animationDuration}ms`};"
           >
@@ -150,20 +169,22 @@ const averagePercentRounded = $derived(
           aria-valuetext={`${currentValueDisplay} (${Math.round(valuePercent)}%)`}
           aria-label={progressBarAriaLabel}
         >
-          <!-- Progress fill with animated width -->
           <div
             class="absolute top-0 left-0 h-full bg-[#00C288]"
-            style="width: {animatedValuePercent.current}%; will-change: width;"
+            style="width: {displayWidth}%; {prefersReducedMotion.current || forceStatic
+              ? ''
+              : 'will-change: width;'}"
           >
             <span class="sr-only">{valuePercentRounded}% complete</span>
           </div>
         </div>
 
         <!-- Average marker with enhanced visibility and animation -->
-        {#if animatedAveragePercent}
+        {#if averagePercent !== undefined}
           <div
             class="absolute top-[-4px] bottom-[-4px] flex items-center transition-all"
-            style="left: {animatedAveragePercent.current}%; transition-duration: {prefersReducedMotion.current
+            style="left: {displayAveragePercent}%; transition-duration: {prefersReducedMotion.current ||
+            forceStatic
               ? '0ms'
               : `${animationDuration}ms`};"
             role="img"
