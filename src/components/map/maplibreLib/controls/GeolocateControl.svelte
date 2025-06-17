@@ -6,6 +6,7 @@ import maplibregl from "maplibre-gl";
 import { getMapContext } from "../contexts.svelte.js";
 import { resetEventListener } from "../utils.js";
 import type { Listener, Event } from "../types.js";
+import { reverseGeocodeCounty } from "$lib/utils/searchCounty2010Census.js";
 
 type GeolocateEvent = Event<maplibregl.GeolocateControl> & object;
 
@@ -25,6 +26,10 @@ interface Props extends maplibregl.GeolocateControlOptions {
   ongeolocate?: Listener<GeolocateEvent & GeolocationPosition>;
   onerror?: Listener<GeolocateEvent & GeolocationPositionError>;
   onoutofmaxbounds?: Listener<GeolocateEvent & GeolocationPosition>;
+  geoid?: string;
+  displayName?: string | null;
+  onLocationUpdate?: (geoid: string, displayName: string) => void;
+  shouldDisableTracking?: boolean;
 }
 let {
   position,
@@ -38,6 +43,10 @@ let {
   onerror,
   onoutofmaxbounds,
   mapZoom,
+  geoid = $bindable(),
+  displayName = $bindable(),
+  onLocationUpdate,
+  shouldDisableTracking = $bindable(false),
   ...options
 }: Props = $props();
 
@@ -66,7 +75,73 @@ $effect(() => resetEventListener(control, "trackuserlocationstart", ontrackuserl
 $effect(() => resetEventListener(control, "trackuserlocationend", ontrackuserlocationend));
 $effect(() => resetEventListener(control, "userlocationlostfocus", onuserlocationlostfocus));
 $effect(() => resetEventListener(control, "userlocationfocus", onuserlocationfocus));
-$effect(() => resetEventListener(control, "geolocate", ongeolocate));
+
+// Track if we're the source of the location change
+let isGeolocatorSource = $state(false);
+
+// Add effect to disable tracking when requested
+$effect(() => {
+  if (shouldDisableTracking && control && control._watchState === "ACTIVE_LOCK") {
+    // Trigger the control to go to background state, which removes the dot
+    control._updateMarker(); // Update marker position
+    control._watchState = "OFF";
+    control._geolocateButton.classList.remove("maplibregl-ctrl-geolocate-active");
+    control._geolocateButton.classList.remove("maplibregl-ctrl-geolocate-active-error");
+    control._geolocateButton.classList.remove("maplibregl-ctrl-geolocate-waiting");
+    control._geolocateButton.classList.remove("maplibregl-ctrl-geolocate-background");
+    control._geolocateButton.classList.remove("maplibregl-ctrl-geolocate-background-error");
+
+    // Clear the marker
+    if (control._userLocationDotMarker) {
+      control._userLocationDotMarker.remove();
+      control._userLocationDotMarker = null;
+    }
+
+    // Clear watch
+    if (control._geolocationWatchID !== undefined) {
+      navigator.geolocation.clearWatch(control._geolocationWatchID);
+      control._geolocationWatchID = undefined;
+    }
+
+    isGeolocatorSource = false;
+  }
+});
+
+async function handleGeolocate(e: GeolocateEvent & GeolocationPosition) {
+  // Mark that we're the source of this location change
+  isGeolocatorSource = true;
+
+  // Stop any existing map animations first
+  if (mapCtx.map) {
+    mapCtx.map.stop();
+  }
+
+  // Get coordinates from the geolocation event
+  const lat = e.coords.latitude;
+  const lon = e.coords.longitude;
+
+  // Reverse geocode to get county information
+  const countyInfo = await reverseGeocodeCounty(lat, lon);
+
+  if (countyInfo && countyInfo.geoid) {
+    // Update the geoid and displayName
+    geoid = countyInfo.geoid;
+    displayName = countyInfo.displayName;
+
+    // Reset the flag since tracking should continue
+    shouldDisableTracking = false;
+
+    // Call the callback if provided
+    onLocationUpdate?.(countyInfo.geoid, countyInfo.displayName, true); // true = from geolocator
+  }
+
+  // Call the original handler if provided
+  ongeolocate?.(e);
+}
+
+// Update the effect to use our custom handler
+$effect(() => resetEventListener(control, "geolocate", handleGeolocate));
+
 $effect(() => resetEventListener(control, "error", onerror));
 $effect(() => resetEventListener(control, "outofmaxbounds", onoutofmaxbounds));
 

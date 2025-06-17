@@ -97,6 +97,10 @@ const highlightedFeature = $derived.by(() => {
   };
 });
 
+// Add state to track if location was set by geolocator
+let wasSetByGeolocator = $state(false);
+let shouldDisableGeolocatorTracking = $state(false);
+
 // --- ARCHITECTURE: Layers are now derived state, not a single monolithic object ---
 const baseLayer = $derived(
   new GeoJsonLayer({
@@ -119,6 +123,10 @@ const baseLayer = $derived(
     lineWidthMinPixels: 0.5,
     onClick: (info: any) => {
       if (info.object) {
+        // User clicked on map - not from geolocator
+        wasSetByGeolocator = false;
+        shouldDisableGeolocatorTracking = true;
+
         geoid = info.object.id;
         const countyData = mapData.get(info.object.id);
         displayName = countyData?.name || info.object.id;
@@ -203,6 +211,18 @@ $effect(() => {
     flyToCounty(zoomToWhichCounty[geoid]);
   }
 });
+
+// Add callback for geolocator updates
+function handleGeolocatorUpdate(
+  newGeoid: string,
+  newDisplayName: string,
+  fromGeolocator: boolean = false
+) {
+  if (fromGeolocator) {
+    wasSetByGeolocator = true;
+    shouldDisableGeolocatorTracking = false;
+  }
+}
 </script>
 
 <figure
@@ -210,6 +230,7 @@ $effect(() => {
   class="relative h-full w-full"
   class:hide-map-controls={hideControls}
   class:at-us-view={isAtUSView}
+  class:hide-geolocator-dot={!wasSetByGeolocator}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
@@ -230,13 +251,24 @@ $effect(() => {
         class="flex! size-[29px] items-center justify-center rounded-md"
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() => {
+          // User clicked reset - not from geolocator
+          wasSetByGeolocator = false;
+          shouldDisableGeolocatorTracking = true;
+
           geoid = "00000";
           displayName = "All locations";
         }}
       ></button>
     </CustomControl>
     <FullScreenControl position="top-left" />
-    <GeolocateControl position="top-left" {mapZoom} />
+    <GeolocateControl
+      position="top-left"
+      {mapZoom}
+      bind:geoid
+      bind:displayName
+      bind:shouldDisableTracking={shouldDisableGeolocatorTracking}
+      onLocationUpdate={handleGeolocatorUpdate}
+    />
 
     <DeckGLOverlay interleaved {layers} />
   </MapLibre>
@@ -271,6 +303,11 @@ $effect(() => {
   :global(
     .maplibregl-user-location-dot.maplibregl-marker.maplibregl-marker-anchor-center.__web-inspector-hide-shortcut__
   ) {
+  display: none !important;
+}
+
+/* Hide geolocator dot when not actively tracking */
+.hide-geolocator-dot :global(.maplibregl-user-location-dot) {
   display: none !important;
 }
 </style>

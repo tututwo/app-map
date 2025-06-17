@@ -254,3 +254,56 @@ export async function searchCounties(query) {
     return [];
   }
 }
+
+// Add this new function for reverse geocoding a specific coordinate
+export async function reverseGeocodeCounty(lat, lon) {
+  try {
+    const reverseResponse = await fetch(
+      `${NOMINATIM_BASE_URL}/reverse?` +
+        new URLSearchParams({
+          lat: lat.toString(),
+          lon: lon.toString(),
+          format: "json",
+          zoom: "8",
+          addressdetails: "1",
+        }),
+      {
+        headers: {
+          "User-Agent": "CountySearchApp/1.0 (gordontu2@gmail.com)",
+        },
+      }
+    );
+
+    const reverseData = await reverseResponse.json();
+
+    if (reverseData.address) {
+      const countyName =
+        reverseData.address.county ||
+        reverseData.address.administrative_area_level_2 ||
+        reverseData.address.state_district;
+      const state = reverseData.address.state || reverseData.address.administrative_area_level_1;
+
+      if (countyName && state) {
+        // Look up GEOID using the original county name
+        const geoid = lookupGeoid(countyName, state);
+
+        // Map to display name (handles CT planning regions)
+        const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
+        const displayName = `${mapped2010County}, ${state}`;
+
+        return {
+          geoid: geoid || null,
+          displayName,
+          county: mapped2010County,
+          state,
+          originalCountyName: countyName,
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Reverse geocoding error:", error);
+    return null;
+  }
+}

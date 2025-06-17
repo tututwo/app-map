@@ -20,6 +20,7 @@ interface CountySearchProps {
   class?: string;
   geoid?: string;
   displayName?: string | null;
+  onLocationSourceChange?: (fromGeolocator: boolean) => void;
 }
 
 let {
@@ -28,6 +29,7 @@ let {
   class: className = "",
   geoid = $bindable(),
   displayName = $bindable(),
+  onLocationSourceChange,
 }: CountySearchProps = $props();
 
 // State management
@@ -67,13 +69,13 @@ function handleValueChange(value: string | undefined) {
   const selected = suggestions.find((s) => s.key === value);
 
   if (selected) {
-    console.log("value", value);
-    console.log("selected", selected);
+    // Notify that this change is NOT from geolocator
+    onLocationSourceChange?.(false);
+
     geoid = selected.geoid;
     displayName = selected.displayName;
     onCountySelected?.(selected);
 
-    // Clear search value after selection
     searchValue = "";
   }
 }

@@ -45,6 +45,9 @@ let stackedBarData = $state<
 let geoid = $state("00000");
 let displayName = $state<string | null>("All locations"); // Track display name
 
+// Track if we should disable geolocator
+let shouldDisableGeolocatorTracking = $state(false);
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -175,12 +178,18 @@ function resetToAllLocations() {
   geoid = "00000";
   displayName = "All locations";
 }
+
+function handleLocationSourceChange(fromGeolocator: boolean) {
+  if (!fromGeolocator) {
+    shouldDisableGeolocatorTracking = true;
+  }
+}
 </script>
 
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>
-    <CountySearch bind:geoid bind:displayName />
+    <CountySearch bind:geoid bind:displayName onLocationSourceChange={handleLocationSourceChange} />
   </Sidebar>
 
   <!-- Main Content -->
@@ -316,6 +325,7 @@ function resetToAllLocations() {
             data={mapData}
             bind:geoid
             bind:displayName
+            bind:shouldDisableGeolocatorTracking
           />
         </section>
       </div>
