@@ -94,9 +94,55 @@ let progress = $derived((completedCount / totalCount) * 100);
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(to right, #00356b, #00a651);
+  background: linear-gradient(90deg, #00356b 0%, #286dc0 30%, #00a651 70%, #00356b 100%);
+  background-size: 200% 100%;
   transition: width 0.3s ease;
   border-radius: 4px;
+  position: relative;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+.progress-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 45%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0.3) 55%,
+    transparent 100%
+  );
+  border-radius: 4px;
+  animation: prestigeShine 2.5s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@keyframes prestigeShine {
+  0% {
+    transform: translateX(-120%);
+  }
+  50% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
 }
 
 .progress-details {

@@ -476,7 +476,7 @@ function retryDataFetch() {
               />
 
               {#snippet figcaption()}
-                <div class="mx-auto ml-[40px] max-w-2xl">
+                <div class="mx-auto ml-[40px] flex max-w-2xl items-center justify-between">
                   <p class="flex flex-wrap items-center gap-1 text-lg text-gray-800">
                     <span class=" bg-emerald-500 px-2 py-1 font-medium text-white">Reopening</span>
                     <span>,</span>
@@ -485,6 +485,13 @@ function retryDataFetch() {
                     <span class=" bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
                     <span>churches</span>
                   </p>
+                  <Tooltip description={"reopening is....; exisiting is....;"} class="mr-3 size-4">
+                    <span
+                      class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
+                    >
+                      <CircleHelp strokeWidth={1.5} color="white" />
+                    </span>
+                  </Tooltip>
                 </div>
               {/snippet}
             </Figure>
@@ -513,7 +520,7 @@ function retryDataFetch() {
                 uniqueIdBase={stat.id}
               />
             {/each}
-            <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
+            <h4 class="mt-8 text-lg font-semibold">Demographics</h4>
             {#each statistics as stat (stat.id)}
               <PercentageBar
                 title={stat.title}

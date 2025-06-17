@@ -1,5 +1,48 @@
-/* Import Barlow font from Google Fonts */
+/* Yale Typeface Definitions */
+@font-face {
+  font-family: "YaleNew";
+  src: url("/Yale_typeface/YaleNew-Roman.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YaleNew";
+  src: url("/Yale_typeface/YaleNew-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YaleNew";
+  src: url("/Yale_typeface/YaleNew-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "YaleNew";
+  src: url("/Yale_typeface/YaleNew-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Placeholder for YaleDisplay when proper font files are available */
+/* @font-face {
+  font-family: "YaleDisplay";
+  src: url("/Yale_typeface/YaleDisplay-Roman.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+} */
+
+/* Fallback to Barlow for now until YaleDisplay is available */
 @import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -127,8 +170,10 @@
   --color-yale-red: #f65568;
 
   /* Typography */
-  --font-sans: "Barlow", Calibri, system-ui, ui-sans-serif, sans-serif;
+  --font-sans: "YaleNew", "Barlow", Calibri, system-ui, ui-sans-serif, sans-serif;
   --font-serif: "Times New Roman", Times, Georgia, ui-serif, serif;
+  --font-display:
+    "Barlow", "YaleNew", system-ui, ui-sans-serif, sans-serif; /* Using Barlow as placeholder for YaleDisplay */
 }
 
 ::-webkit-scrollbar {
@@ -155,5 +200,49 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Yale Typography Utilities */
+@layer utilities {
+  /* Heading styles using display font (Barlow until YaleDisplay is available) */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Body text using YaleNew */
+  .font-yale {
+    font-family: var(--font-sans);
+  }
+
+  /* Typography presets */
+  .yale-h1 {
+    font-family: var(--font-display);
+    @apply text-4xl leading-tight font-bold;
+  }
+
+  .yale-h2 {
+    font-family: var(--font-display);
+    @apply text-3xl leading-tight font-semibold;
+  }
+
+  .yale-h3 {
+    font-family: var(--font-display);
+    @apply text-2xl font-semibold;
+  }
+
+  .yale-h4 {
+    font-family: var(--font-display);
+    @apply text-xl font-medium;
+  }
+
+  .yale-body {
+    font-family: var(--font-sans);
+    @apply text-base;
+  }
+
+  .yale-body-small {
+    font-family: var(--font-sans);
+    @apply text-sm;
   }
 }
