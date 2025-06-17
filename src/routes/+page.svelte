@@ -164,7 +164,7 @@ function highlightGroup(range: string, i: number) {
   }
 }
 
-const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
+const lineChartMargin = { top: 25, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
 let selectedMapMetricString = $derived(String(selectedMapMetric));

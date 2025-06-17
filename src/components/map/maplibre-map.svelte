@@ -150,7 +150,7 @@ const baseLayer = $derived(
           return toDeckGLColor(color || "#cccccc");
         } else {
           // Dim non-selected counties
-          return toDeckGLColor(color || "#cccccc", 50); // Lower opacity
+          return toDeckGLColor(color || "#cccccc", 20); // Lower opacity
         }
       }
 

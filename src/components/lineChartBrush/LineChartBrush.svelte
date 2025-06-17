@@ -509,7 +509,7 @@ function adjustYearRange(year0: number, year1: number) {
       <!-- X-axis ticks and labels -->
       <g class="x-axis-top">
         {#each xTicks as tick}
-          <g transform="translate({tick.x}, 5)">
+          <g transform="translate({tick.x}, 10)">
             <text
               y={-tickOffset}
               text-anchor="middle"
@@ -525,7 +525,7 @@ function adjustYearRange(year0: number, year1: number) {
       <!-- Y-axis ticks and labels -->
       <g class="y-axis-left">
         {#each yTicks as tick}
-          <g transform="translate(5, {tick.y})">
+          <g transform="translate(10, {tick.y})">
             <text
               x={-tickOffset}
               text-anchor="end"
