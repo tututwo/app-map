@@ -214,7 +214,9 @@ async function exportToPDF() {
       }
     }
 
-    pdf.save("closed-churches-fayette-illinois.pdf");
+    pdf.save(
+      `${counties_geoid.find((c) => c.geoid === geoid)?.name}_${yearRange[0]}-${yearRange[1]}.pdf`
+    );
   } catch (error) {
     console.error("PDF export failed:", error);
     exportError = `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`;

@@ -8,9 +8,7 @@
 
 import * as d3 from "d3";
 import { untrack, getContext, onMount } from "svelte";
-import { scale } from "svelte/transition";
-import { cubicOut } from "svelte/easing";
-import { Tween } from "svelte/motion";
+import { ArrowLeftToLine } from "lucide-svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import type { D3BrushEvent } from "d3-brush";
 
@@ -31,6 +29,7 @@ type IProps = {
   yearRange?: [number, number];
   key?: "close";
   yAxisTickCount?: number;
+  extendYAxis?: boolean;
 };
 
 const exampleData = [
@@ -73,7 +72,8 @@ let {
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
   yearRange = $bindable([2003, 2011]),
   key = "close",
-  yAxisTickCount = 1,
+  yAxisTickCount = 2,
+  extendYAxis = false,
 }: IProps = $props();
 
 // Visual styling props - matching lineChart.svelte aesthetic
@@ -104,19 +104,28 @@ const yScale = $derived.by(() => {
   // Get the data extent
   const [minValue, maxValue] = d3.extent(data, (d) => d[key]) as [number, number];
 
+  // Determine if we should start from 0
+  // Start from 0 for smaller values, use data minimum for larger values
+  const startFromZero = maxValue <= 1000;
+  const domainMin = startFromZero ? 0 : minValue;
+
   // Create a temporary scale to get nice tick values
-  const tempScale = d3.scaleLinear().domain([minValue, maxValue]).nice().range([innerHeight, 0]);
+  const tempScale = d3.scaleLinear().domain([domainMin, maxValue]).nice().range([innerHeight, 0]);
 
-  // Get the tick values using the same count we'll use for display
-  const ticks = tempScale.ticks(yAxisTickCount);
-  const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
-
-  // Get the nice domain and extend by one tick interval
+  // Get the nice domain
   const [niceMin, niceMax] = tempScale.domain();
-  const extendedMax = niceMax + tickInterval;
 
-  // Return the final scale with extended domain
-  return d3.scaleLinear().domain([niceMin, extendedMax]).range([innerHeight, 0]);
+  // Optionally extend the maximum
+  let finalMax = niceMax;
+  if (extendYAxis) {
+    // Get the tick values using the same count we'll use for display
+    const ticks = tempScale.ticks(yAxisTickCount);
+    const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
+    finalMax = niceMax + tickInterval;
+  }
+
+  // Return the final scale
+  return d3.scaleLinear().domain([niceMin, finalMax]).range([innerHeight, 0]);
 });
 
 // Axis ticks
@@ -128,10 +137,23 @@ const yTicks = $derived.by(() => {
   // Calculate the tick interval (same as used in yScale)
   const tempScale = d3.scaleLinear().domain([min, max]).range([innerHeight, 0]);
 
-  const ticks = tempScale.ticks(yAxisTickCount + 1); // Add 1 to account for the extended tick
+  // Use the appropriate tick count based on whether we're extending
+  const tickCount = extendYAxis ? yAxisTickCount + 1 : yAxisTickCount;
+  let ticks = tempScale.ticks(tickCount);
 
-  // Make sure we include nice round numbers
-  const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
+  // Ensure 0 is included if the scale starts from 0
+  if (min === 0 && !ticks.includes(0)) {
+    // Add 0 at the beginning and sort
+    ticks = [0, ...ticks].sort((a, b) => a - b);
+  }
+
+  // If we have nice ticks from D3, use them
+  if (ticks.length > 0) {
+    return ticks.map((d) => ({ value: d, y: yScale(d) }));
+  }
+
+  // Fallback: generate ticks manually
+  const tickInterval = 50; // default interval
   const finalTicks = [];
 
   // Generate ticks from min to max (inclusive) with consistent interval
@@ -166,6 +188,10 @@ function flashWarningEffect() {
     repeat: 1, // Play the tween forward, then backward (yoyo) once
   });
 }
+
+// Add new state for instruction animation
+let instructionElement = $state<HTMLDivElement>();
+let hasInteracted = $state(false);
 // Path data
 //! IMPORTANT: this is not used, because we use gsap to animate the path. instead of relying on svelte's reactivity to update the path immediately;
 //! IMPORTANT:  we created an effect to update the path and circles with gsap MANUALLY when data changes.
@@ -453,6 +479,49 @@ function adjustYearRange(year0: number, year1: number) {
   year1 = Math.min(MAX_YEAR_END, Math.max(MIN_YEAR_START + MIN_YEAR_SPAN, year1));
   return [year0, year1];
 }
+
+// Refined instruction animation
+$effect(() => {
+  if (instructionElement && brushSelection && !hasInteracted) {
+    hasInteracted = true;
+
+    // Minimalist fade and slide
+    gsap.fromTo(
+      instructionElement,
+      {
+        opacity: 0,
+        y: 10,
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 2,
+        delay: 0.3,
+        ease: "power3.out",
+      }
+    );
+
+    // Fade to subtle after initial appearance
+    gsap.to(instructionElement, {
+      opacity: 0.6,
+      duration: 1,
+      delay: 4,
+      ease: "power2.inOut",
+    });
+  }
+});
+
+// Clean exit animation
+$effect(() => {
+  if (instructionElement && !brushSelection && hasInteracted) {
+    gsap.to(instructionElement, {
+      opacity: 0,
+      y: 5,
+      duration: 0.3,
+      ease: "power2.in",
+    });
+  }
+});
 </script>
 
 <div class="relative h-full w-full" bind:this={svgBoundary}>
@@ -588,6 +657,24 @@ function adjustYearRange(year0: number, year1: number) {
       aria-hidden={!brushSelection}
     >
       to <strong>{yearRangeSelection[1]}</strong>
+    </div>
+
+    <div
+      bind:this={instructionElement}
+      class="absolute flex translate-y-1/2 transform items-center gap-1.5
+           text-xs font-normal tracking-wide whitespace-nowrap text-gray-500"
+      style={`
+      left: ${margin.left + brushSelection[1] + 80}px; 
+      top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET + 2}px; 
+      opacity: 0;
+    `}
+      aria-hidden={!brushSelection}
+      role="tooltip"
+    >
+      <ArrowLeftToLine class="h-3.5 w-3.5 translate-y-1/2 opacity-70" />
+      <span class="translate-y-1/2 uppercase" style="letter-spacing: 0.05em;"
+        >Drag to adjust range</span
+      >
     </div>
     <!-- use +50 to control where the "from to" texts are -->
     <div

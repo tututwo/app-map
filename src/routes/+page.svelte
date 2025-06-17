@@ -293,7 +293,7 @@ function retryDataFetch() {
     <!-- ------------------------------------------------------------------ -->
     <section
       aria-label="Line chart"
-      class="mb-2 h-[22vh] rounded px-5 pt-6"
+      class="mb-2 h-[24vh] rounded px-5 pt-6"
       style="background-color: #EBF6FF;"
     >
       <header class="flex w-full justify-between" style="padding-left: {lineChartMargin.left}px;">
