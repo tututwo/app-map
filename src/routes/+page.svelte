@@ -7,6 +7,11 @@ import MetricData from "$data/sideMetricData.csv";
 import { onMount } from "svelte";
 import { Pointer, CircleHelp } from "lucide-svelte";
 
+// Loading components
+import LoadingOverlay from "$components/loadingPage/LoadingOverlay.svelte";
+import LoadingProgress from "$components/loadingPage/LoadingProgress.svelte";
+import LoadingError from "$components/loadingPage/LoadingError.svelte";
+
 // Custom UI
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/sideSection/Sidebar.svelte";
@@ -49,6 +54,29 @@ let displayName = $state<string | null>("All locations"); // Track display name
 // Track if we should disable geolocator
 let shouldDisableGeolocatorTracking = $state(false);
 
+// Loading states
+let isMapDataLoading = $state(true);
+let isLineChartDataLoading = $state(true);
+let isStackedBarDataLoading = $state(true);
+let hasLoadingError = $state(false);
+let hasLoadingTimeout = $state(false);
+
+// Track initial load
+let isInitialLoad = $state(true);
+let loadingTimeoutId: number | null = null;
+
+// Loading items for progress component
+let loadingItems = $derived([
+  { name: "Map Data", isLoading: isMapDataLoading },
+  { name: "Church Closure Trends", isLoading: isLineChartDataLoading },
+  { name: "Church Status Distribution", isLoading: isStackedBarDataLoading },
+]);
+
+// Check if all data is loaded
+let isAllDataLoaded = $derived(
+  !isMapDataLoading && !isLineChartDataLoading && !isStackedBarDataLoading
+);
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -57,8 +85,17 @@ async function fetchMapData(from: number, to: number) {
   // wait for the brush transition animation to finish
   // otherwise it lags
   await sleep(300);
-  const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
-  mapData = await response.json();
+  isMapDataLoading = true;
+  try {
+    const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
+    if (!response.ok) throw new Error("Failed to fetch map data");
+    mapData = await response.json();
+    isMapDataLoading = false;
+  } catch (error) {
+    console.error("Error fetching map data:", error);
+    isMapDataLoading = false;
+    hasLoadingError = true;
+  }
 }
 
 $effect(() => {
@@ -66,12 +103,17 @@ $effect(() => {
 });
 
 async function fetchLineChartData(geoidParam?: string) {
+  isLineChartDataLoading = true;
   try {
     const url = `/api/line_chart_data?geoid=${geoidParam}`;
     const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch line chart data");
     lineChartData = await response.json();
+    isLineChartDataLoading = false;
   } catch (error) {
     console.error("Error fetching line chart data:", error);
+    isLineChartDataLoading = false;
+    hasLoadingError = true;
     // Keep existing data on error
   }
 }
@@ -84,12 +126,17 @@ $effect(() => {
 });
 
 async function fetchStackedBarData(geoidParam?: string) {
+  isStackedBarDataLoading = true;
   try {
     const url = `/api/stacked_bar_chart_data?geoid=${geoidParam}`;
     const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch stacked bar data");
     stackedBarData = await response.json();
+    isStackedBarDataLoading = false;
   } catch (error) {
     console.error("Error fetching stacked bar data:", error);
+    isStackedBarDataLoading = false;
+    hasLoadingError = true;
     // Keep existing data on error
   }
 }
@@ -192,6 +239,45 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
   if (!fromGeolocator) {
     shouldDisableGeolocatorTracking = true;
   }
+}
+
+// Set up loading timeout
+onMount(() => {
+  // Set a timeout for initial load (10 seconds)
+  loadingTimeoutId = window.setTimeout(() => {
+    if (!isAllDataLoaded && isInitialLoad) {
+      hasLoadingTimeout = true;
+    }
+  }, 10000);
+
+  // Clean up on unmount
+  return () => {
+    if (loadingTimeoutId) {
+      clearTimeout(loadingTimeoutId);
+    }
+  };
+});
+
+// Watch for when all data is loaded
+$effect(() => {
+  if (isAllDataLoaded && isInitialLoad) {
+    isInitialLoad = false;
+    if (loadingTimeoutId) {
+      clearTimeout(loadingTimeoutId);
+    }
+  }
+});
+
+// Retry function for error handling
+function retryDataFetch() {
+  hasLoadingError = false;
+  hasLoadingTimeout = false;
+
+  // Re-fetch all data
+  fetchMapData(yearRange[0], yearRange[1]);
+  const geoidToFetch = geoid === "00000" ? "" : geoid;
+  fetchLineChartData(geoidToFetch);
+  fetchStackedBarData(geoidToFetch);
 }
 </script>
 
@@ -448,3 +534,15 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
     </div>
   </main>
 </div>
+
+<!-- Loading States -->
+{#if isInitialLoad && !isAllDataLoaded}
+  <LoadingProgress items={loadingItems} show={true} />
+{/if}
+
+<!-- Loading Error -->
+<LoadingError
+  show={hasLoadingError || hasLoadingTimeout}
+  hasTimeout={hasLoadingTimeout}
+  onRetry={retryDataFetch}
+/>

@@ -1,5 +1,4 @@
 /// file: src/routes/+page.server.js
-import { error } from "@sveltejs/kit";
 
 /** * @type {object | null}
  * --- In-memory cache for the fetched GeoJSON data ---
@@ -41,15 +40,5 @@ function filterGeojsonByPropertySuffix(geojson, suffix, alwaysInclude = ["geoid"
   return {
     type: "FeatureCollection",
     features: filteredFeatures,
-  };
-}
-
-/** @type {import('./$types').PageServerLoad} */
-export async function load({ fetch, url }) {
-  const csvData = await fetch("/api/map_data?from=2001&to=2021&geoid");
-  const data = await csvData.json();
-
-  return {
-    data,
   };
 }
