@@ -47,16 +47,19 @@ let { from, to, geoid, children }: { from: number; to: number; geoid: string; ch
         <a
           class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
           href={`/PDF?from=${from ?? ""}&to=${to ?? ""}&geoid=${geoid ?? "00000"}`}
+          target="_blank"
         >
           <FileChartColumnIncreasing size={24} strokeWidth={1.5} color="white" />
           Export Report
         </a>
-        <button
+        <a
           class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
+          href={`/api/download_data?from=${from ?? ""}&to=${to ?? ""}&geoid=${geoid ?? "00000"}`}
+          target="_blank"
         >
           <Download size={24} strokeWidth={1.5} color="white" />
           Download data
-        </button>
+        </a>
       </div>
     </div>
   </div>

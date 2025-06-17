@@ -258,10 +258,14 @@ const statistics = $state([
             Save as PDF
           {/if}
         </button>
-        <button class="flex items-center text-sm text-gray-700 hover:text-gray-900">
+        <a
+          href={`/api/download_data?from=${yearRange[0]}&to=${yearRange[1]}&geoid=${geoid}`}
+          target="_blank"
+          class="flex items-center text-sm text-gray-700 hover:text-gray-900"
+        >
           <Download class="mr-1.5 h-4 w-4" />
           Download data
-        </button>
+        </a>
       </div>
       <Button.Root class="cursor-pointer text-gray-500 hover:text-gray-700">
         <X class="h-5 w-5" />

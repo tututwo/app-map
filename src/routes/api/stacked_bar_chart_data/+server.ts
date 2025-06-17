@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
     let result: IStackedDatum[];
 
-    if (geoidParam) {
+    if (geoidParam && geoidParam !== "00000") {
       // Filter by specific geoid and return data for that geoid sorted by year
       const filteredData = data
         .filter((row: any) => row.geoid === geoidParam)
