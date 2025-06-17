@@ -24,7 +24,7 @@ interface Props {
 
 let {
   data,
-  reportLinkText = "Click to preview and download report",
+  reportLinkText = "Click to zoom and download report from the bottom right button",
   reportLink = "#",
   excludeFields = ["geoid", "name"], // Fields to exclude from auto-generation
   autoGenerate = false, // Set to true to auto-generate from all numeric fields

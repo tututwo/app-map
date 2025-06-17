@@ -49,6 +49,8 @@ let {
   geoid = $bindable(),
   displayName = $bindable(),
   hideControls = false,
+  selectedQuantile = -1,
+  quantileHighlightEnabled = false,
 } = $props();
 
 let isAtUSView = $derived(geoid === "00000");
@@ -76,6 +78,26 @@ const geoData = $derived.by(() => {
 const colorScale = $derived.by(() => {
   if (!selectedMapColorKey || data.length === 0) return () => "#ccc";
   return d3.scaleQuantize().domain(selectedMapColorDomain).range(selectedMapColorRange);
+});
+
+// Calculate which values fall into the selected quantile
+const quantileThresholds = $derived.by(() => {
+  if (!selectedMapColorKey || selectedQuantile < 0 || !quantileHighlightEnabled) return null;
+
+  const scale = d3.scaleQuantize().domain(selectedMapColorDomain).range(selectedMapColorRange);
+
+  const thresholds = scale.thresholds();
+  const min = selectedMapColorDomain[0];
+  const max = selectedMapColorDomain[1];
+
+  // Calculate the range for the selected quantile
+  if (selectedQuantile === 0) {
+    return [min, thresholds[0]];
+  } else if (selectedQuantile === thresholds.length) {
+    return [thresholds[thresholds.length - 1], max];
+  } else {
+    return [thresholds[selectedQuantile - 1], thresholds[selectedQuantile]];
+  }
 });
 
 // --- Tooltip State (Derived State) ---
@@ -114,7 +136,24 @@ const baseLayer = $derived(
     getFillColor: (d: any) => {
       const countyData = d.properties;
       if (!selectedMapColorKey) return toDeckGLColor("#ccc", 200);
-      let color: string = colorScale(countyData[selectedMapColorKey]) as any;
+
+      const value = countyData[selectedMapColorKey];
+      let color: string = colorScale(value) as any;
+
+      // Check if this county should be highlighted based on quantile selection
+      if (quantileThresholds && value !== undefined && value !== null) {
+        const [min, max] = quantileThresholds;
+        const isInSelectedQuantile = value >= min && value <= max;
+
+        if (isInSelectedQuantile) {
+          // Keep the original color for selected quantile
+          return toDeckGLColor(color || "#cccccc");
+        } else {
+          // Dim non-selected counties
+          return toDeckGLColor(color || "#cccccc", 50); // Lower opacity
+        }
+      }
+
       return toDeckGLColor(color || "#cccccc");
     },
     getLineColor: DEFAULT_BORDER_COLOR,
@@ -137,7 +176,13 @@ const baseLayer = $derived(
       tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
     },
     updateTriggers: {
-      getFillColor: [selectedMapColorKey, selectedMapColorRange],
+      getFillColor: [
+        selectedMapColorKey,
+        selectedMapColorRange,
+        selectedQuantile,
+        quantileHighlightEnabled,
+        quantileThresholds,
+      ],
     },
     transitions: {
       getFillColor: {

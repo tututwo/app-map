@@ -10,7 +10,8 @@ import { Pointer, CircleHelp } from "lucide-svelte";
 // Custom UI
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/sideSection/Sidebar.svelte";
-import Tooltip from "$components/chart/Tooltip.svelte";
+import ChartTooltip from "$components/chart/Tooltip.svelte";
+import Tooltip from "$components/Tooltip.svelte";
 import Figure from "$components/chart/Figure.svelte";
 
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
@@ -106,13 +107,20 @@ function handleLocationChange(e: { target: { value: string } }) {
 }
 let selectedQuantile = $state(0);
 function highlightGroup(range: string, i: number) {
-  highlightedGroup = range;
-  selectedQuantile = i;
+  // Toggle off if clicking the same button
+  if (highlightedGroup === range) {
+    highlightedGroup = null;
+    selectedQuantile = -1;
+  } else {
+    highlightedGroup = range;
+    selectedQuantile = i;
+  }
 }
 
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let selectedMapMetric = $state(dataFilters.metrics[0].value);
+let selectedMapMetricString = $derived(String(selectedMapMetric));
 let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].colorKey);
 let selectedMapColorDomain = $derived(dataFilters.metrics[selectedMapMetric].colorDomain);
 let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colorRange);
@@ -121,6 +129,7 @@ let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colo
 let dataRanges = $derived.by(() => {
   const selectedMetric = dataFilters.metrics[selectedMapMetric];
 
+  console.log(selectedMapMetric);
   return selectedMetric.legendText.map((label, index) => ({
     label,
     color: selectedMetric.colorRange[index],
@@ -197,7 +206,11 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
     <!-- ------------------------------------------------------------------ -->
     <!-- Line chart section -->
     <!-- ------------------------------------------------------------------ -->
-    <section aria-label="Line chart" class="mb-2 h-[20vh] rounded px-5">
+    <section
+      aria-label="Line chart"
+      class="mb-2 h-[20vh] rounded px-5"
+      style="background-color: #EBF6FF;"
+    >
       <header
         class="flex w-full justify-between"
         style="padding-left: {lineChartMargin.left - 15}px;"
@@ -248,14 +261,17 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
             <!-- ------------------------------------------------------------------ -->
             <section aria-label="Metrics" class="flex flex-col">
               <RadioGroup.Root
-                bind:value={selectedMapMetric}
+                value={selectedMapMetricString}
+                onValueChange={(v) => {
+                  selectedMapMetric = Number(v) as 0 | 1 | 2;
+                }}
                 name="metric"
                 class="flex h-full flex-col justify-between py-2"
               >
                 {#each dataFilters.metrics as metric (metric.value)}
                   {@const id = `metric-${metric.value}`}
                   <div class="flex items-center gap-2 transition-colors">
-                    <RadioGroup.Item {id} value={metric.value} />
+                    <RadioGroup.Item {id} value={String(metric.value)} />
 
                     <Label
                       for={id}
@@ -266,9 +282,9 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
                       {#if metric.description}
                         <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
                           <span
-                            class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-xs"
+                            class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
                           >
-                            <CircleHelp strokeWidth={1.5} />
+                            <CircleHelp strokeWidth={1.5} color="white" />
                           </span>
                         </Tooltip>
                       {/if}
@@ -306,7 +322,9 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
 
               <div class="flex items-center justify-center gap-2 pt-1">
                 <Pointer class="h-4 w-4 text-gray-500" strokeWidth={2} />
-                <span class="text-sm text-gray-600">Select a category to highlight</span>
+                <span class="text-sm text-gray-600">
+                  {highlightedGroup ? "Click again to deselect" : "Select a category to highlight"}
+                </span>
               </div>
             </section>
           </div>
@@ -325,7 +343,8 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
             data={mapData}
             bind:geoid
             bind:displayName
-            bind:shouldDisableGeolocatorTracking
+            {selectedQuantile}
+            quantileHighlightEnabled={highlightedGroup !== null}
           />
         </section>
       </div>
@@ -373,15 +392,11 @@ function handleLocationSourceChange(fromGeolocator: boolean) {
               {#snippet figcaption()}
                 <div class="mx-auto ml-[40px] max-w-2xl">
                   <p class="flex flex-wrap items-center gap-1 text-lg text-gray-800">
-                    <span class="rounded bg-emerald-500 px-2 py-1 font-medium text-white"
-                      >Reopening</span
-                    >
+                    <span class=" bg-emerald-500 px-2 py-1 font-medium text-white">Reopening</span>
                     <span>,</span>
-                    <span class="rounded bg-[#E9E9E9] px-2 py-1 font-medium text-gray-800"
-                      >existing</span
-                    >
+                    <span class=" bg-[#E9E9E9] px-2 py-1 font-medium text-gray-800">existing</span>
                     <span>and</span>
-                    <span class="rounded bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
+                    <span class=" bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
                     <span>churches</span>
                   </p>
                 </div>
