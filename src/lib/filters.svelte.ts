@@ -11,7 +11,7 @@ class DataFilters {
   metric = $state(0);
   metrics = [
     {
-      label: "Number of closed church",
+      label: "Number of closed churches",
       description: "Number of closed churches",
       value: 0,
       legendText: ["1-12", "13-24", "25-36", "37-48", "49-60"],

@@ -325,7 +325,7 @@ const statistics = $state([
           Download data
         </a>
       </div>
-      <Button.Root class="cursor-pointer text-gray-500 hover:text-gray-700">
+      <Button.Root href="/" class="cursor-pointer text-gray-500 hover:text-gray-700">
         <X class="h-5 w-5" />
       </Button.Root>
     </header>
@@ -354,9 +354,7 @@ const statistics = $state([
         Closed Churches in {counties_geoid.find((c) => c.geoid === geoid)?.name} ({yearRange[0]}-{yearRange[1]})
       </h1>
 
-      <div
-        class="mb-8 flex h-48 items-center justify-center rounded border border-gray-300 bg-gray-50"
-      >
+      <div class="mb-8 flex h-48 items-center justify-center rounded border border-gray-300">
         <Figure exclude="">
           <LineChartBrush
             key="close"
