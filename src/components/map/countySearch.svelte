@@ -27,7 +27,7 @@ let {
   onCountySelected,
   class: className = "",
   geoid = $bindable(),
-  displayName,
+  displayName = $bindable(),
 }: CountySearchProps = $props();
 
 // State management
@@ -38,7 +38,7 @@ let selectedCountyKey = $state<string | undefined>(undefined);
 let open = $state(false);
 
 $inspect(displayName);
-const displayedValue = $derived(open ? searchValue : displayName || geoid || "");
+const displayedValue = $derived(open ? searchValue : displayName || "");
 const debouncedSearchValue = new Debounced(() => searchValue, 1000);
 $effect(async () => {
   const searchTerm = debouncedSearchValue.current;
@@ -69,11 +69,12 @@ function handleValueChange(value: string | undefined) {
   if (selected) {
     console.log("value", value);
     console.log("selected", selected);
-    // This update will flow up to the parent, which will then
-    // update the `displayName` prop reactively.
     geoid = selected.geoid;
     displayName = selected.displayName;
     onCountySelected?.(selected);
+
+    // Clear search value after selection
+    searchValue = "";
   }
 }
 function handleInput(e: Event) {
@@ -104,7 +105,7 @@ function handleInput(e: Event) {
 function handleOpenChange(isOpen: boolean) {
   open = isOpen;
   if (!isOpen) {
-    searchValue = ""; // On close, clear the search term.
+    searchValue = ""; // Clear search but keep displayName
   }
 }
 
@@ -129,9 +130,9 @@ type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
     <Combobox.Input
       oninput={handleInput}
       {placeholder}
-      class="w-full rounded-xs bg-white px-4 py-2 text-lg font-normal text-gray-800
+      class="w-full rounded-xs bg-white py-2 pl-4 text-base font-normal text-gray-800
                transition-all duration-200
-               ease-in-out placeholder:text-base placeholder:text-gray-400 focus:border-blue-500 focus:ring-2
+               ease-in-out placeholder:text-sm placeholder:text-gray-400 focus:border-blue-500 focus:ring-2
                focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
       aria-label="Search for a county"
     />

@@ -41,6 +41,10 @@ let stackedBarData = $state<
   { year: number; negative: number; neutral: number; positive: number }[]
 >([]);
 
+// Add displayName state after geoid
+let geoid = $state("00000");
+let displayName = $state<string | null>("All locations"); // Track display name
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -122,8 +126,6 @@ let dataRanges = $derived.by(() => {
   }));
 });
 
-let geoid = $state("00000");
-
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
@@ -161,12 +163,24 @@ const fieldConfigs = [
 ];
 
 let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
+
+// Add an effect to sync displayName with default geoid
+$effect(() => {
+  if (geoid === "00000" && !displayName) {
+    displayName = "All locations";
+  }
+});
+
+function resetToAllLocations() {
+  geoid = "00000";
+  displayName = "All locations";
+}
 </script>
 
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>
-    <CountySearch bind:geoid />
+    <CountySearch bind:geoid bind:displayName />
   </Sidebar>
 
   <!-- Main Content -->
@@ -181,7 +195,7 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
       >
         <h1 class="mb-1 text-2xl font-medium text-gray-900">
           Number of <span class="font-bold">closed churches</span> in
-          <span class="font-bold">all locations</span> over time
+          <span class="font-bold">{displayName || "all locations"}</span> over time
         </h1>
         <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
@@ -301,6 +315,7 @@ let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldC
             {selectedMapColorRange}
             data={mapData}
             bind:geoid
+            bind:displayName
           />
         </section>
       </div>

@@ -47,6 +47,7 @@ let {
   selectedMapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   data = [],
   geoid = $bindable(),
+  displayName = $bindable(),
   hideControls = false,
 } = $props();
 
@@ -117,7 +118,11 @@ const baseLayer = $derived(
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.5,
     onClick: (info: any) => {
-      if (info.object) geoid = info.object.id;
+      if (info.object) {
+        geoid = info.object.id;
+        const countyData = mapData.get(info.object.id);
+        displayName = countyData?.name || info.object.id;
+      }
     },
     onHover: (info: any) => {
       hoveredCountyId = info.object ? info.object.id : null;
@@ -226,6 +231,7 @@ $effect(() => {
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() => {
           geoid = "00000";
+          displayName = "All locations";
         }}
       ></button>
     </CustomControl>
