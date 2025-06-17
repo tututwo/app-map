@@ -62,7 +62,7 @@ const MIN_YEAR_SPAN = 5;
 const MIN_YEAR_START = 2001;
 const MAX_YEAR_END = 2021;
 const ALERT_COLOR = "hsla(353, 90%, 65%, 0.5)";
-const FROM_TO_TEXT_VERTICAL_OFFSET = 0;
+const FROM_TO_TEXT_VERTICAL_OFFSET = 10;
 
 // Add tick formatter for y-axis
 const yTickFormatter = d3.format("~s"); // SI-prefix with trimmed zeros
@@ -82,7 +82,7 @@ const lineColor = "hsla(0, 0%, 53%, 1)";
 const circleColor = "hsla(211, 99%, 21%, 1)";
 const circleHoverColor = "hsla(211, 99%, 35%, 1)";
 const gridLineColor = "hsla(0, 0%, 80%, 1)";
-const circleRadius = 6;
+const circleRadius = 5;
 const circleHoverRadius = 8;
 const tickLength = 6;
 const tickOffset = 20;
@@ -264,7 +264,7 @@ const brush = d3
     // svelte-ignore state_referenced_locally
     [innerWidth, innerHeight],
   ])
-  .handleSize(8)
+  .handleSize(5)
   .keyModifiers(false)
   .on("brush", onBrush)
   .on("end", onBrushEnd);
@@ -509,7 +509,7 @@ function adjustYearRange(year0: number, year1: number) {
       <!-- X-axis ticks and labels -->
       <g class="x-axis-top">
         {#each xTicks as tick}
-          <g transform="translate({tick.x}, 0)">
+          <g transform="translate({tick.x}, 5)">
             <text
               y={-tickOffset}
               text-anchor="middle"

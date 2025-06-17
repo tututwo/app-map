@@ -176,7 +176,6 @@ let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colo
 let dataRanges = $derived.by(() => {
   const selectedMetric = dataFilters.metrics[selectedMapMetric];
 
-  console.log(selectedMapMetric);
   return selectedMetric.legendText.map((label, index) => ({
     label,
     color: selectedMetric.colorRange[index],
@@ -451,7 +450,7 @@ function retryDataFetch() {
                 data={stackedBarData}
                 keys={["negative", "neutral", "positive"]}
                 {yearRange}
-                margin={{ top: 10, right: 0, bottom: 0, left: 35 }}
+                margin={{ top: 10, right: 0, bottom: 10, left: 35 }}
                 colors={{
                   negative: "hsla(211, 98%, 21%, .9)", // Bright blue
                   neutral: "hsla(0, 0%, 87%, .9)", // Light gray

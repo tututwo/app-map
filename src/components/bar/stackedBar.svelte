@@ -3,13 +3,16 @@
 import * as d3 from "d3";
 import { getContext, untrack } from "svelte";
 import { expoOut, cubicOut } from "svelte/easing";
-import { fade } from "svelte/transition";
+import { fade, fly } from "svelte/transition";
 import Tooltip from "$components/chart/Tooltip.svelte";
 
 // Get responsive dimensions from Figure context
 const figure = getContext("Figure");
 const width = $derived(figure.getWidth());
 const height = $derived(figure.getHeight());
+
+// Add tick formatter for y-axis
+const yTickFormatter = d3.format("~s"); // SI-prefix with trimmed zeros
 
 // Component props
 let {
@@ -65,6 +68,16 @@ let animationPromise = null;
 // Calculate chart dimensions
 const innerWidth = $derived(width - margin.left - margin.right);
 const innerHeight = $derived(height - margin.top - margin.bottom);
+
+// Determine if x-axis labels should be shown based on bar width
+const showXAxisLabels = $derived(() => {
+  if (!xScale) return true;
+  const barWidth = xScale.bandwidth();
+  // Estimate text width: 4 digits for year + some padding
+  // Using ~8px per character for text-sm font size, plus 10px padding
+  const estimatedTextWidth = 32; // ~42px
+  return barWidth >= estimatedTextWidth;
+});
 
 // Process data
 const processedData = $derived(() => {
@@ -393,19 +406,22 @@ $effect(() => {
       <g class="bars-interaction"></g>
       {#if xTickPosition !== "none"}
         {#if xTickPosition === "bottom" || xTickPosition === "both"}
-          <g class="x-axis" transform={`translate(0,${innerHeight})`}>
+          <g class="x-axis" transform={`translate(0,${innerHeight - margin.top - margin.bottom})`}>
             {#each processedData() as d}
               {@const x = xScale(d.year) + xScale.bandwidth() / 2}
               <g transform={`translate(${x},0)`}>
-                <line y1={0} y2={tickLength} stroke="currentColor" class="text-gray-400" />
-                <text
-                  y={tickOffset + tickLength}
-                  text-anchor="middle"
-                  dominant-baseline="hanging"
-                  class="fill-gray-600 text-sm font-medium"
-                >
-                  {d.year}
-                </text>
+                {#if showXAxisLabels()}
+                  <text
+                    y={tickOffset + tickLength}
+                    text-anchor="middle"
+                    dominant-baseline="hanging"
+                    class="fill-gray-600 text-sm font-medium"
+                    in:fly={{ y: 10, duration: 300, easing: cubicOut }}
+                    out:fly={{ y: 15, duration: 250, easing: cubicOut }}
+                  >
+                    {d.year}
+                  </text>
+                {/if}
               </g>
             {/each}
           </g>
@@ -415,15 +431,18 @@ $effect(() => {
             {#each processedData() as d}
               {@const x = xScale(d.year) + xScale.bandwidth() / 2}
               <g transform={`translate(${x},0)`}>
-                <line y1={0} y2={-tickLength} stroke="currentColor" class="text-gray-400" />
-                <text
-                  y={-tickOffset - tickLength}
-                  text-anchor="middle"
-                  dominant-baseline="auto"
-                  class="fill-gray-600 text-sm font-medium"
-                >
-                  {d.year}
-                </text>
+                {#if showXAxisLabels()}
+                  <text
+                    y={-tickOffset - tickLength}
+                    text-anchor="middle"
+                    dominant-baseline="auto"
+                    class="fill-gray-600 text-sm font-medium"
+                    in:fly={{ y: -10, duration: 300, easing: cubicOut }}
+                    out:fly={{ y: -15, duration: 250, easing: cubicOut }}
+                  >
+                    {d.year}
+                  </text>
+                {/if}
               </g>
             {/each}
           </g>
@@ -433,15 +452,14 @@ $effect(() => {
         {#if yTickPosition === "left" || yTickPosition === "both"}
           <g class="y-axis">
             {#each yTicks as tick}
-              <g transform={`translate(0,${yScale()(tick)})`}>
-                <line x1={0} x2={-tickLength} stroke="currentColor" class="text-gray-400" />
+              <g transform={`translate(10,${yScale()(tick)})`}>
                 <text
                   x={-tickOffset - tickLength}
                   text-anchor="end"
                   dominant-baseline="middle"
                   class="fill-gray-600 text-sm font-medium"
                 >
-                  {tick}
+                  {yTickFormatter(tick)}
                 </text>
               </g>
             {/each}
@@ -451,14 +469,13 @@ $effect(() => {
           <g class="y-axis">
             {#each yTicks as tick}
               <g transform={`translate(${innerWidth},${yScale()(tick)})`}>
-                <line x1={0} x2={tickLength} stroke="currentColor" class="text-gray-400" />
                 <text
                   x={tickOffset + tickLength}
                   text-anchor="start"
                   dominant-baseline="middle"
                   class="fill-gray-600 text-sm font-medium"
                 >
-                  {tick}
+                  {yTickFormatter(tick)}
                 </text>
               </g>
             {/each}
