@@ -194,6 +194,11 @@ function flashWarningEffect() {
 // Add new state for instruction animation
 let instructionElement = $state<HTMLDivElement>();
 let hasInteracted = $state(false);
+// +++ ADD LABEL DRAGGING STATE +++
+let isDraggingLabel = $state<"from" | "to" | null>(null);
+let dragStartX = $state(0);
+let dragStartYear = $state(0);
+
 // Path data
 //! IMPORTANT: this is not used, because we use gsap to animate the path. instead of relying on svelte's reactivity to update the path immediately;
 //! IMPORTANT:  we created an effect to update the path and circles with gsap MANUALLY when data changes.
@@ -292,7 +297,7 @@ const brush = d3
     // svelte-ignore state_referenced_locally
     [innerWidth, innerHeight],
   ])
-  .handleSize(5)
+  .handleSize(15)
   .keyModifiers(false)
   .filter((event) => !disableBrushing)
   .on("brush", onBrush)
@@ -310,12 +315,13 @@ $effect(() => {
       .attr("fill", "hsla(162, 100%, 38%, 1)")
       .attr("stroke", "white")
       .attr("stroke-width", 2)
-      .attr("rx", 2);
+
+      .attr("rx", 3);
   }
 });
 
 function redrawBrush() {
-  if (brushGroupElm && yearRangeSelection) {
+  if (brushGroupElm && yearRangeSelection && !isDraggingLabel) {
     const [year0, year1] = yearRangeSelection;
     const x0 = xScale(year0);
     const x1 = xScale(year1);
@@ -525,6 +531,60 @@ $effect(() => {
     });
   }
 });
+
+// +++ ADD LABEL DRAG HANDLERS +++
+function handleLabelMouseDown(event: MouseEvent, type: "from" | "to") {
+  if (disableBrushing || !yearRangeSelection || !brushGroupElm) return;
+
+  event.preventDefault();
+  isDraggingLabel = type;
+  dragStartX = event.clientX;
+  dragStartYear = type === "from" ? yearRangeSelection[0] : yearRangeSelection[1];
+
+  // Add global listeners
+  window.addEventListener("mousemove", handleLabelMouseMove);
+  window.addEventListener("mouseup", handleLabelMouseUp);
+}
+
+function handleLabelMouseMove(event: MouseEvent) {
+  if (!isDraggingLabel || !yearRangeSelection || !brushGroupElm) return;
+
+  const deltaX = event.clientX - dragStartX;
+  const deltaYear = Math.round(xScale.invert(xScale(dragStartYear) + deltaX) - dragStartYear);
+
+  let newYear0 = yearRangeSelection[0];
+  let newYear1 = yearRangeSelection[1];
+
+  if (isDraggingLabel === "from") {
+    newYear0 = dragStartYear + deltaYear;
+  } else {
+    newYear1 = dragStartYear + deltaYear;
+  }
+
+  // Apply constraints
+  // Set movingHandle temporarily to match the label being dragged
+  movingHandle = isDraggingLabel === "from" ? "start" : "end";
+  [newYear0, newYear1] = adjustYearRange(newYear0, newYear1);
+
+  // Update brush programmatically
+  const x0 = xScale(newYear0);
+  const x1 = xScale(newYear1);
+  d3.select(brushGroupElm).call(brush.move, [x0, x1]);
+}
+
+function handleLabelMouseUp() {
+  isDraggingLabel = null;
+  window.removeEventListener("mousemove", handleLabelMouseMove);
+  window.removeEventListener("mouseup", handleLabelMouseUp);
+}
+
+// Clean up on unmount
+$effect(() => {
+  return () => {
+    window.removeEventListener("mousemove", handleLabelMouseMove);
+    window.removeEventListener("mouseup", handleLabelMouseUp);
+  };
+});
 </script>
 
 <div class="relative h-full w-full" bind:this={svgBoundary}>
@@ -647,19 +707,29 @@ $effect(() => {
 
   {#if brushSelection && yearRangeSelection}
     <div
-      class=" absolute -translate-x-1/2 transform px-2 py-1 whitespace-nowrap"
-      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 whitespace-nowrap shadow-md"
+      class:cursor-grab={!disableBrushing && !isDraggingLabel}
+      class:cursor-grabbing={isDraggingLabel === "from"}
+      style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px; user-select: none;`}
       aria-hidden={!brushSelection}
+      role={disableBrushing ? undefined : "button"}
+      tabindex={disableBrushing ? undefined : 0}
+      onmousedown={(e) => handleLabelMouseDown(e, "from")}
     >
-      from <strong class="">{yearRangeSelection[0]}</strong>
+      from <strong>{yearRangeSelection[0]}</strong>
     </div>
 
     <div
-      class=" absolute -translate-x-1/2 transform px-2 py-1 whitespace-nowrap"
-      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
+      class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 whitespace-nowrap shadow-md"
+      class:cursor-grab={!disableBrushing && !isDraggingLabel}
+      class:cursor-grabbing={isDraggingLabel === "to"}
+      style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px; user-select: none;`}
       aria-hidden={!brushSelection}
+      role={disableBrushing ? undefined : "button"}
+      tabindex={disableBrushing ? undefined : 0}
+      onmousedown={(e) => handleLabelMouseDown(e, "to")}
     >
-      to <strong class="">{yearRangeSelection[1]}</strong>
+      to <strong>{yearRangeSelection[1]}</strong>
     </div>
 
     {#if !disableBrushing}

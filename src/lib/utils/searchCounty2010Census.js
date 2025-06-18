@@ -9,14 +9,14 @@ let currentAbortController = null;
 const REGION_TO_2010_COUNTY = {
   // Connecticut planning regions to historical county names mapping
   // The geocoding API returns planning region names, but we display historical county names
-  "South Central Connecticut Planning Region": "New Haven County",
-  "Western Connecticut Planning Region": "Fairfield County",
-  "Lower Connecticut River Valley Planning Region": "Middlesex County",
-  "Southeastern Connecticut Planning Region": "New London County",
-  "Capitol Planning Region": "Hartford County",
-  "Northeastern Connecticut Planning Region": "Windham County",
-  "Northwest Hills Planning Region": "Litchfield County",
-  "Central Connecticut Planning Region": "Hartford County",
+  "South Central Connecticut Planning Region": "New Haven County, CT",
+  "Western Connecticut Planning Region": "Fairfield County, CT",
+  "Lower Connecticut River Valley Planning Region": "Middlesex County, CT",
+  "Southeastern Connecticut Planning Region": "New London County, CT",
+  "Capitol Planning Region": "Hartford County, CT",
+  "Northeastern Connecticut Planning Region": "Windham County, CT",
+  "Northwest Hills Planning Region": "Litchfield County, CT",
+  "Central Connecticut Planning Region": "Hartford County, CT",
 };
 
 // Parse CSV and create a Map for efficient lookups
@@ -222,7 +222,13 @@ export async function searchCounties(query) {
       if (countyName) {
         // IMPORTANT: Look up GEOID using the ORIGINAL county/region name from the API
         // For CT, this will be the planning region name (e.g., "South Central Connecticut Planning Region")
-        const geoid = lookupGeoid(countyName, state);
+
+        let geoid;
+        if (countyName === "South Central Connecticut Planning Region") {
+          geoid = "09009";
+        } else {
+          geoid = lookupGeoid(countyName, state);
+        }
 
         // Map to display name (for CT planning regions, this converts to historical county names)
         const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;

@@ -34,19 +34,19 @@ let {
     {
       key: "closure",
       label: "Closure Rate",
-      format: (value) => (value * 100).toFixed(1),
+      format: (value) => (value * 100).toFixed(0),
       condition: (data) => data.closure !== undefined,
     },
     {
       key: "closure_rate_per_10000",
       label: "Per 10,000",
-      format: (value) => value.toFixed(2),
+      format: (value) => value.toFixed(0),
       condition: (data) => data.closure_rate_per_10000 !== undefined,
     },
     {
       key: "persistence",
       label: "Persistence",
-      format: (value) => (value * 100).toFixed(1),
+      format: (value) => (value * 100).toFixed(0),
       condition: (data) => data.persistence !== undefined,
     },
     {
@@ -71,10 +71,10 @@ function formatValue(value: any): string | number {
   if (typeof value === "number") {
     // If it's a small decimal (likely a rate), convert to percentage
     if (value > 0 && value < 1) {
-      return (value * 100).toFixed(1);
+      return (value * 100).toFixed(0);
     }
     // Otherwise, round to 2 decimal places
-    return value.toFixed(2);
+    return value.toFixed(0);
   }
   return value;
 }
