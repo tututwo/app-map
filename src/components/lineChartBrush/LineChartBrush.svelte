@@ -647,19 +647,19 @@ $effect(() => {
 
   {#if brushSelection && yearRangeSelection}
     <div
-      class="bg-yale-green absolute -translate-x-1/2 transform rounded-xs px-2 py-1 whitespace-nowrap shadow-md"
+      class=" absolute -translate-x-1/2 transform px-2 py-1 whitespace-nowrap"
       style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
-      from <strong>{yearRangeSelection[0]}</strong>
+      from <strong class="">{yearRangeSelection[0]}</strong>
     </div>
 
     <div
-      class="bg-yale-green absolute -translate-x-1/2 transform rounded-xs px-2 py-1 whitespace-nowrap shadow-md"
+      class=" absolute -translate-x-1/2 transform px-2 py-1 whitespace-nowrap"
       style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px;`}
       aria-hidden={!brushSelection}
     >
-      to <strong>{yearRangeSelection[1]}</strong>
+      to <strong class="">{yearRangeSelection[1]}</strong>
     </div>
 
     {#if !disableBrushing}

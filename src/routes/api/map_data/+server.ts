@@ -1,6 +1,6 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
-import countiesData from "$data/counties_all.csv";
+import countiesData from "$data/countyID/counties_all.csv";
 
 export interface CountyData {
   geoid: string;

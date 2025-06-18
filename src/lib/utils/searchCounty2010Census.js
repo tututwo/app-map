@@ -1,4 +1,4 @@
-import counties_geoid from "$data/counties_geoid.csv";
+import counties_geoid from "$data/countyID/counties_geoid.csv";
 
 // searchCounty2010Census.js
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";

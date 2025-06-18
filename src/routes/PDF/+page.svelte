@@ -29,7 +29,7 @@ import { toJpeg } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { onMount } from "svelte";
 
-import counties_geoid from "$data/counties_geoid.csv";
+import counties_geoid from "$data/countyID/counties_geoid.csv";
 import { dataFilters } from "$lib/filters.svelte.js";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 

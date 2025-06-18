@@ -1,7 +1,7 @@
 <script lang="ts">
 import Fuse from "fuse.js";
 import { onMount } from "svelte";
-import counties from "$data/counties_geoid.csv";
+import counties from "$data/countyID/counties_geoid.csv";
 
 let {
   placeholder = "Search for a county...",

@@ -67,6 +67,7 @@ let hoveredCountyId = $state<string | null>(null);
 
 // --- Data Processing (Derived State) ---
 const mapData = $derived(new Map(data.map((d) => [d.geoid, d])));
+$inspect(data);
 const geoData = $derived.by(() => {
   const features = usMapGeoData.features.map((feature) => {
     const countyData = mapData.get(feature.id);

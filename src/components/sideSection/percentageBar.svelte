@@ -113,7 +113,7 @@ const averagePercentRounded = $derived(
 
 <article class="w-full" role="region" aria-labelledby={titleId} aria-describedby={descriptionId}>
   <header class="">
-    <h2 id={titleId} class="text-lg">
+    <h2 id={titleId} class="">
       {title}
     </h2>
     {#if description}
