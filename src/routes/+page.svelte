@@ -248,7 +248,7 @@ const demographicFieldConfigs = [
     type: "number",
     range: [200, 60000],
     labels: ["200", "10k"],
-    average: 1200,
+    average: 15000,
     averageLabel: "US Average",
   },
   {
