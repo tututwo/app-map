@@ -3,14 +3,14 @@
 declare global {
   namespace App {
     // interface Error {}
-    // interface Locals {}
+    interface Locals {
+      accessProtectionEnabled: boolean;
+      accessAuthenticated: boolean;
+    }
     // interface PageData {}
     // interface PageState {}
     // interface Platform {}
   }
 }
 
-declare module "*.csv" {
-  const content: any[];
-  export default content;
-}
+export {};

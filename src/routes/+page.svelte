@@ -3,7 +3,6 @@
 <script lang="ts">
 import { invalidate } from "$app/navigation";
 import { page } from "$app/state";
-import MetricData from "$data/sideMetricData.csv";
 import { onMount } from "svelte";
 import { Pointer, CircleHelp } from "lucide-svelte";
 
@@ -46,6 +45,7 @@ let lineChartData = $state<{ year: number; close: number }[]>([]);
 let stackedBarData = $state<
   { year: number; negative: number; neutral: number; positive: number }[]
 >([]);
+let sideMetricData = $state<Record<string, string> | null>(null);
 
 // Add displayName state after geoid
 let geoid = $state("00000");
@@ -58,6 +58,7 @@ let shouldDisableGeolocatorTracking = $state(false);
 let isMapDataLoading = $state(true);
 let isLineChartDataLoading = $state(true);
 let isStackedBarDataLoading = $state(true);
+let isSideMetricDataLoading = $state(true);
 let hasLoadingError = $state(false);
 let hasLoadingTimeout = $state(false);
 
@@ -70,11 +71,15 @@ let loadingItems = $derived([
   { name: "Map Data", isLoading: isMapDataLoading },
   { name: "Church Closure Trends", isLoading: isLineChartDataLoading },
   { name: "Church Status Distribution", isLoading: isStackedBarDataLoading },
+  { name: "Community Metrics", isLoading: isSideMetricDataLoading },
 ]);
 
 // Check if all data is loaded
 let isAllDataLoaded = $derived(
-  !isMapDataLoading && !isLineChartDataLoading && !isStackedBarDataLoading
+  !isMapDataLoading &&
+    !isLineChartDataLoading &&
+    !isStackedBarDataLoading &&
+    !isSideMetricDataLoading
 );
 
 function sleep(ms: number) {
@@ -148,6 +153,25 @@ $effect(() => {
   fetchStackedBarData(geoidToFetch);
 });
 
+async function fetchSideMetricData(geoidParam: string) {
+  isSideMetricDataLoading = true;
+  sideMetricData = null;
+  try {
+    const response = await fetch(`/api/side_metric_data?geoid=${encodeURIComponent(geoidParam)}`);
+    if (!response.ok) throw new Error("Failed to fetch community metrics");
+    sideMetricData = await response.json();
+  } catch (error) {
+    console.error("Error fetching community metrics:", error);
+    hasLoadingError = true;
+  } finally {
+    isSideMetricDataLoading = false;
+  }
+}
+
+$effect(() => {
+  fetchSideMetricData(geoid);
+});
+
 // Event handlers
 function handleLocationChange(e: { target: { value: string } }) {
   selectedLocation = e.target.value;
@@ -187,7 +211,6 @@ let dataRanges = $derived.by(() => {
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
-let selectedSideMetricData = $derived(MetricData.filter((d) => d.geoid === geoid));
 // Usage example:
 const fieldConfigs = [
   {
@@ -238,7 +261,7 @@ const fieldConfigs = [
   },
 ];
 
-let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
+let statistics = $derived(sideMetricData ? createSideMetricData(sideMetricData, fieldConfigs) : []);
 // Demographic stats
 const demographicFieldConfigs = [
   {
@@ -272,7 +295,7 @@ const demographicFieldConfigs = [
 ];
 
 let demographicStatistics = $derived(
-  createSideMetricData(selectedSideMetricData[0], demographicFieldConfigs)
+  sideMetricData ? createSideMetricData(sideMetricData, demographicFieldConfigs) : []
 );
 
 // Add an effect to sync displayName with default geoid
@@ -330,6 +353,7 @@ function retryDataFetch() {
   const geoidToFetch = geoid === "00000" ? "" : geoid;
   fetchLineChartData(geoidToFetch);
   fetchStackedBarData(geoidToFetch);
+  fetchSideMetricData(geoid);
 }
 </script>
 
