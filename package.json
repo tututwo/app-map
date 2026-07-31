@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node --max-old-space-size=8192 node_modules/vite/bin/vite.js build",
+    "build": "node --max-old-space-size=5120 node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
     "prepare": "husky && svelte-kit sync || echo ''",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
