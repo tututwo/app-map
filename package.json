@@ -3,19 +3,31 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
+    "generate:data": "node scripts/prebuild-data.mjs",
+    "predev": "npm run generate:data",
     "dev": "vite dev",
-    "build": "vite build",
+    "prebuild": "npm run generate:data",
+    "build": "node --max-old-space-size=5120 node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
     "prepare": "husky && svelte-kit sync || echo ''",
+    "precheck": "npm run generate:data",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "npm run test:unit && npm run test:contract",
+    "pretest:unit": "npm run generate:data",
+    "test:unit": "vitest run tests/unit",
+    "test:contract": "playwright test tests/contract",
     "format": "prettier --write .",
     "lint": "prettier --check ."
   },
   "devDependencies": {
     "@internationalized/date": "^3.8.2",
     "@lucide/svelte": "^0.513.0",
+    "@playwright/test": "1.62.1",
     "@rollup/plugin-dsv": "^3.0.5",
     "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/adapter-vercel": "^5.7.2",
@@ -38,9 +50,13 @@
     "tailwindcss": "^4.1.6",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5.0.0",
-    "vite": "^6.2.6"
+    "vite": "^6.2.6",
+    "vitest": "4.1.10"
   },
   "dependencies": {
+    "@deck.gl/core": "9.1.11",
+    "@deck.gl/layers": "9.1.11",
+    "@deck.gl/mapbox": "9.1.11",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "fuse.js": "^7.1.0",
@@ -51,6 +67,7 @@
     "lodash-es": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "lucide-svelte": "^0.509.0",
+    "maplibre-gl": "5.4.0",
     "runed": "^0.28.0",
     "shareon": "^2.6.0",
     "tailwind-merge": "^3.3.0",

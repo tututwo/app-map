@@ -1,6 +1,6 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
-import MetricData from "$data/sideMetricData.csv";
+import { readSideMetric } from "$lib/server/data/side-metric-data";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { csvFormat } from "d3";
 import JSZip from "jszip";
@@ -97,8 +97,8 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
         averageLabel: "US Average",
       },
     ];
-    const selectedSideMetricData = MetricData.filter((d) => d.geoid === geoid);
-    const statistics = createSideMetricData(selectedSideMetricData[0], fieldConfigs);
+    const selectedSideMetricData = await readSideMetric(geoid ?? "");
+    const statistics = createSideMetricData(selectedSideMetricData, fieldConfigs);
 
     const zip = new JSZip();
 

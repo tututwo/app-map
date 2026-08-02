@@ -1,55 +1,22 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
-import data from "$data/line/brushableLineChartData.csv";
-
-type IDatum = {
-  year: number;
-  close: number;
-};
+import { DASHBOARD_CACHE_CONTROL } from "$lib/server/data/compressed-asset";
+import { readLineSeries } from "$lib/server/data/line-data";
 
 export const GET: RequestHandler = async ({ url }) => {
   try {
     const geoidParam = url.searchParams.get("geoid");
 
-    let result: IDatum[];
+    const lookupGeoid = geoidParam && geoidParam !== "00000" ? geoidParam : "00000";
+    const result = await readLineSeries(lookupGeoid);
 
-    if (geoidParam && geoidParam !== "00000") {
-      // Filter by specific geoid and return data for that geoid sorted by year
-      const filteredData = data
-        .filter((row: any) => row.geoid === geoidParam)
-        .map((row: any) => ({
-          year: +row.year,
-          close: +row.close,
-        }))
-        .sort((a, b) => a.year - b.year);
-
-      if (filteredData.length === 0) {
-        throw error(404, `No data found for geoid ${geoidParam}`);
-      }
-
-      result = filteredData;
-    } else {
-      // Group by year and sum close values across all geoids
-      const yearMap = new Map<number, number>();
-
-      data.forEach((row: any) => {
-        const year = +row.year;
-        const close = +row.close;
-
-        if (yearMap.has(year)) {
-          yearMap.set(year, yearMap.get(year)! + close);
-        } else {
-          yearMap.set(year, close);
-        }
-      });
-
-      // Convert map to array and sort by year
-      result = Array.from(yearMap.entries())
-        .map(([year, close]) => ({ year, close }))
-        .sort((a, b) => a.year - b.year);
+    if (!result) {
+      throw error(404, `No data found for geoid ${geoidParam}`);
     }
 
-    return json(result);
+    return json(result, {
+      headers: { "Cache-Control": DASHBOARD_CACHE_CONTROL },
+    });
   } catch (err: any) {
     console.error("API Error:", err);
 

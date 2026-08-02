@@ -1,6 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
-import countiesData from "$data/countyID/counties_all.csv";
+import { DASHBOARD_CACHE_CONTROL } from "$lib/server/data/compressed-asset";
+import { readMapRange } from "$lib/server/data/map-data";
 
 export interface CountyData {
   geoid: string;
@@ -9,23 +10,6 @@ export interface CountyData {
   closure_rate_per_10000: number;
   persistence: number;
   reopening: number;
-}
-
-function findMatchingYearRangeColumn(
-  prefix: string,
-  from: number,
-  to: number,
-  headers: string[]
-): string | null {
-  const targetRange = `${from}-${to}`;
-  const targetColumn = `${prefix}_${targetRange}`;
-
-  // Look for exact match first
-  if (headers.includes(targetColumn)) {
-    return targetColumn;
-  }
-
-  return null;
 }
 
 function validateYearRange(from: number, to: number): { valid: boolean; error?: string } {
@@ -81,44 +65,30 @@ export const GET: RequestHandler = async ({ url }) => {
       throw error(400, validation.error!);
     }
 
-    // Get headers from the first row of imported data
-    const headers = Object.keys(countiesData[0] || {});
+    const dataText = await readMapRange(`${from}-${to}`);
 
-    // Find matching columns for the requested year range
-    const closureCountColumn = findMatchingYearRangeColumn("closure_count", from, to, headers);
-    const closureRateColumn = findMatchingYearRangeColumn(
-      "closure_rate_per_10000",
-      from,
-      to,
-      headers
-    );
-    const persistenceColumn = findMatchingYearRangeColumn("persistence", from, to, headers);
-    const reopeningCountColumn = findMatchingYearRangeColumn("reopening_count", from, to, headers);
-
-    // Check if all required columns exist
-    if (!closureCountColumn || !closureRateColumn || !persistenceColumn || !reopeningCountColumn) {
+    if (!dataText) {
       throw error(404, `Data not available for year range ${from}-${to}`);
     }
 
-    // Process data
-    let result: CountyData[] = countiesData.map((row: any) => ({
-      geoid: row.geoid,
-      name: row.name,
-      closure: +row[closureCountColumn],
-      closure_rate_per_10000: +row[closureRateColumn],
-      persistence: +row[persistenceColumn],
-      reopening: +row[reopeningCountColumn],
-    }));
-
-    // Filter by geoid if provided
     if (geoidParam) {
-      result = result.filter((county) => county.geoid === geoidParam);
-      if (result.length === 0) {
+      const county = (JSON.parse(dataText) as CountyData[]).find(
+        (candidate) => candidate.geoid === geoidParam
+      );
+      if (!county) {
         throw error(404, `County with geoid ${geoidParam} not found`);
       }
+      return json([county], {
+        headers: { "Cache-Control": DASHBOARD_CACHE_CONTROL },
+      });
     }
 
-    return json(result);
+    return new Response(dataText, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": DASHBOARD_CACHE_CONTROL,
+      },
+    });
   } catch (err: any) {
     console.error("API Error:", err);
 
