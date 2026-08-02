@@ -20,6 +20,7 @@
     "test": "npm run test:unit && npm run test:contract",
     "pretest:unit": "npm run generate:data",
     "test:unit": "vitest run tests/unit",
+    "pretest:contract": "npm run build",
     "test:contract": "playwright test tests/contract",
     "format": "prettier --write .",
     "lint": "prettier --check ."

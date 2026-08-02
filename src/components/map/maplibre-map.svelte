@@ -15,14 +15,20 @@ import { DeckGLOverlay } from "@svelte-maplibre-gl/deckgl";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
+import type { MapDatum } from "$lib/dashboard/data";
 import { loadMapAssets, type CountyCameraLookup } from "$lib/map/static-assets";
+import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
+import { toDeckGLColor } from "$lib/map/color";
+import { topologyToFeatureCollection, type CountyFeatureCollection } from "$lib/map/topology";
 import { reverseGeocodeCounty } from "$lib/utils/searchCounty2010Census.js";
-// @ts-ignore
-import { topoToGeo, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
-import type { FeatureCollection, Geometry } from "geojson";
-import type { FlyToOptions, Map as MapLibreInstance } from "maplibre-gl";
+import type {
+  FlyToOptions,
+  GeolocateControl as MapLibreGeolocateControl,
+  Map as MapLibreInstance,
+  MapMouseEvent,
+} from "maplibre-gl";
 
 // --- Style constants ---
 const US_MAP_CENTER: [number, number] = [-98.5795, 39.8283];
@@ -32,43 +38,69 @@ const DEFAULT_BORDER_COLOR: [number, number, number, number] = [234, 234, 234, 2
 const HIGHLIGHT_BORDER_WIDTH = 3.5;
 const DEFAULT_BORDER_WIDTH = 1;
 
-type CountyFeatureCollection = FeatureCollection<Geometry, Record<string, any>>;
-
 let usMapGeoData = $state<CountyFeatureCollection>({
   type: "FeatureCollection",
   features: [],
 });
 let countyCameras = $state<CountyCameraLookup>({});
+let mapAssetsReady = $state(false);
 
 onMount(() => {
   let active = true;
+  invalidateMapCapture();
 
   void loadMapAssets()
     .then(({ countiesTopology, countyCameras: loadedCountyCameras }) => {
       if (!active) return;
-      usMapGeoData = topoToGeo(countiesTopology) as CountyFeatureCollection;
+      usMapGeoData = topologyToFeatureCollection(countiesTopology);
       countyCameras = loadedCountyCameras;
+      mapAssetsReady = true;
+      mapInstance?.triggerRepaint();
     })
     .catch((error) => {
       console.error("Failed to load map assets:", error);
+      if (active) {
+        captureState = {
+          state: "error",
+          revision: mapCaptureGeneration,
+          message: error instanceof Error ? error.message : "Failed to load map assets",
+        };
+      }
     });
 
   return () => {
     active = false;
+    invalidateMapCapture();
   };
 });
+
+type Props = {
+  selectedMapColorKey?: string;
+  selectedMapColorDomain?: readonly number[];
+  selectedMapColorRange?: readonly string[];
+  data?: MapDatum[];
+  geoid?: string;
+  displayName?: string | null;
+  shouldDisableGeolocatorTracking?: boolean;
+  captureState?: MapCaptureState;
+  hideControls?: boolean;
+  selectedQuantile?: number;
+  quantileHighlightEnabled?: boolean;
+};
 
 let {
   selectedMapColorKey,
   selectedMapColorDomain = [],
   selectedMapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   data = [],
-  geoid = $bindable(),
-  displayName = $bindable(),
+  geoid = $bindable("00000"),
+  displayName = $bindable<string | null>(null),
+  shouldDisableGeolocatorTracking = $bindable(false),
+  captureState = $bindable<MapCaptureState>(initialMapCaptureState()),
   hideControls = false,
   selectedQuantile = -1,
   quantileHighlightEnabled = false,
-} = $props();
+}: Props = $props();
 
 let isAtUSView = $derived(geoid === "00000");
 
@@ -78,6 +110,56 @@ let mapCenter = $state<[number, number]>(US_MAP_CENTER as [number, number]);
 let mapZoom = $state(US_MAP_ZOOM);
 let mapBearing = $state(0);
 let mapPitch = $state(0);
+let mapCaptureGeneration = 0;
+let deckRenderedGeneration: number | null = null;
+let deckIsBeforeWaterway = $state(false);
+
+function invalidateMapCapture() {
+  mapCaptureGeneration += 1;
+  deckRenderedGeneration = null;
+  captureState = { state: "loading", revision: mapCaptureGeneration };
+}
+
+function handleDeckAfterRender() {
+  if (!mapAssetsReady || !mapInstance || deckRenderedGeneration === mapCaptureGeneration) return;
+
+  deckRenderedGeneration = mapCaptureGeneration;
+  mapInstance.triggerRepaint();
+}
+
+function handleMapIdle() {
+  if (
+    !mapAssetsReady ||
+    !mapInstance ||
+    deckRenderedGeneration !== mapCaptureGeneration ||
+    !mapInstance.isStyleLoaded() ||
+    !mapInstance.loaded() ||
+    !mapInstance.areTilesLoaded() ||
+    mapInstance.isMoving()
+  ) {
+    return;
+  }
+
+  deckIsBeforeWaterway = Boolean(
+    mapInstance.getLayer("deck-layer-group-before:waterway") && mapInstance.getLayer("waterway")
+  );
+
+  const generation = mapCaptureGeneration;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (
+        generation === mapCaptureGeneration &&
+        deckRenderedGeneration === generation &&
+        mapInstance?.isStyleLoaded() &&
+        mapInstance?.loaded() &&
+        mapInstance.areTilesLoaded() &&
+        !mapInstance.isMoving()
+      ) {
+        captureState = { state: "ready", revision: generation };
+      }
+    });
+  });
+}
 
 // --- Interaction State (Source of Truth) ---
 let hoveredCountyId = $state<string | null>(null);
@@ -95,14 +177,17 @@ const geoData = $derived.by<CountyFeatureCollection>(() => {
 
 const colorScale = $derived.by(() => {
   if (!selectedMapColorKey || data.length === 0) return () => "#ccc";
-  return d3.scaleQuantize().domain(selectedMapColorDomain).range(selectedMapColorRange);
+  return d3.scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
 });
 
 // Calculate which values fall into the selected quantile
 const quantileThresholds = $derived.by(() => {
   if (!selectedMapColorKey || selectedQuantile < 0 || !quantileHighlightEnabled) return null;
 
-  const scale = d3.scaleQuantize().domain(selectedMapColorDomain).range(selectedMapColorRange);
+  const scale = d3
+    .scaleQuantize<string>()
+    .domain(selectedMapColorDomain)
+    .range(selectedMapColorRange);
 
   const thresholds = scale.thresholds();
   const min = selectedMapColorDomain[0];
@@ -140,14 +225,31 @@ const highlightedFeature = $derived.by<CountyFeatureCollection>(() => {
 });
 
 let wasSetByGeolocator = $state(false);
-let geolocationGeneration = 0;
+let geolocateControl = $state<MapLibreGeolocateControl>();
+let geolocationSessionGeneration = 0;
+let activeGeolocationSession: number | null = null;
+let reverseGeocodeGeneration = 0;
 let geolocatorTargetGeoid: string | null = null;
 let observedGeoid = geoid;
 
 function cancelGeolocationSelection() {
-  geolocationGeneration += 1;
+  activeGeolocationSession = null;
+  geolocationSessionGeneration += 1;
+  reverseGeocodeGeneration += 1;
   geolocatorTargetGeoid = null;
   wasSetByGeolocator = false;
+
+  let triggerCount = 0;
+  while (
+    geolocateControl?._watchState &&
+    geolocateControl._watchState !== "OFF" &&
+    triggerCount < 2
+  ) {
+    if (!geolocateControl.trigger()) break;
+    triggerCount += 1;
+  }
+
+  shouldDisableGeolocatorTracking = false;
 }
 
 function selectCounty(nextGeoid: string, nextDisplayName: string) {
@@ -193,13 +295,6 @@ const baseLayer = $derived(
     getLineWidth: DEFAULT_BORDER_WIDTH,
     lineWidthUnits: "pixels",
     lineWidthMinPixels: 0.5,
-    onClick: (info: any) => {
-      if (info.object) {
-        const nextGeoid = String(info.object.id);
-        const countyData = mapData.get(nextGeoid);
-        selectCounty(nextGeoid, countyData?.name || nextGeoid);
-      }
-    },
     onHover: (info: any) => {
       hoveredCountyId = info.object ? info.object.id : null;
       tooltipPosition = info.object ? { x: info.x, y: info.y } : null;
@@ -216,7 +311,7 @@ const baseLayer = $derived(
     transitions: {
       getFillColor: {
         type: "interpolation",
-        duration: 300,
+        duration: hideControls ? 0 : 300,
         easing: cubicOut,
       },
     },
@@ -238,6 +333,18 @@ const highlightLayer = $derived(
 const layers = $derived([baseLayer, highlightLayer]);
 
 // --- Side Effects ---
+$effect(() => {
+  data;
+  selectedMapColorKey;
+  selectedMapColorDomain;
+  selectedMapColorRange;
+
+  if (mapAssetsReady && mapInstance) {
+    invalidateMapCapture();
+    mapInstance.triggerRepaint();
+  }
+});
+
 function flyToCounty(countyZoomData: {
   longitude: number;
   latitude: number;
@@ -267,6 +374,17 @@ function handleMouseLeave() {
   tooltipPosition = null;
 }
 
+function handleMapClick(event: MapMouseEvent) {
+  const clickedCounty = geoData.features.find((feature) =>
+    d3.geoContains(feature, [event.lngLat.lng, event.lngLat.lat])
+  );
+  if (!clickedCounty?.id) return;
+
+  const nextGeoid = String(clickedCounty.id);
+  const countyData = mapData.get(nextGeoid);
+  selectCounty(nextGeoid, countyData?.name || nextGeoid);
+}
+
 // Correct use of $effect for a side effect
 $effect(() => {
   // A special case for the US view
@@ -287,6 +405,10 @@ $effect(() => {
 });
 
 $effect(() => {
+  if (shouldDisableGeolocatorTracking) cancelGeolocationSelection();
+});
+
+$effect(() => {
   const nextGeoid = geoid;
   if (nextGeoid === observedGeoid) return;
 
@@ -296,8 +418,24 @@ $effect(() => {
   }
 });
 
+function handleGeolocationTrackingStart() {
+  activeGeolocationSession = ++geolocationSessionGeneration;
+  reverseGeocodeGeneration += 1;
+}
+
+function handleGeolocationTrackingEnd() {
+  if (geolocateControl?._watchState === "OFF") {
+    activeGeolocationSession = null;
+    reverseGeocodeGeneration += 1;
+    wasSetByGeolocator = false;
+  }
+}
+
 async function handleGeolocate(event: GeolocationPosition) {
-  const requestGeneration = ++geolocationGeneration;
+  const sessionGeneration = activeGeolocationSession;
+  if (sessionGeneration === null || geolocateControl?._watchState === "OFF") return;
+
+  const requestGeneration = ++reverseGeocodeGeneration;
   const geoidAtRequest = geoid;
 
   wasSetByGeolocator = true;
@@ -305,7 +443,12 @@ async function handleGeolocate(event: GeolocationPosition) {
 
   const county = await reverseGeocodeCounty(event.coords.latitude, event.coords.longitude);
 
-  if (requestGeneration !== geolocationGeneration || geoid !== geoidAtRequest || !county?.geoid) {
+  if (
+    sessionGeneration !== activeGeolocationSession ||
+    requestGeneration !== reverseGeocodeGeneration ||
+    geoid !== geoidAtRequest ||
+    !county?.geoid
+  ) {
     return;
   }
 
@@ -313,6 +456,7 @@ async function handleGeolocate(event: GeolocationPosition) {
   observedGeoid = county.geoid;
   geoid = county.geoid;
   displayName = county.displayName;
+  shouldDisableGeolocatorTracking = false;
 }
 </script>
 
@@ -322,6 +466,12 @@ async function handleGeolocate(event: GeolocationPosition) {
   class:hide-map-controls={hideControls}
   class:at-us-view={isAtUSView}
   class:hide-geolocator-dot={!wasSetByGeolocator || mapZoom > 4}
+  data-map-capture-state={captureState.state}
+  data-map-capture-revision={captureState.revision}
+  data-map-center-longitude={mapCenter[0]}
+  data-map-center-latitude={mapCenter[1]}
+  data-map-zoom={mapZoom}
+  data-deck-before-waterway={deckIsBeforeWaterway}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
@@ -341,6 +491,9 @@ async function handleGeolocate(event: GeolocationPosition) {
     bind:zoom={mapZoom}
     bind:center={mapCenter}
     bind:map={mapInstance}
+    onclick={handleMapClick}
+    onmovestart={invalidateMapCapture}
+    onidle={handleMapIdle}
   >
     <NavigationControl showCompass={false} position="top-left" />
     <CustomControl position="top-left">
@@ -355,13 +508,16 @@ async function handleGeolocate(event: GeolocationPosition) {
     </CustomControl>
     <FullScreenControl position="top-left" />
     <GeolocateControl
+      bind:control={geolocateControl}
       position="top-left"
-      trackUserLocation={false}
+      trackUserLocation={true}
       showUserLocation={true}
+      ontrackuserlocationstart={handleGeolocationTrackingStart}
+      ontrackuserlocationend={handleGeolocationTrackingEnd}
       ongeolocate={handleGeolocate}
     />
 
-    <DeckGLOverlay interleaved {layers} />
+    <DeckGLOverlay interleaved {layers} onAfterRender={handleDeckAfterRender} />
   </MapLibre>
 
   <Tooltip

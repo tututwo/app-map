@@ -33,7 +33,7 @@ export interface StackedDatum {
   positive: number;
 }
 
-export type SideMetricDatum = Record<string, string>;
+export type SideMetricDatum = Record<string, string> & { geoid: string };
 
 export interface DashboardLoadDependencies {
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -174,12 +174,60 @@ function fetchResult<T>(
   return pending;
 }
 
-function isArray<T>(value: unknown): value is T[] {
-  return Array.isArray(value);
+function isMapDatum(value: unknown): value is MapDatum {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+
+  const datum = value as Record<string, unknown>;
+  return (
+    typeof datum.geoid === "string" &&
+    typeof datum.name === "string" &&
+    typeof datum.closure === "number" &&
+    typeof datum.closure_rate_per_10000 === "number" &&
+    typeof datum.persistence === "number" &&
+    typeof datum.reopening === "number"
+  );
+}
+
+function isMapDatumArray(value: unknown): value is MapDatum[] {
+  return Array.isArray(value) && value.every(isMapDatum);
+}
+
+function isLineDatum(value: unknown): value is LineDatum {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+
+  const datum = value as Record<string, unknown>;
+  return typeof datum.year === "number" && typeof datum.close === "number";
+}
+
+function isLineDatumArray(value: unknown): value is LineDatum[] {
+  return Array.isArray(value) && value.every(isLineDatum);
+}
+
+function isStackedDatum(value: unknown): value is StackedDatum {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+
+  const datum = value as Record<string, unknown>;
+  return (
+    typeof datum.year === "number" &&
+    typeof datum.negative === "number" &&
+    typeof datum.neutral === "number" &&
+    typeof datum.positive === "number"
+  );
+}
+
+function isStackedDatumArray(value: unknown): value is StackedDatum[] {
+  return Array.isArray(value) && value.every(isStackedDatum);
 }
 
 function isSideMetricDatum(value: unknown): value is SideMetricDatum {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "geoid" in value &&
+    typeof value.geoid === "string" &&
+    Object.values(value).every((field) => typeof field === "string")
+  );
 }
 
 export async function loadDashboardData(
@@ -198,7 +246,7 @@ export async function loadDashboardData(
         results.map = await fetchResult<MapDatum[]>(
           fetch,
           `/api/map_data?from=${params.from}&to=${params.to}`,
-          isArray<MapDatum>,
+          isMapDatumArray,
           cache
         );
       })()
@@ -211,7 +259,7 @@ export async function loadDashboardData(
         results.line = await fetchResult<LineDatum[]>(
           fetch,
           `/api/line_chart_data?geoid=${params.geoid}`,
-          isArray<LineDatum>,
+          isLineDatumArray,
           cache
         );
       })()
@@ -224,7 +272,7 @@ export async function loadDashboardData(
         results.stacked = await fetchResult<StackedDatum[]>(
           fetch,
           `/api/stacked_bar_chart_data?geoid=${params.geoid}`,
-          isArray<StackedDatum>,
+          isStackedDatumArray,
           cache
         );
       })()

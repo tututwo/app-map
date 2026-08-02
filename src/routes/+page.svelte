@@ -1,5 +1,3 @@
-<!-- @ts-nocheck -->
-
 <script lang="ts">
 import { invalidate } from "$app/navigation";
 import { Pointer, CircleHelp } from "lucide-svelte";
@@ -13,8 +11,6 @@ import Tooltip from "$components/Tooltip.svelte";
 import Figure from "$components/chart/Figure.svelte";
 
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
-import { dataFilters } from "$lib/filters.svelte.js";
-
 // Reusable UI components
 import { Button } from "bits-ui";
 import * as RadioGroup from "$components/ui/radio-group/index.js";
@@ -27,6 +23,7 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 // Map
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 
+import { mapMetricConfigs, type MapMetricIndex } from "$lib/config/mapMetrics";
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
@@ -58,6 +55,7 @@ let stackedBarData = $derived(stackedState.value ?? []);
 
 let highlightedGroup = $state<string | null>(null);
 let pendingGeoid = $state<string | null>(null);
+let shouldDisableGeolocatorTracking = $state(false);
 let geoidNavigationGeneration = 0;
 let displayNameOverride = $state<{ geoid: string; name: string | null } | null>(null);
 
@@ -75,6 +73,7 @@ function updateYearRange(nextRange: [number, number]) {
 }
 
 function updateGeoid(nextGeoid: string) {
+  shouldDisableGeolocatorTracking = true;
   const generation = ++geoidNavigationGeneration;
   pendingGeoid = nextGeoid;
 
@@ -101,15 +100,15 @@ function highlightGroup(range: string, i: number) {
 
 const lineChartMargin = { top: 25, right: 10, bottom: 20, left: 40 };
 const stackedBarMargin = { top: 10, right: 0, bottom: 10, left: 35 };
-let selectedMapMetric = $state(dataFilters.metrics[0].value);
+let selectedMapMetric = $state<MapMetricIndex>(mapMetricConfigs[0].value);
 let selectedMapMetricString = $derived(String(selectedMapMetric));
-let selectedMapColorKey = $derived(dataFilters.metrics[selectedMapMetric].colorKey);
-let selectedMapColorDomain = $derived(dataFilters.metrics[selectedMapMetric].colorDomain);
-let selectedMapColorRange = $derived(dataFilters.metrics[selectedMapMetric].colorRange);
+let selectedMapColorKey = $derived(mapMetricConfigs[selectedMapMetric].colorKey);
+let selectedMapColorDomain = $derived(mapMetricConfigs[selectedMapMetric].colorDomain);
+let selectedMapColorRange = $derived(mapMetricConfigs[selectedMapMetric].colorRange);
 // Data ranges for the legend with corrected colors and widths
 // Usage in your Svelte component:
 let dataRanges = $derived.by(() => {
-  const selectedMetric = dataFilters.metrics[selectedMapMetric];
+  const selectedMetric = mapMetricConfigs[selectedMapMetric];
 
   return selectedMetric.legendText.map((label, index) => ({
     label,
@@ -143,18 +142,17 @@ let errors = $derived(
     sideResult && !sideResult.ok ? sideResult : undefined,
   ].filter(Boolean)
 );
-let errorSignature = $derived(errors.map((error) => `${error?.kind}:${error?.message}`).join("|"));
-let dismissedErrorSignature = $state("");
-let hasLoadingError = $derived(errorSignature !== "" && errorSignature !== dismissedErrorSignature);
+let dismissedErrorResults = $state.raw<PageData["results"] | null>(null);
+let hasLoadingError = $derived(errors.length > 0 && dismissedErrorResults !== data.results);
 let hasLoadingTimeout = $derived(errors.some((error) => error?.kind === "timeout"));
 
 function retryDataFetch() {
-  dismissedErrorSignature = "";
+  dismissedErrorResults = null;
   void invalidate("app:dashboard");
 }
 
 function dismissLoadingError() {
-  dismissedErrorSignature = errorSignature;
+  dismissedErrorResults = data.results;
 }
 </script>
 
@@ -226,12 +224,12 @@ function dismissLoadingError() {
               <RadioGroup.Root
                 value={selectedMapMetricString}
                 onValueChange={(v) => {
-                  selectedMapMetric = Number(v) as 0 | 1 | 2;
+                  selectedMapMetric = Number(v) as MapMetricIndex;
                 }}
                 name="metric"
                 class="flex h-full flex-col justify-between py-2"
               >
-                {#each dataFilters.metrics as metric (metric.value)}
+                {#each mapMetricConfigs as metric (metric.value)}
                   {@const id = `metric-${metric.value}`}
                   <div class="flex items-center gap-2 transition-colors">
                     <RadioGroup.Item {id} value={String(metric.value)} />
@@ -262,7 +260,7 @@ function dismissLoadingError() {
             <!-- ------------------------------------------------------------------ -->
             <section aria-label="Legend" class="flex flex-col space-y-1">
               <h4 class="mb-1 text-sm font-medium text-gray-500">
-                {dataFilters.metrics.find((m) => m.value === selectedMapMetric)?.label}
+                {mapMetricConfigs.find((m) => m.value === selectedMapMetric)?.label}
               </h4>
               <div class="flex gap-1.5">
                 {#each dataRanges as range, index (range.label)}
@@ -306,6 +304,7 @@ function dismissLoadingError() {
             data={mapData}
             bind:geoid={() => displayNameGeoid, updateGeoid}
             bind:displayName={() => displayName, updateDisplayName}
+            bind:shouldDisableGeolocatorTracking
             {selectedQuantile}
             quantileHighlightEnabled={highlightedGroup !== null}
           />

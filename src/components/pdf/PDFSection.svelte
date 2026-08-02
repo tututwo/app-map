@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { BarSegment } from "$lib/types";
+import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import SegmentedBar from "./segmentedBar.svelte";
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 let {
@@ -13,6 +14,7 @@ let {
   mapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   mapData,
   geoid,
+  mapCaptureState = $bindable<MapCaptureState>(initialMapCaptureState()),
 }: {
   title: string;
   mapPlaceholderText: string;
@@ -20,10 +22,11 @@ let {
   legendData: BarSegment[];
   description: string;
   mapColorKey: string;
-  mapColorDomain: [number, number];
-  mapColorRange: string[];
+  mapColorDomain: readonly [number, number];
+  mapColorRange: readonly string[];
   mapData: any[];
   geoid: string;
+  mapCaptureState?: MapCaptureState;
 } = $props();
 </script>
 
@@ -39,6 +42,7 @@ let {
         selectedMapColorRange={mapColorRange}
         data={mapData}
         {geoid}
+        bind:captureState={mapCaptureState}
       />
     </div>
     <div>

@@ -21,6 +21,12 @@ describe("parseDashboardParams", () => {
     });
   });
 
+  test("normalizes the proven Connecticut planning-region alias before any data loads", () => {
+    const url = new URL("https://example.test/?from=2003&to=2011&geoid=09170");
+
+    expect(parseDashboardParams(url).geoid).toBe("09009");
+  });
+
   test("uses the default for a year that is not a strict integer", () => {
     const url = new URL("https://example.test/?from=2003x&to=2012");
 

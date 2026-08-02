@@ -76,4 +76,17 @@ describe("download-data GEOID correctness", () => {
     expect(stacked).toBe("year,negative,neutral,positive\n2003,-1,2,1");
     expect(statistics).toBe("");
   });
+
+  it("uses the same proven Connecticut alias for every exported dataset", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => responseFor(String(input)));
+
+    const response = await call("/api/download_data?from=2003&to=2011&geoid=09170", fetch);
+
+    expect(response.status).toBe(200);
+    expect(fetch.mock.calls.map(([input]) => String(input))).toEqual([
+      "/api/line_chart_data?from=2003&to=2011&geoid=09009",
+      "/api/map_data?from=2003&to=2011&geoid=09009",
+      "/api/stacked_bar_chart_data?from=2003&to=2011&geoid=09009",
+    ]);
+  });
 });

@@ -3,6 +3,14 @@ import { describe, expect, test, vi } from "vitest";
 import { createDashboardResultCache, loadDashboardData } from "$lib/dashboard/data";
 
 const params = { from: 2003, to: 2011, geoid: "01001" };
+const mapDatum = {
+  geoid: "01001",
+  name: "Autauga County",
+  closure: 2,
+  closure_rate_per_10000: 1.5,
+  persistence: 4,
+  reopening: 1,
+};
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -14,7 +22,7 @@ function deferred<T>() {
 
 describe("loadDashboardData", () => {
   test("loads selected map data without filtering the national map by GEOID", async () => {
-    const fetch = vi.fn(async () => Response.json([{ geoid: "01001", name: "Autauga County" }]));
+    const fetch = vi.fn(async (_input: RequestInfo | URL) => Response.json([mapDatum]));
     const depends = vi.fn();
 
     const results = await loadDashboardData({ fetch, depends }, params, new Set(["map"]));
@@ -22,7 +30,7 @@ describe("loadDashboardData", () => {
     expect(results).toEqual({
       map: {
         ok: true,
-        data: [{ geoid: "01001", name: "Autauga County" }],
+        data: [mapDatum],
       },
     });
     expect(fetch).toHaveBeenCalledOnce();
@@ -100,13 +108,13 @@ describe("loadDashboardData", () => {
     const second = loadDashboardData(dependencies, params, new Set(["map"]));
 
     expect(fetch).toHaveBeenCalledOnce();
-    response.resolve(Response.json([{ geoid: "01001" }]));
+    response.resolve(Response.json([mapDatum]));
 
     await expect(first).resolves.toEqual({
-      map: { ok: true, data: [{ geoid: "01001" }] },
+      map: { ok: true, data: [mapDatum] },
     });
     await expect(second).resolves.toEqual({
-      map: { ok: true, data: [{ geoid: "01001" }] },
+      map: { ok: true, data: [mapDatum] },
     });
   });
 
@@ -114,7 +122,7 @@ describe("loadDashboardData", () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
-      .mockResolvedValueOnce(Response.json([{ geoid: "01001" }]));
+      .mockResolvedValueOnce(Response.json([mapDatum]));
     const dependencies = {
       fetch,
       depends: vi.fn(),
@@ -125,7 +133,7 @@ describe("loadDashboardData", () => {
     const retried = await loadDashboardData(dependencies, params, new Set(["map"]));
 
     expect(failed.map).toMatchObject({ ok: false, kind: "http" });
-    expect(retried.map).toEqual({ ok: true, data: [{ geoid: "01001" }] });
+    expect(retried.map).toEqual({ ok: true, data: [mapDatum] });
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -191,6 +199,62 @@ describe("loadDashboardData", () => {
     );
 
     expect(results.map).toMatchObject({ ok: false, kind: "invalid-data" });
+    expect(results.side).toMatchObject({ ok: false, kind: "invalid-data" });
+  });
+
+  test("returns invalid-data when a map row has a missing or mistyped required field", async () => {
+    const fetch = vi.fn(async (_input: RequestInfo | URL) =>
+      Response.json([
+        {
+          geoid: "01001",
+          name: "Autauga County",
+          closure: "2",
+          closure_rate_per_10000: 1.5,
+          persistence: 4,
+        },
+      ])
+    );
+
+    const results = await loadDashboardData({ fetch, depends: vi.fn() }, params, new Set(["map"]));
+
+    expect(results.map).toMatchObject({ ok: false, kind: "invalid-data" });
+  });
+
+  test("returns invalid-data when a line-chart row has a missing or mistyped required field", async () => {
+    const fetch = vi.fn(async () => Response.json([{ year: "2003" }]));
+
+    const results = await loadDashboardData({ fetch, depends: vi.fn() }, params, new Set(["line"]));
+
+    expect(results.line).toMatchObject({ ok: false, kind: "invalid-data" });
+  });
+
+  test("returns invalid-data when a stacked-chart row has a missing or mistyped required field", async () => {
+    const fetch = vi.fn(async () =>
+      Response.json([{ year: 2003, negative: -2, neutral: null, positive: 1 }])
+    );
+
+    const results = await loadDashboardData(
+      { fetch, depends: vi.fn() },
+      params,
+      new Set(["stacked"])
+    );
+
+    expect(results.stacked).toMatchObject({ ok: false, kind: "invalid-data" });
+  });
+
+  test("returns invalid-data when a side-metric field is not a string", async () => {
+    const fetch = vi.fn(async () => Response.json({ geoid: "01001", p_renter: 31.5 }));
+
+    const results = await loadDashboardData({ fetch, depends: vi.fn() }, params, new Set(["side"]));
+
+    expect(results.side).toMatchObject({ ok: false, kind: "invalid-data" });
+  });
+
+  test("returns invalid-data when side-metric data has no GEOID", async () => {
+    const fetch = vi.fn(async () => Response.json({ p_renter: "31.5" }));
+
+    const results = await loadDashboardData({ fetch, depends: vi.fn() }, params, new Set(["side"]));
+
     expect(results.side).toMatchObject({ ok: false, kind: "invalid-data" });
   });
 

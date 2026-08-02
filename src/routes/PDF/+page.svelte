@@ -24,7 +24,8 @@ import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
-import { dataFilters } from "$lib/filters.svelte.js";
+import { getMapMetricValue, mapMetricConfigs } from "$lib/config/mapMetrics";
+import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 
@@ -33,6 +34,15 @@ import { scaleQuantize } from "d3-scale";
 let mainContent = $state<HTMLElement | null>(null);
 let isExporting = $state(false);
 let exportError = $state<string | null>(null);
+let closureMapCaptureState = $state<MapCaptureState>(initialMapCaptureState());
+let closureRateMapCaptureState = $state<MapCaptureState>(initialMapCaptureState());
+let persistenceMapCaptureState = $state<MapCaptureState>(initialMapCaptureState());
+let mapCaptureStates = $derived([
+  closureMapCaptureState,
+  closureRateMapCaptureState,
+  persistenceMapCaptureState,
+]);
+let allMapsReady = $derived(mapCaptureStates.every(({ state }) => state === "ready"));
 
 // --- ADD THIS ---
 let pdfOverrideWidths = $state<Record<string, number>>({});
@@ -51,7 +61,7 @@ let countyName = $derived(
 const n = 5;
 
 // build a quantize scale that clamps out-of-range values
-const whichQuantile = (domain: [number, number]) =>
+const whichQuantile = (domain: readonly [number, number]) =>
   scaleQuantize<number, number>()
     .domain(domain)
     .range(Array.from({ length: n }, (_, i) => i + 1)); // [1,2,3,4,5]
@@ -59,18 +69,12 @@ const whichQuantile = (domain: [number, number]) =>
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let dataRanges = $derived.by(() => {
-  let threeMetrics = $state([0, 1, 2]);
-
-  return threeMetrics.map((metric) => {
-    const m = dataFilters.metrics[metric];
-    const quantize = whichQuantile(m.colorDomain as [number, number]);
+  return mapMetricConfigs.map((m) => {
+    const quantize = whichQuantile(m.colorDomain);
 
     // find the raw value (could be 0, undefined, etc.)
     const rec = mapData.find((d) => d.geoid === geoid);
-    const raw = rec?.[m.colorKey as keyof typeof rec] as number | undefined;
-
-    // if raw is nullish, force it to domain[0]; otherwise leave 0 ↦ 0
-    const value = raw ?? m.colorDomain[0];
+    const value = getMapMetricValue(rec, m);
 
     // 1..n → subtract 1 for a 0-based index
     const quantileIndex = quantize(value) - 1;
@@ -90,6 +94,12 @@ const introText = $state(
   "Intro text goes here. consectetur adipiscing elit. Quisque maximus risus laoreet lacus venenatis, nec ultrices odio sodales. Phasellus nulla dui, faucibus id rhoncus quis."
 );
 
+function waitForBrowserPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 async function exportToPDF() {
   if (import.meta.env.SSR) return;
 
@@ -98,16 +108,28 @@ async function exportToPDF() {
     return;
   }
 
+  if (!allMapsReady) {
+    exportError = "Maps are still preparing. Please try again in a moment.";
+    return;
+  }
+
+  const readyRevisions = mapCaptureStates.map(({ revision }) => revision);
+
   isExporting = true; // This will now trigger forceStatic in the children
   exportError = null;
 
   try {
     const [{ toJpeg }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
 
-    // 2. Wait for Svelte to apply the new widths to the components
     await tick();
-    // HACK: Wait a brief moment for the browser to paint the changes before capturing.
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await waitForBrowserPaint();
+
+    if (
+      !allMapsReady ||
+      mapCaptureStates.some(({ revision }, index) => revision !== readyRevisions[index])
+    ) {
+      throw new Error("A map changed while the report was being prepared");
+    }
 
     // 3. Capture the canvas now that the DOM is updated
     const imgData = await toJpeg(mainContent, {
@@ -169,7 +191,8 @@ let demographicStatistics = $derived(
       <div class="flex items-center space-x-4">
         <button
           onclick={exportToPDF}
-          disabled={isExporting}
+          disabled={isExporting || !allMapsReady}
+          title={allMapsReady ? "Save this report as a PDF" : "Preparing report maps"}
           class="flex cursor-pointer items-center text-sm text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if isExporting}
@@ -190,6 +213,8 @@ let demographicStatistics = $derived(
               ></path>
             </svg>
             Exporting...
+          {:else if !allMapsReady}
+            Preparing maps...
           {:else}
             <FileText class="mr-1.5 h-4 w-4" />
             Save as PDF
@@ -262,33 +287,36 @@ let demographicStatistics = $derived(
             mapBorderColor="border-blue-100"
             legendData={dataRanges[0]}
             description={introText}
-            mapColorKey="closure"
-            mapColorRange={["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"]}
-            mapColorDomain={[0, 1]}
+            mapColorKey={mapMetricConfigs[0].colorKey}
+            mapColorRange={mapMetricConfigs[0].colorRange}
+            mapColorDomain={mapMetricConfigs[0].colorDomain}
             {mapData}
             {geoid}
+            bind:mapCaptureState={closureMapCaptureState}
           />
           <DataSection
             title="Rate of closed churches per 10,000 population"
             mapPlaceholderText="Map"
             legendData={dataRanges[1]}
             description={introText}
-            mapColorKey="closure_rate_per_10000"
-            mapColorRange={["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"]}
-            mapColorDomain={[0, 1]}
+            mapColorKey={mapMetricConfigs[1].colorKey}
+            mapColorRange={mapMetricConfigs[1].colorRange}
+            mapColorDomain={mapMetricConfigs[1].colorDomain}
             {mapData}
             {geoid}
+            bind:mapCaptureState={closureRateMapCaptureState}
           />
           <DataSection
             title="Persistence of open churches"
             mapPlaceholderText="Map"
             legendData={dataRanges[2]}
             description={introText}
-            mapColorKey="persistence"
-            mapColorRange={["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"]}
-            mapColorDomain={[0, 1]}
+            mapColorKey={mapMetricConfigs[2].colorKey}
+            mapColorRange={mapMetricConfigs[2].colorRange}
+            mapColorDomain={mapMetricConfigs[2].colorDomain}
             {mapData}
             {geoid}
+            bind:mapCaptureState={persistenceMapCaptureState}
           />
         </div>
 

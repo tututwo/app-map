@@ -1,3 +1,5 @@
+import { normalizeCountyGeoid } from "$lib/domain/countyGeoid";
+
 export interface DashboardParams {
   from: number;
   to: number;
@@ -38,6 +40,9 @@ export function parseDashboardParams(url: URL): DashboardParams {
   return {
     from: to - from >= 5 ? from : DEFAULT_DASHBOARD_PARAMS.from,
     to: to - from >= 5 ? to : DEFAULT_DASHBOARD_PARAMS.to,
-    geoid: geoidParam && /^\d{5}$/.test(geoidParam) ? geoidParam : DEFAULT_DASHBOARD_PARAMS.geoid,
+    geoid:
+      geoidParam && /^\d{5}$/.test(geoidParam)
+        ? normalizeCountyGeoid(geoidParam)
+        : DEFAULT_DASHBOARD_PARAMS.geoid,
   };
 }

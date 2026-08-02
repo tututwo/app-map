@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-async function dragFromYear(page: Page, years: number) {
-  const fromHandle = page.getByRole("button", { name: /^from 2003$/i });
-  const toHandle = page.getByRole("button", { name: /^to 2011$/i });
+async function dragFromYear(page: Page, years: number, currentFrom = 2003, currentTo = 2011) {
+  const fromHandle = page.getByRole("button", { name: new RegExp(`^from ${currentFrom}$`, "i") });
+  const toHandle = page.getByRole("button", { name: new RegExp(`^to ${currentTo}$`, "i") });
 
   await expect(fromHandle).toBeVisible();
   const fromBox = await fromHandle.boundingBox();
@@ -11,7 +11,7 @@ async function dragFromYear(page: Page, years: number) {
 
   const fromX = fromBox.x + fromBox.width / 2;
   const toX = toBox.x + toBox.width / 2;
-  const pixelsPerYear = (toX - fromX) / 8;
+  const pixelsPerYear = (toX - fromX) / (currentTo - currentFrom);
   const y = fromBox.y + fromBox.height / 2;
 
   await fromHandle.dispatchEvent("mousedown", {
@@ -136,4 +136,32 @@ test("a failed navigation keeps last-good data and retry recovers", async ({ pag
   await page.getByRole("button", { name: "Try Again" }).click();
   await expect(page.getByText("Failed to load some data", { exact: true })).toBeHidden();
   await expect(page.getByText("From 2005 to 2011", { exact: true })).toBeVisible();
+});
+
+test("a dismissed load error is shown again after recovery", async ({ page }) => {
+  let failNextMapRequest = false;
+  await page.route("**/api/map_data?*", async (route) => {
+    if (failNextMapRequest) {
+      failNextMapRequest = false;
+      await route.fulfill({ status: 503, body: "temporarily unavailable" });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto("/?from=2003&to=2011&geoid=00000");
+
+  failNextMapRequest = true;
+  await dragFromYear(page, 1);
+  await expect(page.getByText("Failed to load some data", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Continue Anyway" }).click();
+  await expect(page.getByText("Failed to load some data", { exact: true })).toBeHidden();
+
+  await dragFromYear(page, 1, 2004, 2011);
+  await expect.poll(() => new URL(page.url()).searchParams.get("from")).toBe("2005");
+
+  failNextMapRequest = true;
+  await dragFromYear(page, 1, 2005, 2011);
+  await expect.poll(() => new URL(page.url()).searchParams.get("from")).toBe("2006");
+  await expect(page.getByText("Failed to load some data", { exact: true })).toBeVisible();
 });
