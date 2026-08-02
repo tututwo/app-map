@@ -27,11 +27,12 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 // Map
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 
+import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { createLastGood } from "$lib/dashboard/last-good.svelte";
 import { setDashboardParams } from "$lib/dashboard/navigate-app";
-import type { LineDatum, MapDatum, SideMetricDatum, StackedDatum } from "$lib/dashboard/data";
+import type { LineDatum, MapDatum, StackedDatum } from "$lib/dashboard/data";
 import type { PageData } from "./$types";
 
 let { data }: { data: PageData } = $props();
@@ -39,13 +40,11 @@ let { data }: { data: PageData } = $props();
 const mapState = createLastGood<MapDatum[]>();
 const lineState = createLastGood<LineDatum[]>();
 const stackedState = createLastGood<StackedDatum[]>();
-const sideState = createLastGood<SideMetricDatum>();
 
 function syncDashboardResults() {
   if (data.results.map) mapState.update(data.results.map);
   if (data.results.line) lineState.update(data.results.line);
   if (data.results.stacked) stackedState.update(data.results.stacked);
-  if (data.results.side) sideState.update(data.results.side);
 }
 
 syncDashboardResults();
@@ -123,100 +122,26 @@ let dataRanges = $derived.by(() => {
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
-let selectedSideMetricData = $derived(sideState.value);
-// Usage example:
-const fieldConfigs = [
-  {
-    id: "median-rent",
-    field: "n_med_rent",
-    title: "Median rent (USD)",
-    type: "currency",
-    range: [200, 10000],
-    labels: ["200", "10k"],
-    average: 1200,
-    averageLabel: "US Average",
-  },
-  {
-    id: "renters-percent",
-    field: "p_renter",
-    title: "Percent of people who are renters",
-    type: "percent",
-    range: [0, 100],
-    labels: ["0%", "100%"],
-    average: 36,
-  },
-  {
-    id: "poverty-level",
-    field: "p_poverty",
-    title: "Percentage of population living in poverty",
-    type: "percent",
-    range: [0, 100],
-    labels: ["0%", "100%"],
-    average: 12,
-  },
-  {
-    id: "mobility-level",
-    field: "p_mobility",
-    title: "Percentage of population with mobility limitations",
-    type: "percent",
-    range: [0, 100],
-    labels: ["0%", "100%"],
-    average: 12,
-  },
-  {
-    id: "community-health-centers",
-    field: "n_commhlthcntr",
-    title: "Number of community health centers",
-    type: "currency",
-    range: [0, 100],
-    labels: ["0%", "100%"],
-    average: 12,
-  },
-];
+let sideResult = $derived(data.results.side);
+let selectedSideMetricData = $derived(
+  geoid !== "00000" && sideResult?.ok ? sideResult.data : undefined
+);
 
 let statistics = $derived(
-  selectedSideMetricData ? createSideMetricData(selectedSideMetricData, fieldConfigs) : []
+  createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs)
 );
-// Demographic stats
-const demographicFieldConfigs = [
-  {
-    id: "black-population",
-    field: "n_pop_black",
-    title: "Number of individuals identifying as Black",
-    type: "number",
-    range: [200, 60000],
-    labels: ["200", "10k"],
-    average: 15000,
-    averageLabel: "US Average",
-  },
-  {
-    id: "hispanic-population",
-    field: "n_pop_hisp",
-    title: "Number of individuals identifying as Hispanic",
-    type: "number",
-    range: [0, 10000],
-    labels: ["0", "10k"],
-    average: 1200,
-  },
-  {
-    id: "renter-population-percent",
-    field: "p_renter",
-    title: "Percentage of population renting",
-    type: "percent",
-    range: [0, 100],
-    labels: ["0%", "100%"],
-    average: 36,
-  },
-];
 
 let demographicStatistics = $derived(
-  selectedSideMetricData
-    ? createSideMetricData(selectedSideMetricData, demographicFieldConfigs)
-    : []
+  createSideMetricData(selectedSideMetricData, demographicMetricConfigs)
 );
 
 let errors = $derived(
-  [mapState.error, lineState.error, stackedState.error, sideState.error].filter(Boolean)
+  [
+    mapState.error,
+    lineState.error,
+    stackedState.error,
+    sideResult && !sideResult.ok ? sideResult : undefined,
+  ].filter(Boolean)
 );
 let errorSignature = $derived(errors.map((error) => `${error?.kind}:${error?.message}`).join("|"));
 let dismissedErrorSignature = $state("");
@@ -458,35 +383,41 @@ function dismissLoadingError() {
           <div class="absolute inset-0 overflow-y-auto pr-1">
             <!-- Social determinants -->
             <h4 class="text-lg font-semibold">Social Determinants</h4>
-            {#each statistics as stat (stat.id)}
-              <PercentageBar
-                title={stat.title}
-                currentValueDisplay={stat.currentValueDisplay}
-                currentValue={stat.currentValue}
-                minValue={stat.minValue}
-                maxValue={stat.maxValue}
-                minLabel={stat.minLabel}
-                maxLabel={stat.maxLabel}
-                averageValue={stat.averageValue}
-                averageLabel={stat.averageLabel}
-                uniqueIdBase={stat.id}
-              />
-            {/each}
-            <h4 class="mt-8 text-lg font-semibold">Demographics</h4>
-            {#each demographicStatistics as stat (stat.id)}
-              <PercentageBar
-                title={stat.title}
-                currentValueDisplay={stat.currentValueDisplay}
-                currentValue={stat.currentValue}
-                minValue={stat.minValue}
-                maxValue={stat.maxValue}
-                minLabel={stat.minLabel}
-                maxLabel={stat.maxLabel}
-                averageValue={stat.averageValue}
-                averageLabel={stat.averageLabel}
-                uniqueIdBase={stat.id}
-              />
-            {/each}
+            {#if statistics.length === 0 && demographicStatistics.length === 0}
+              <p class="mt-2 text-sm text-gray-600">
+                Community and demographic data are unavailable for this location.
+              </p>
+            {:else}
+              {#each statistics as stat (stat.id)}
+                <PercentageBar
+                  title={stat.title}
+                  currentValueDisplay={stat.currentValueDisplay}
+                  currentValue={stat.currentValue}
+                  minValue={stat.minValue}
+                  maxValue={stat.maxValue}
+                  minLabel={stat.minLabel}
+                  maxLabel={stat.maxLabel}
+                  averageValue={stat.averageValue}
+                  averageLabel={stat.averageLabel}
+                  uniqueIdBase={stat.id}
+                />
+              {/each}
+              <h4 class="mt-8 text-lg font-semibold">Demographics</h4>
+              {#each demographicStatistics as stat (stat.id)}
+                <PercentageBar
+                  title={stat.title}
+                  currentValueDisplay={stat.currentValueDisplay}
+                  currentValue={stat.currentValue}
+                  minValue={stat.minValue}
+                  maxValue={stat.maxValue}
+                  minLabel={stat.minLabel}
+                  maxLabel={stat.maxLabel}
+                  averageValue={stat.averageValue}
+                  averageLabel={stat.averageLabel}
+                  uniqueIdBase={stat.id}
+                />
+              {/each}
+            {/if}
           </div>
         </div>
       </div>

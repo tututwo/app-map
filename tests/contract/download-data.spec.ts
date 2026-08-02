@@ -46,8 +46,10 @@ test("download contract preserves ZIP entry names and extracted CSV text", async
 2010,-7,56,1
 2011,-18,22,14`,
     "statistics.csv": `id,title,currentValueDisplay,currentValue,minValue,maxValue,minLabel,maxLabel,averageValue,averageLabel
-median-rent,Median rent (USD),$769,769,200,10000,200,10k,1200,
-renters-percent,Percent of people who are renters,25%,25,0,100,0%,100%,36,
-poverty-level,Percent below the federal poverty level,11%,11,0,100,0%,100%,12,US Average`,
+median-rent,Median gross rent (USD),$769,769,200,10000,$200,$10k,621,County average
+renters-percent,Percentage of occupied housing units that are renter-occupied,25%,25,0,100,0%,100%,28,County average
+poverty-level,Percentage of population below the poverty level,11%,11,0,100,0%,100%,16,County average
+mobility-level,Percentage of residents living in the same house as one year ago,86%,86,0,100,0%,100%,86,County average
+community-health-centers,Number of community health centers,1,1,0,100,0,100,5,County average`,
   });
 });

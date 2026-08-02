@@ -15,7 +15,6 @@ import { tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
 
 import type { PageData } from "./$types";
-import type { BarSegment } from "$lib/types";
 import { Button } from "bits-ui";
 import Figure from "$components/chart/Figure.svelte";
 
@@ -24,8 +23,10 @@ import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
+import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { dataFilters } from "$lib/filters.svelte.js";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
+import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 
 import { scaleQuantize } from "d3-scale";
 // State management for PDF export
@@ -56,49 +57,6 @@ const whichQuantile = (domain: [number, number]) =>
     .range(Array.from({ length: n }, (_, i) => i + 1)); // [1,2,3,4,5]
 
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
-
-// ----------------------------------------------------------------
-// ---------------Legend Data----------------------------
-// ----------------------------------------------------------------
-const totalChurchesData: BarSegment[] = $state([
-  { range: "1-12", color: "bg-pink-200", textColor: "text-black" },
-  { range: "13-24", color: "bg-pink-300", textColor: "text-black" },
-  {
-    range: "25-36",
-    color: "bg-pink-400",
-    textColor: "text-white",
-    popupValue: "25",
-    markerText: "US Average",
-  }, // This is the one with the specific popup
-  { range: "37-48", color: "bg-pink-500", textColor: "text-white" },
-  { range: "49-60", color: "bg-pink-600", textColor: "text-white" },
-]);
-
-// Removed popupValue from other datasets to match the image's focus
-const densityPer100kData: BarSegment[] = $state([
-  { range: "0-20", color: "bg-orange-200", textColor: "text-black" },
-  { range: "21-40", color: "bg-orange-300", textColor: "text-black" },
-  { range: "41-60", color: "bg-orange-400", textColor: "text-white" },
-  {
-    range: "61-80",
-    color: "bg-amber-500",
-    textColor: "text-white" /* popupValue: '80%' removed */,
-  },
-  { range: "81-100", color: "bg-amber-600", textColor: "text-white" },
-]);
-
-const densityPerSqkmData: BarSegment[] = $state([
-  { range: "1-12", color: "bg-purple-200", textColor: "text-black" },
-  { range: "13-24", color: "bg-purple-300", textColor: "text-black" },
-  {
-    range: "25-36",
-    color: "bg-purple-400",
-    textColor: "text-white" /* popupValue: '12k' removed */,
-  },
-  { range: "37-48", color: "bg-purple-500", textColor: "text-white" },
-  { range: "49-60", color: "bg-purple-600", textColor: "text-white" },
-]);
-// Usage in your Svelte component:
 
 let dataRanges = $derived.by(() => {
   let threeMetrics = $state([0, 1, 2]);
@@ -194,68 +152,15 @@ async function exportToPDF() {
   }
 }
 
-// ----------------------------------------------------------------
-// ---------------Social Determinants----------------------------
-// ----------------------------------------------------------------
-const statistics = $state([
-  {
-    id: "college-degree",
-    title: "Percent with a collage degree or higher", // Keeping 'collage' typo from image
-    currentValueDisplay: "17%",
-    currentValue: 17,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 35,
-    averageLabel: "US Average",
-  },
-  {
-    id: "median-rent",
-    title: "Median rent (USD)",
-    currentValueDisplay: "$2039",
-    currentValue: 2039,
-    minValue: 200,
-    maxValue: 10000,
-    minLabel: "200",
-    maxLabel: "10k",
-    averageValue: 5500, // Estimated from image
-    // No averageLabel for this one based on image, but line is present
-  },
-  {
-    id: "renters-percent",
-    title: "Percent of people who are renters",
-    currentValueDisplay: "87%",
-    currentValue: 87,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 70, // Estimated from image
-  },
-  {
-    id: "poverty-level",
-    title: "Percent below the federal poverty level",
-    currentValueDisplay: "17%",
-    currentValue: 17,
-    minValue: 0,
-    maxValue: 100,
-    minLabel: "0%",
-    maxLabel: "100%",
-    averageValue: 30, // Estimated from image
-  },
-  {
-    id: "household-income",
-    title: "Median household income (USD)",
-    currentValueDisplay: "$30.5k",
-    currentValue: 30500,
-    minValue: 0,
-    maxValue: 80000,
-    minLabel: "0",
-    maxLabel: "80k",
-    averageValue: 45000, // Estimated from image
-  },
-]);
+let selectedSideMetricData = $derived(
+  geoid !== "00000" && data.results.side?.ok ? data.results.side.data : undefined
+);
+let statistics = $derived(
+  createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs)
+);
+let demographicStatistics = $derived(
+  createSideMetricData(selectedSideMetricData, demographicMetricConfigs)
+);
 </script>
 
 <div class="flex min-h-screen items-start justify-center bg-gray-100 p-4 sm:p-8">
@@ -393,39 +298,45 @@ const statistics = $state([
             <div class="absolute inset-0 overflow-y-auto pr-1">
               <!-- Social determinants -->
               <h4 class="text-lg font-semibold">Social Determinants</h4>
-              {#each statistics as stat (stat.id)}
-                <PercentageBar
-                  title={stat.title}
-                  currentValueDisplay={stat.currentValueDisplay}
-                  currentValue={stat.currentValue}
-                  minValue={stat.minValue}
-                  maxValue={stat.maxValue}
-                  minLabel={stat.minLabel}
-                  maxLabel={stat.maxLabel}
-                  averageValue={stat.averageValue}
-                  averageLabel={stat.averageLabel}
-                  uniqueIdBase={stat.id}
-                  overrideWidth={pdfOverrideWidths[stat.id]}
-                  forceStatic={isExporting}
-                />
-              {/each}
-              <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
-              {#each statistics as stat (stat.id)}
-                <PercentageBar
-                  title={stat.title}
-                  currentValueDisplay={stat.currentValueDisplay}
-                  currentValue={stat.currentValue}
-                  minValue={stat.minValue}
-                  maxValue={stat.maxValue}
-                  minLabel={stat.minLabel}
-                  maxLabel={stat.maxLabel}
-                  averageValue={stat.averageValue}
-                  averageLabel={stat.averageLabel}
-                  uniqueIdBase={stat.id}
-                  overrideWidth={pdfOverrideWidths[stat.id]}
-                  forceStatic={isExporting}
-                />
-              {/each}
+              {#if statistics.length === 0 && demographicStatistics.length === 0}
+                <p class="mt-2 text-sm text-gray-600">
+                  Community and demographic data are unavailable for this location.
+                </p>
+              {:else}
+                {#each statistics as stat (stat.id)}
+                  <PercentageBar
+                    title={stat.title}
+                    currentValueDisplay={stat.currentValueDisplay}
+                    currentValue={stat.currentValue}
+                    minValue={stat.minValue}
+                    maxValue={stat.maxValue}
+                    minLabel={stat.minLabel}
+                    maxLabel={stat.maxLabel}
+                    averageValue={stat.averageValue}
+                    averageLabel={stat.averageLabel}
+                    uniqueIdBase={stat.id}
+                    overrideWidth={pdfOverrideWidths[stat.id]}
+                    forceStatic={isExporting}
+                  />
+                {/each}
+                <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
+                {#each demographicStatistics as stat (stat.id)}
+                  <PercentageBar
+                    title={stat.title}
+                    currentValueDisplay={stat.currentValueDisplay}
+                    currentValue={stat.currentValue}
+                    minValue={stat.minValue}
+                    maxValue={stat.maxValue}
+                    minLabel={stat.minLabel}
+                    maxLabel={stat.maxLabel}
+                    averageValue={stat.averageValue}
+                    averageLabel={stat.averageLabel}
+                    uniqueIdBase={stat.id}
+                    overrideWidth={pdfOverrideWidths[stat.id]}
+                    forceStatic={isExporting}
+                  />
+                {/each}
+              {/if}
             </div>
           </div>
         </div>

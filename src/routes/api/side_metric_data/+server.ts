@@ -8,6 +8,10 @@ export const GET: RequestHandler = async ({ url }) => {
     throw error(400, "Invalid geoid");
   }
 
+  if (geoid === "00000") {
+    return json({ geoid });
+  }
+
   const row = await readSideMetric(geoid);
   if (!row) {
     throw error(404, "Data not found");

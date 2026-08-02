@@ -33,7 +33,7 @@ type DataPoint = {
   p_overcrowding: number;
   /** Number of individuals with median rent */
   n_med_rent: number;
-  /** Percentage of population with mobility limitations */
+  /** Percentage of residents living in the same house as one year ago */
   p_mobility: number;
   /** Number of individuals aged 25 and older */
   n_pop_25: number;

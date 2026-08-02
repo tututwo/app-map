@@ -273,14 +273,12 @@ describe("current dashboard endpoint contracts", () => {
   });
 
   describe("side-metric data", () => {
-    it("defaults to the national row and preserves source strings", async () => {
+    it("defaults to an explicit national sentinel without publishing county values", async () => {
       const response = await call(getSideMetricData, "/api/side_metric_data");
       const body = (await response.json()) as Record<string, string>;
 
       expect(response.status).toBe(200);
-      expect(body.geoid).toBe("00000");
-      expect(body.n_med_rent).toBe("585");
-      expect(body.p_renter).toBe("30.3518461695817");
+      expect(body).toEqual({ geoid: "00000" });
     });
 
     it("rejects malformed GEOIDs", async () => {

@@ -1,30 +1,51 @@
 import counties_geoid from "$data/countyID/counties_geoid.csv";
+import { normalizeCountyGeoid, resolveCountyDisplay } from "$lib/domain/countyGeoid";
+
+/**
+ * @typedef {{
+ *   county?: string;
+ *   administrative_area_level_2?: string;
+ *   state_district?: string;
+ *   state?: string;
+ *   administrative_area_level_1?: string;
+ * }} NominatimAddress
+ */
+
+/**
+ * @typedef {{
+ *   lat?: string;
+ *   lon?: string;
+ *   display_name?: string;
+ *   address?: NominatimAddress;
+ * }} NominatimLocation
+ */
+
+/**
+ * @typedef {{
+ *   key: string;
+ *   county: string;
+ *   state: string | null;
+ *   displayName: string;
+ *   geoid: string;
+ *   originalCountyName: string;
+ *   originalLocation: string;
+ * }} CountySearchResult
+ */
 
 // searchCounty2010Census.js
 const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
 
 // Keep track of the current request
+/** @type {AbortController | null} */
 let currentAbortController = null;
 
-const REGION_TO_2010_COUNTY = {
-  // Connecticut planning regions to historical county names mapping
-  // The geocoding API returns planning region names, but we display historical county names
-  "South Central Connecticut Planning Region": "New Haven County, CT",
-  "Western Connecticut Planning Region": "Fairfield County, CT",
-  "Lower Connecticut River Valley Planning Region": "Middlesex County, CT",
-  "Southeastern Connecticut Planning Region": "New London County, CT",
-  "Capitol Planning Region": "Hartford County, CT",
-  "Northeastern Connecticut Planning Region": "Windham County, CT",
-  "Northwest Hills Planning Region": "Litchfield County, CT",
-  "Central Connecticut Planning Region": "Hartford County, CT",
-};
-
 // Parse CSV and create a Map for efficient lookups
+/** @type {Map<string, string>} */
 const GEOID_MAP = new Map();
 
 // Initialize the GEOID map from CSV data
 
-counties_geoid.forEach((row, index) => {
+counties_geoid.forEach((row) => {
   // Handle different CSV formats - could be array or object
   let countyState, geoid;
 
@@ -54,7 +75,9 @@ counties_geoid.forEach((row, index) => {
 });
 
 // Helper function to get state abbreviation
+/** @param {string} stateName */
 function getStateAbbreviation(stateName) {
+  /** @type {Record<string, string>} */
   const stateAbbreviations = {
     Alabama: "AL",
     Alaska: "AK",
@@ -112,6 +135,10 @@ function getStateAbbreviation(stateName) {
 }
 
 // Helper function to lookup GEOID
+/**
+ * @param {string} countyName
+ * @param {string | null} state
+ */
 function lookupGeoid(countyName, state) {
   if (!countyName) return null;
 
@@ -143,6 +170,7 @@ function lookupGeoid(countyName, state) {
   return null;
 }
 
+/** @param {string} query */
 export async function searchCounties(query) {
   if (!query || query.length < 3) return [];
 
@@ -172,7 +200,8 @@ export async function searchCounties(query) {
       }
     );
 
-    const locations = await searchResponse.json();
+    const locations = /** @type {NominatimLocation[]} */ (await searchResponse.json());
+    /** @type {CountySearchResult[]} */
     const countyResults = [];
 
     for (const location of locations) {
@@ -184,7 +213,7 @@ export async function searchCounties(query) {
           location.address.county ||
           location.address.administrative_area_level_2 ||
           location.address.state_district;
-        state = location.address.state || location.address.administrative_area_level_1;
+        state = location.address.state || location.address.administrative_area_level_1 || null;
       }
 
       // If we don't have county info, try reverse geocoding
@@ -211,11 +240,11 @@ export async function searchCounties(query) {
           }
         );
 
-        const reverseData = await reverseResponse.json();
+        const reverseData = /** @type {NominatimLocation} */ (await reverseResponse.json());
         if (reverseData.address) {
           countyName =
             reverseData.address.county || reverseData.address.administrative_area_level_2;
-          state = reverseData.address.state;
+          state = reverseData.address.state || null;
         }
       }
 
@@ -223,28 +252,22 @@ export async function searchCounties(query) {
         // IMPORTANT: Look up GEOID using the ORIGINAL county/region name from the API
         // For CT, this will be the planning region name (e.g., "South Central Connecticut Planning Region")
 
-        let geoid;
-        if (countyName === "South Central Connecticut Planning Region") {
-          geoid = "09009";
-        } else {
-          geoid = lookupGeoid(countyName, state);
-        }
+        const sourceGeoid = lookupGeoid(countyName, state);
+        if (!sourceGeoid) continue;
 
-        // Map to display name (for CT planning regions, this converts to historical county names)
-        const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
-
-        const displayName = state ? `${mapped2010County}, ${state}` : mapped2010County;
-        const key = `${mapped2010County}_${state}`;
+        const geoid = normalizeCountyGeoid(sourceGeoid);
+        const { county, displayName } = resolveCountyDisplay(countyName, state);
+        const key = `${county}_${state}`;
 
         if (!countyResults.find((r) => r.key === key)) {
           countyResults.push({
             key,
-            county: mapped2010County, // Display name (e.g., "New Haven County")
+            county,
             state,
             displayName,
-            geoid: geoid, // GEOID from original region name (e.g., "09170")
+            geoid,
             originalCountyName: countyName, // Keep original for debugging
-            originalLocation: location.display_name,
+            originalLocation: location.display_name ?? displayName,
           });
         }
       }
@@ -253,7 +276,10 @@ export async function searchCounties(query) {
     return countyResults;
   } catch (error) {
     // Don't log cancelled requests as errors
-    if (error.name === "AbortError" || error.message === "Request cancelled") {
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.message === "Request cancelled")
+    ) {
       return [];
     }
     console.error("Geocoding error:", error);
@@ -262,6 +288,10 @@ export async function searchCounties(query) {
 }
 
 // Add this new function for reverse geocoding a specific coordinate
+/**
+ * @param {number} lat
+ * @param {number} lon
+ */
 export async function reverseGeocodeCounty(lat, lon) {
   try {
     const reverseResponse = await fetch(
@@ -280,7 +310,7 @@ export async function reverseGeocodeCounty(lat, lon) {
       }
     );
 
-    const reverseData = await reverseResponse.json();
+    const reverseData = /** @type {NominatimLocation} */ (await reverseResponse.json());
 
     if (reverseData.address) {
       const countyName =
@@ -291,16 +321,14 @@ export async function reverseGeocodeCounty(lat, lon) {
 
       if (countyName && state) {
         // Look up GEOID using the original county name
-        const geoid = lookupGeoid(countyName, state);
-
-        // Map to display name (handles CT planning regions)
-        const mapped2010County = REGION_TO_2010_COUNTY[countyName] || countyName;
-        const displayName = `${mapped2010County}, ${state}`;
+        const sourceGeoid = lookupGeoid(countyName, state);
+        const geoid = sourceGeoid ? normalizeCountyGeoid(sourceGeoid) : null;
+        const { county, displayName } = resolveCountyDisplay(countyName, state);
 
         return {
-          geoid: geoid || null,
+          geoid,
           displayName,
-          county: mapped2010County,
+          county,
           state,
           originalCountyName: countyName,
         };

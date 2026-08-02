@@ -1,22 +1,18 @@
-import { json, error } from "@sveltejs/kit";
-import type { RequestHandler } from "@sveltejs/kit";
+import { error, type RequestHandler } from "@sveltejs/kit";
+import { socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
+import { isConnecticutPlanningRegionGeoid, normalizeCountyGeoid } from "$lib/domain/countyGeoid";
 import { readSideMetric } from "$lib/server/data/side-metric-data";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { csvFormat } from "d3";
 import JSZip from "jszip";
-
-interface AggregatedData {
-  lineChartData: any[];
-  mapData: any[];
-  stackedBarData: any[];
-}
 
 export const GET: RequestHandler = async ({ url, fetch }) => {
   try {
     // Parse query parameters
     const fromParam = url.searchParams.get("from");
     const toParam = url.searchParams.get("to");
-    const geoid = url.searchParams.get("geoid");
+    const requestedGeoid = url.searchParams.get("geoid") ?? "00000";
+    const geoid = normalizeCountyGeoid(requestedGeoid);
 
     // Validate required parameters
     if (!fromParam || !toParam) {
@@ -34,7 +30,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     const baseParams = new URLSearchParams({
       from: fromParam,
       to: toParam,
-      geoid: geoid ?? "00000",
+      geoid,
     });
 
     // Make parallel requests to all three APIs
@@ -50,7 +46,10 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
       throw error(lineChartResponse.status, "Failed to fetch line chart data");
     }
 
-    if (!mapDataResponse.ok) {
+    const hasKnownMapDataGap =
+      isConnecticutPlanningRegionGeoid(geoid) && mapDataResponse.status === 404;
+
+    if (!mapDataResponse.ok && !hasKnownMapDataGap) {
       console.error("Map data API error:", await mapDataResponse.text());
       throw error(mapDataResponse.status, "Failed to fetch map data");
     }
@@ -64,41 +63,14 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     const [lineChartData, stackedBarData, mapData] = await Promise.all([
       (await lineChartResponse.json()).filter((row: any) => row.year >= from && row.year <= to),
       (await stackedBarResponse.json()).filter((row: any) => row.year >= from && row.year <= to),
-      await mapDataResponse.json(),
+      hasKnownMapDataGap ? [] : await mapDataResponse.json(),
     ]);
 
-    const fieldConfigs = [
-      {
-        id: "median-rent",
-        field: "n_med_rent",
-        title: "Median rent (USD)",
-        type: "currency",
-        range: [200, 10000],
-        labels: ["200", "10k"],
-        average: 1200,
-      },
-      {
-        id: "renters-percent",
-        field: "p_renter",
-        title: "Percent of people who are renters",
-        type: "percent",
-        range: [0, 100],
-        labels: ["0%", "100%"],
-        average: 36,
-      },
-      {
-        id: "poverty-level",
-        field: "p_poverty",
-        title: "Percent below the federal poverty level",
-        type: "percent",
-        range: [0, 100],
-        labels: ["0%", "100%"],
-        average: 12,
-        averageLabel: "US Average",
-      },
-    ];
-    const selectedSideMetricData = await readSideMetric(geoid ?? "");
-    const statistics = createSideMetricData(selectedSideMetricData, fieldConfigs);
+    const selectedSideMetricData = await readSideMetric(geoid);
+    const statistics =
+      geoid === "00000"
+        ? []
+        : createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs);
 
     const zip = new JSZip();
 

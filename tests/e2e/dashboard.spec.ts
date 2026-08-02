@@ -42,6 +42,38 @@ test("dashboard and report data are present in server-rendered HTML", async ({ r
   expect(report.ok()).toBe(true);
   const reportHtml = await report.text();
   expect(reportHtml).toContain("Closed Churches in Autauga County, AL (2004-2012)");
+  expect(reportHtml).toContain("Median gross rent (USD)");
+  expect(reportHtml).toContain("$769");
+  expect(reportHtml).toContain("Black population (count)");
+  expect(reportHtml).toContain("9486");
+  expect(reportHtml).toContain("1099");
+  expect(reportHtml).not.toContain("$2039");
+  expect(reportHtml).not.toContain("$30.5k");
+  expect(reportHtml).not.toContain("Percent with a collage degree or higher");
+
+  const baldwinReport = await request.get("/PDF?from=2004&to=2012&geoid=01003");
+  expect(baldwinReport.ok()).toBe(true);
+  const baldwinHtml = await baldwinReport.text();
+  expect(baldwinHtml).toContain("$821");
+  expect(baldwinHtml).toContain("16314");
+  expect(baldwinHtml).toContain("7367");
+  expect(baldwinHtml).not.toContain("$769");
+
+  const missingReport = await request.get("/PDF?from=2004&to=2012&geoid=09110");
+  expect(missingReport.ok()).toBe(true);
+  const missingHtml = await missingReport.text();
+  expect(missingHtml).toContain(
+    "Community and demographic data are unavailable for this location."
+  );
+  expect(missingHtml).not.toContain("NaN");
+
+  const nationalReport = await request.get("/PDF?from=2004&to=2012&geoid=00000");
+  expect(nationalReport.ok()).toBe(true);
+  const nationalHtml = await nationalReport.text();
+  expect(nationalHtml).toContain(
+    "Community and demographic data are unavailable for this location."
+  );
+  expect(nationalHtml).not.toContain("$585");
 });
 
 test("concurrent brush and county changes converge on one complete URL", async ({ page }) => {
