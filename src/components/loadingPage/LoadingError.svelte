@@ -5,10 +5,12 @@ let {
   show = false,
   hasTimeout = false,
   onRetry = () => {},
+  onDismiss = () => {},
 }: {
   show?: boolean;
   hasTimeout?: boolean;
   onRetry?: () => void;
+  onDismiss?: () => void;
 } = $props();
 </script>
 
@@ -58,7 +60,7 @@ let {
           Try Again
         </button>
 
-        <button class="continue-button" onclick={() => (show = false)}> Continue Anyway </button>
+        <button class="continue-button" onclick={onDismiss}> Continue Anyway </button>
       </div>
     </div>
   </div>

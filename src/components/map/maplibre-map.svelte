@@ -3,6 +3,7 @@
 import { patchMapLibreGL } from "$lib/maplibre-patch";
 
 import { cubicOut } from "svelte/easing";
+import { onMount } from "svelte";
 import * as d3 from "d3";
 
 import MapLibre from "$components/map/maplibreLib/MapLibre.svelte";
@@ -15,31 +16,47 @@ import CustomControl from "./maplibreLib/controls/CustomControl.svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
-import { zoomToWhichCounty } from "../../data/calculateStateViews";
-import usmap from "../../data/counties-10m.json";
+import { loadMapAssets, type CountyCameraLookup } from "$lib/map/static-assets";
 // @ts-ignore
 import { topoToGeo, toDeckGLColor } from "../../lib/utils";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
-import type { Map } from "maplibre-gl";
+import type { FeatureCollection, Geometry } from "geojson";
+import type { FlyToOptions, Map as MapLibreInstance } from "maplibre-gl";
 
 // --- Style constants ---
-const US_MAP_CENTER = [-98.5795, 39.8283];
+const US_MAP_CENTER: [number, number] = [-98.5795, 39.8283];
 const US_MAP_ZOOM = 3.5;
-const HIGHLIGHT_BORDER_COLOR = [0, 0, 0, 255];
-const DEFAULT_BORDER_COLOR = [234, 234, 234, 250];
+const HIGHLIGHT_BORDER_COLOR: [number, number, number, number] = [0, 0, 0, 255];
+const DEFAULT_BORDER_COLOR: [number, number, number, number] = [234, 234, 234, 250];
 const HIGHLIGHT_BORDER_WIDTH = 3.5;
 const DEFAULT_BORDER_WIDTH = 1;
 
-const usMapGeoData: {
-  type: "FeatureCollection";
-  features: {
-    type: "Feature";
-    id: string;
-    geometry: { type: "Polygon"; coordinates: [number, number][] };
-    properties: Record<string, any>;
-  }[];
-} = topoToGeo(usmap);
+type CountyFeatureCollection = FeatureCollection<Geometry, Record<string, any>>;
+
+let usMapGeoData = $state<CountyFeatureCollection>({
+  type: "FeatureCollection",
+  features: [],
+});
+let countyCameras = $state<CountyCameraLookup>({});
+
+onMount(() => {
+  let active = true;
+
+  void loadMapAssets()
+    .then(({ countiesTopology, countyCameras: loadedCountyCameras }) => {
+      if (!active) return;
+      usMapGeoData = topoToGeo(countiesTopology) as CountyFeatureCollection;
+      countyCameras = loadedCountyCameras;
+    })
+    .catch((error) => {
+      console.error("Failed to load map assets:", error);
+    });
+
+  return () => {
+    active = false;
+  };
+});
 
 let {
   selectedMapColorKey,
@@ -56,7 +73,7 @@ let {
 let isAtUSView = $derived(geoid === "00000");
 
 // --- Map State (Source of Truth) ---
-let mapInstance = $state<Map | undefined>(undefined);
+let mapInstance = $state<MapLibreInstance | undefined>(undefined);
 let mapCenter = $state<[number, number]>(US_MAP_CENTER as [number, number]);
 let mapZoom = $state(US_MAP_ZOOM);
 let mapBearing = $state(0);
@@ -68,9 +85,9 @@ let hoveredCountyId = $state<string | null>(null);
 // --- Data Processing (Derived State) ---
 const mapData = $derived(new Map(data.map((d) => [d.geoid, d])));
 
-const geoData = $derived.by(() => {
+const geoData = $derived.by<CountyFeatureCollection>(() => {
   const features = usMapGeoData.features.map((feature) => {
-    const countyData = mapData.get(feature.id);
+    const countyData = mapData.get(String(feature.id));
     return { ...feature, properties: { ...feature.properties, ...countyData } };
   });
   return { ...usMapGeoData, features };
@@ -109,9 +126,11 @@ let isTooltipOpen = $derived(!!hoveredCountyData);
 let mapContainerElement = $state<HTMLElement | null>(null);
 
 // --- CORRECTED: Using $derived.by for multi-line logic ---
-const highlightedFeature = $derived.by(() => {
+const highlightedFeature = $derived.by<CountyFeatureCollection>(() => {
   const highlightId = hoveredCountyId || geoid;
-  const feature = highlightId ? geoData.features.find((f) => f.id === highlightId) : null;
+  const feature = highlightId
+    ? geoData.features.find((candidate) => String(candidate.id) === highlightId)
+    : null;
 
   // The logic inside remains the same: always return a valid FeatureCollection.
   return {
@@ -222,7 +241,7 @@ function flyToCounty(countyZoomData: {
   // Stop any existing animation before starting a new one
   mapInstance.stop();
 
-  const flyToOptions: maplibregl.FlyToOptions = {
+  const flyToOptions: FlyToOptions = {
     center: [countyZoomData.longitude, countyZoomData.latitude],
     zoom: countyZoomData.zoom * 0.88,
     bearing: countyZoomData.bearing ?? mapBearing,
@@ -253,8 +272,8 @@ $effect(() => {
         essential: true,
       });
     }
-  } else if (zoomToWhichCounty[geoid]) {
-    flyToCounty(zoomToWhichCounty[geoid]);
+  } else if (countyCameras[geoid]) {
+    flyToCounty(countyCameras[geoid]);
   }
 });
 

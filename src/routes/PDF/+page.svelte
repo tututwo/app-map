@@ -13,9 +13,11 @@
 // CRITICAL: Apply MapLibre patch BEFORE importing any components that use MapLibre
 import "$lib/maplibre-patch";
 
-import { untrack, tick } from "svelte";
+import { resolveRoute } from "$app/paths";
+import { tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
 
+import type { PageData } from "./$types";
 import type { BarSegment } from "$lib/types";
 import { Button } from "bits-ui";
 import Figure from "$components/chart/Figure.svelte";
@@ -27,9 +29,6 @@ import DataSection from "$components/pdf/PDFSection.svelte";
 
 import { toJpeg } from "html-to-image";
 import { jsPDF } from "jspdf";
-import { onMount } from "svelte";
-
-import counties_geoid from "$data/countyID/counties_geoid.csv";
 import { dataFilters } from "$lib/filters.svelte.js";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 
@@ -42,17 +41,16 @@ let exportError = $state<string | null>(null);
 // --- ADD THIS ---
 let pdfOverrideWidths = $state<Record<string, number>>({});
 
-let yearRange = $state<[number, number]>([2003, 2011]);
-let geoid = $state("00000");
-let mapData = $state<any[]>([]);
-let lineChartData = $state<{ year: number; close: number }[]>([]);
-
-onMount(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  yearRange[0] = parseInt(urlParams.get("from") ?? "2003");
-  yearRange[1] = parseInt(urlParams.get("to") ?? "2011");
-  geoid = urlParams.get("geoid") ?? "00000";
-});
+let { data }: { data: PageData } = $props();
+let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
+let geoid = $derived(data.params.geoid);
+let mapData = $derived(data.results.map?.ok ? data.results.map.data : []);
+let lineChartData = $derived(data.results.line?.ok ? data.results.line.data : []);
+let countyName = $derived(
+  geoid === "00000"
+    ? "the United States"
+    : (mapData.find((county) => county.geoid === geoid)?.name ?? geoid)
+);
 
 const n = 5;
 
@@ -62,32 +60,6 @@ const whichQuantile = (domain: [number, number]) =>
     .domain(domain)
     .range(Array.from({ length: n }, (_, i) => i + 1)); // [1,2,3,4,5]
 
-async function fetchMapData(from: number, to: number) {
-  // wait for the brush transition animation to finish
-  // otherwise it lags
-  const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
-  mapData = await response.json();
-}
-async function fetchLineChartData(geoidParam?: string) {
-  try {
-    const url = `/api/line_chart_data?geoid=${geoidParam}`;
-    const response = await fetch(url);
-    lineChartData = await response.json();
-  } catch (error) {
-    console.error("Error fetching line chart data:", error);
-    // Keep existing data on error
-  }
-}
-$effect(() => {
-  fetchMapData(yearRange[0], yearRange[1]);
-});
-
-$effect(() => {
-  // Fetch line chart data when geoid changes
-  // If geoid is "00000" (default), fetch aggregated data for all locations
-  const geoidToFetch = geoid === "00000" ? "" : geoid;
-  fetchLineChartData(geoidToFetch);
-});
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 // ----------------------------------------------------------------
@@ -142,7 +114,7 @@ let dataRanges = $derived.by(() => {
 
     // find the raw value (could be 0, undefined, etc.)
     const rec = mapData.find((d) => d.geoid === geoid);
-    const raw = rec?.[m.colorKey];
+    const raw = rec?.[m.colorKey as keyof typeof rec] as number | undefined;
 
     // if raw is nullish, force it to domain[0]; otherwise leave 0 ↦ 0
     const value = raw ?? m.colorDomain[0];
@@ -214,9 +186,7 @@ async function exportToPDF() {
       }
     }
 
-    pdf.save(
-      `${counties_geoid.find((c) => c.geoid === geoid)?.name}_${yearRange[0]}-${yearRange[1]}.pdf`
-    );
+    pdf.save(`${countyName}_${yearRange[0]}-${yearRange[1]}.pdf`);
   } catch (error) {
     console.error("PDF export failed:", error);
     exportError = `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`;
@@ -321,16 +291,20 @@ const statistics = $state([
             Save as PDF
           {/if}
         </button>
-        <a
-          href={`/api/download_data?from=${yearRange[0]}&to=${yearRange[1]}&geoid=${geoid}`}
-          target="_blank"
-          class="flex items-center text-sm text-gray-700 hover:text-gray-900"
-        >
-          <Download class="mr-1.5 h-4 w-4" />
-          Download data
-        </a>
+        <form method="GET" action="/api/download_data" target="_blank">
+          <input type="hidden" name="from" value={yearRange[0]} />
+          <input type="hidden" name="to" value={yearRange[1]} />
+          <input type="hidden" name="geoid" value={geoid} />
+          <button type="submit" class="flex items-center text-sm text-gray-700 hover:text-gray-900">
+            <Download class="mr-1.5 h-4 w-4" />
+            Download data
+          </button>
+        </form>
       </div>
-      <Button.Root href="/" class="cursor-pointer text-gray-500 hover:text-gray-700">
+      <Button.Root
+        href={`${resolveRoute("/", {})}?from=${yearRange[0]}&to=${yearRange[1]}&geoid=${geoid}`}
+        class="cursor-pointer text-gray-500 hover:text-gray-700"
+      >
         <X class="h-5 w-5" />
       </Button.Root>
     </header>
@@ -356,7 +330,7 @@ const statistics = $state([
 
     <main bind:this={mainContent}>
       <h1 class="mb-2 text-2xl font-bold text-gray-800">
-        Closed Churches in {counties_geoid.find((c) => c.geoid === geoid)?.name} ({yearRange[0]}-{yearRange[1]})
+        Closed Churches in {countyName} ({yearRange[0]}-{yearRange[1]})
       </h1>
 
       <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
@@ -364,7 +338,7 @@ const statistics = $state([
           <LineChartBrush
             key="close"
             margin={lineChartMargin}
-            bind:yearRange
+            {yearRange}
             data={lineChartData}
             disableBrushing={true}
           />

@@ -2,20 +2,13 @@
 
 <script lang="ts">
 import { invalidate } from "$app/navigation";
-import { page } from "$app/state";
-import MetricData from "$data/sideMetricData.csv";
-import { onMount } from "svelte";
 import { Pointer, CircleHelp } from "lucide-svelte";
 
-// Loading components
-import LoadingOverlay from "$components/loadingPage/LoadingOverlay.svelte";
-import LoadingProgress from "$components/loadingPage/LoadingProgress.svelte";
 import LoadingError from "$components/loadingPage/LoadingError.svelte";
 
 // Custom UI
 import CountySearch from "$components/map/countySearch.svelte";
 import Sidebar from "$components/sideSection/Sidebar.svelte";
-import ChartTooltip from "$components/chart/Tooltip.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import Figure from "$components/chart/Figure.svelte";
 
@@ -36,122 +29,65 @@ import MapLibreMap from "$components/map/maplibre-map.svelte";
 
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
+import { createLastGood } from "$lib/dashboard/last-good.svelte";
+import { setDashboardParams } from "$lib/dashboard/navigate-app";
+import type { LineDatum, MapDatum, SideMetricDatum, StackedDatum } from "$lib/dashboard/data";
+import type { PageData } from "./$types";
 
-let yearRange = $state<[number, number]>([2003, 2011]);
-let selectedLocation = $state("All locations");
+let { data }: { data: PageData } = $props();
+
+const mapState = createLastGood<MapDatum[]>();
+const lineState = createLastGood<LineDatum[]>();
+const stackedState = createLastGood<StackedDatum[]>();
+const sideState = createLastGood<SideMetricDatum>();
+
+function syncDashboardResults() {
+  if (data.results.map) mapState.update(data.results.map);
+  if (data.results.line) lineState.update(data.results.line);
+  if (data.results.stacked) stackedState.update(data.results.stacked);
+  if (data.results.side) sideState.update(data.results.side);
+}
+
+syncDashboardResults();
+$effect(syncDashboardResults);
+
+let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
+let geoid = $derived(data.params.geoid);
+let mapData = $derived(mapState.value ?? []);
+let lineChartData = $derived(lineState.value ?? []);
+let stackedBarData = $derived(stackedState.value ?? []);
+
 let highlightedGroup = $state<string | null>(null);
+let pendingGeoid = $state<string | null>(null);
+let geoidNavigationGeneration = 0;
+let displayNameOverride = $state<{ geoid: string; name: string | null } | null>(null);
 
-let mapData = $state<any[]>([]);
-let lineChartData = $state<{ year: number; close: number }[]>([]);
-let stackedBarData = $state<
-  { year: number; negative: number; neutral: number; positive: number }[]
->([]);
-
-// Add displayName state after geoid
-let geoid = $state("00000");
-let displayName = $state<string | null>("All locations"); // Track display name
-
-// Track if we should disable geolocator
-let shouldDisableGeolocatorTracking = $state(false);
-
-// Loading states
-let isMapDataLoading = $state(true);
-let isLineChartDataLoading = $state(true);
-let isStackedBarDataLoading = $state(true);
-let hasLoadingError = $state(false);
-let hasLoadingTimeout = $state(false);
-
-// Track initial load
-let isInitialLoad = $state(true);
-let loadingTimeoutId: number | null = null;
-
-// Loading items for progress component
-let loadingItems = $derived([
-  { name: "Map Data", isLoading: isMapDataLoading },
-  { name: "Church Closure Trends", isLoading: isLineChartDataLoading },
-  { name: "Church Status Distribution", isLoading: isStackedBarDataLoading },
-]);
-
-// Check if all data is loaded
-let isAllDataLoaded = $derived(
-  !isMapDataLoading && !isLineChartDataLoading && !isStackedBarDataLoading
+let displayNameGeoid = $derived(pendingGeoid ?? geoid);
+let displayName = $derived(
+  displayNameOverride?.geoid === displayNameGeoid
+    ? displayNameOverride.name
+    : displayNameGeoid === "00000"
+      ? "All locations"
+      : (mapData.find((county) => county.geoid === displayNameGeoid)?.name ?? displayNameGeoid)
 );
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function updateYearRange(nextRange: [number, number]) {
+  void setDashboardParams({ from: nextRange[0], to: nextRange[1] });
 }
 
-async function fetchMapData(from: number, to: number) {
-  // wait for the brush transition animation to finish
-  // otherwise it lags
-  await sleep(300);
-  isMapDataLoading = true;
-  try {
-    const response = await fetch(`/api/map_data?from=${from}&to=${to}`);
-    if (!response.ok) throw new Error("Failed to fetch map data");
-    mapData = await response.json();
-    isMapDataLoading = false;
-  } catch (error) {
-    console.error("Error fetching map data:", error);
-    isMapDataLoading = false;
-    hasLoadingError = true;
-  }
+function updateGeoid(nextGeoid: string) {
+  const generation = ++geoidNavigationGeneration;
+  pendingGeoid = nextGeoid;
+
+  void setDashboardParams({ geoid: nextGeoid }).finally(() => {
+    if (generation === geoidNavigationGeneration) pendingGeoid = null;
+  });
 }
 
-$effect(() => {
-  fetchMapData(yearRange[0], yearRange[1]);
-});
-
-async function fetchLineChartData(geoidParam?: string) {
-  isLineChartDataLoading = true;
-  try {
-    const url = `/api/line_chart_data?geoid=${geoidParam}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch line chart data");
-    lineChartData = await response.json();
-    isLineChartDataLoading = false;
-  } catch (error) {
-    console.error("Error fetching line chart data:", error);
-    isLineChartDataLoading = false;
-    hasLoadingError = true;
-    // Keep existing data on error
-  }
+function updateDisplayName(nextDisplayName: string | null) {
+  displayNameOverride = { geoid: pendingGeoid ?? geoid, name: nextDisplayName };
 }
 
-$effect(() => {
-  // Fetch line chart data when geoid changes
-  // If geoid is "00000" (default), fetch aggregated data for all locations
-  const geoidToFetch = geoid === "00000" ? "" : geoid;
-  fetchLineChartData(geoidToFetch);
-});
-
-async function fetchStackedBarData(geoidParam?: string) {
-  isStackedBarDataLoading = true;
-  try {
-    const url = `/api/stacked_bar_chart_data?geoid=${geoidParam}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch stacked bar data");
-    stackedBarData = await response.json();
-    isStackedBarDataLoading = false;
-  } catch (error) {
-    console.error("Error fetching stacked bar data:", error);
-    isStackedBarDataLoading = false;
-    hasLoadingError = true;
-    // Keep existing data on error
-  }
-}
-
-$effect(() => {
-  // Fetch stacked bar data when geoid changes
-  // If geoid is "00000" (default), fetch aggregated data for all locations
-  const geoidToFetch = geoid === "00000" ? "" : geoid;
-  fetchStackedBarData(geoidToFetch);
-});
-
-// Event handlers
-function handleLocationChange(e: { target: { value: string } }) {
-  selectedLocation = e.target.value;
-}
 let selectedQuantile = $state(0);
 function highlightGroup(range: string, i: number) {
   // Toggle off if clicking the same button
@@ -187,7 +123,7 @@ let dataRanges = $derived.by(() => {
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
-let selectedSideMetricData = $derived(MetricData.filter((d) => d.geoid === geoid));
+let selectedSideMetricData = $derived(sideState.value);
 // Usage example:
 const fieldConfigs = [
   {
@@ -238,7 +174,9 @@ const fieldConfigs = [
   },
 ];
 
-let statistics = $derived(createSideMetricData(selectedSideMetricData[0], fieldConfigs));
+let statistics = $derived(
+  selectedSideMetricData ? createSideMetricData(selectedSideMetricData, fieldConfigs) : []
+);
 // Demographic stats
 const demographicFieldConfigs = [
   {
@@ -272,71 +210,36 @@ const demographicFieldConfigs = [
 ];
 
 let demographicStatistics = $derived(
-  createSideMetricData(selectedSideMetricData[0], demographicFieldConfigs)
+  selectedSideMetricData
+    ? createSideMetricData(selectedSideMetricData, demographicFieldConfigs)
+    : []
 );
 
-// Add an effect to sync displayName with default geoid
-$effect(() => {
-  if (geoid === "00000" && !displayName) {
-    displayName = "All locations";
-  }
-});
+let errors = $derived(
+  [mapState.error, lineState.error, stackedState.error, sideState.error].filter(Boolean)
+);
+let errorSignature = $derived(errors.map((error) => `${error?.kind}:${error?.message}`).join("|"));
+let dismissedErrorSignature = $state("");
+let hasLoadingError = $derived(errorSignature !== "" && errorSignature !== dismissedErrorSignature);
+let hasLoadingTimeout = $derived(errors.some((error) => error?.kind === "timeout"));
 
-function resetToAllLocations() {
-  geoid = "00000";
-  displayName = "All locations";
-}
-
-function handleLocationSourceChange(fromGeolocator: boolean) {
-  if (!fromGeolocator) {
-    shouldDisableGeolocatorTracking = true;
-  }
-}
-
-// Set up loading timeout
-onMount(() => {
-  // Set a timeout for initial load (10 seconds)
-  loadingTimeoutId = window.setTimeout(() => {
-    if (!isAllDataLoaded && isInitialLoad) {
-      hasLoadingTimeout = true;
-    }
-  }, 10000);
-
-  // Clean up on unmount
-  return () => {
-    if (loadingTimeoutId) {
-      clearTimeout(loadingTimeoutId);
-    }
-  };
-});
-
-// Watch for when all data is loaded
-$effect(() => {
-  if (isAllDataLoaded && isInitialLoad) {
-    isInitialLoad = false;
-    if (loadingTimeoutId) {
-      clearTimeout(loadingTimeoutId);
-    }
-  }
-});
-
-// Retry function for error handling
 function retryDataFetch() {
-  hasLoadingError = false;
-  hasLoadingTimeout = false;
+  dismissedErrorSignature = "";
+  void invalidate("app:dashboard");
+}
 
-  // Re-fetch all data
-  fetchMapData(yearRange[0], yearRange[1]);
-  const geoidToFetch = geoid === "00000" ? "" : geoid;
-  fetchLineChartData(geoidToFetch);
-  fetchStackedBarData(geoidToFetch);
+function dismissLoadingError() {
+  dismissedErrorSignature = errorSignature;
 }
 </script>
 
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>
-    <CountySearch bind:geoid bind:displayName onLocationSourceChange={handleLocationSourceChange} />
+    <CountySearch
+      bind:geoid={() => geoid, updateGeoid}
+      bind:displayName={() => displayName, updateDisplayName}
+    />
   </Sidebar>
 
   <!-- Main Content -->
@@ -361,7 +264,7 @@ function retryDataFetch() {
           <LineChartBrush
             key="close"
             margin={lineChartMargin}
-            bind:yearRange
+            bind:yearRange={() => yearRange, updateYearRange}
             data={lineChartData}
           />
 
@@ -437,7 +340,7 @@ function retryDataFetch() {
                 {dataFilters.metrics.find((m) => m.value === selectedMapMetric)?.label}
               </h4>
               <div class="flex gap-1.5">
-                {#each dataRanges as range, index}
+                {#each dataRanges as range, index (range.label)}
                   <Button.Root
                     style="background-color: {range.color}; {highlightedGroup === range.label
                       ? 'filter: brightness(0.95);'
@@ -476,8 +379,8 @@ function retryDataFetch() {
             {selectedMapColorDomain}
             {selectedMapColorRange}
             data={mapData}
-            bind:geoid
-            bind:displayName
+            bind:geoid={() => geoid, updateGeoid}
+            bind:displayName={() => displayName, updateDisplayName}
             {selectedQuantile}
             quantileHighlightEnabled={highlightedGroup !== null}
           />
@@ -534,7 +437,7 @@ function retryDataFetch() {
                     <span class=" bg-blue-900 px-2 py-1 font-medium text-white">closed</span>
                     <span>churches</span>
                   </p>
-                  <Tooltip description={"reopening is....; exisiting is....;"} class="mr-6 size-4">
+                  <Tooltip description="reopening is....; exisiting is....;" class="mr-6 size-4">
                     <span
                       class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
                     >
@@ -591,14 +494,10 @@ function retryDataFetch() {
   </main>
 </div>
 
-<!-- Loading States -->
-{#if isInitialLoad && !isAllDataLoaded}
-  <LoadingProgress items={loadingItems} show={true} />
-{/if}
-
 <!-- Loading Error -->
 <LoadingError
-  show={hasLoadingError || hasLoadingTimeout}
+  show={hasLoadingError}
   hasTimeout={hasLoadingTimeout}
   onRetry={retryDataFetch}
+  onDismiss={dismissLoadingError}
 />

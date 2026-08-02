@@ -7,7 +7,7 @@
  */
 
 import * as d3 from "d3";
-import { untrack, getContext, onMount } from "svelte";
+import { untrack, getContext } from "svelte";
 import { ArrowLeftToLine } from "lucide-svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import type { D3BrushEvent } from "d3-brush";
@@ -220,6 +220,8 @@ $effect(() => {
   if (!pathElement || !data.length) return;
 
   const newPath = line(data);
+  if (!newPath) return;
+
   const newCirclesData = data.map((point) => ({
     cx: xScale(point.year),
     cy: yScale(point[key]),
@@ -244,15 +246,16 @@ $effect(() => {
     }
 
     // Create a new timeline with shared defaults
-    chartTimeline = gsap.timeline({
+    const timeline = gsap.timeline({
       defaults: {
         duration: 0.8,
         ease: "power2.inOut",
       },
     });
+    chartTimeline = timeline;
 
     // Add the path animation to the timeline
-    chartTimeline.to(pathElement, {
+    timeline.to(pathElement, {
       morphSVG: newPath,
     });
 
@@ -262,7 +265,7 @@ $effect(() => {
       if (circleEl) {
         // Add the tween and use the "<" position parameter
         // to make it start at the same time as the previous tween
-        chartTimeline.to(
+        timeline.to(
           circleEl,
           {
             attr: circleData,
@@ -278,6 +281,8 @@ let brushGroupElm = $state<SVGGElement>();
 let brushSelection = $state<[number, number] | null>(null);
 let yearRangeSelection = $state<[number, number]>(yearRange);
 let movingHandle = $state<"start" | "end" | null>(null);
+let isSnapping = false;
+let snapGeneration = 0;
 
 // +++ IMPROVED TOOLTIP STATE - Following stacked bar chart pattern +++
 let svgBoundary = $state<HTMLElement | null>();
@@ -294,8 +299,7 @@ const brush = d3
   .brushX()
   .extent([
     [0, 0],
-    // svelte-ignore state_referenced_locally
-    [innerWidth, innerHeight],
+    [1, 1],
   ])
   .handleSize(15)
   .keyModifiers(false)
@@ -325,10 +329,21 @@ function redrawBrush() {
     const [year0, year1] = yearRangeSelection;
     const x0 = xScale(year0);
     const x1 = xScale(year1);
-    // redraw
-    d3.select(brushGroupElm).transition().call(brush.move, [x0, x1]);
+    d3.select(brushGroupElm).interrupt().call(brush.move, [x0, x1]);
   }
 }
+
+// Keep the visible selection in sync when navigation changes the input range.
+$effect(() => {
+  const nextRange: [number, number] = [yearRange[0], yearRange[1]];
+
+  if (nextRange[0] === yearRangeSelection[0] && nextRange[1] === yearRangeSelection[1]) {
+    return;
+  }
+
+  yearRangeSelection = nextRange;
+  untrack(redrawBrush);
+});
 // redraw brush when innerWidth or innerHeight changes
 $effect(() => {
   if (!brushGroupElm) return;
@@ -391,9 +406,8 @@ $effect(() => {
     flashWarningEffect();
   }
 });
-let _preventReEnter = false;
 function onBrushEnd(event: D3BrushEvent<IDatum>) {
-  if (_preventReEnter) return (_preventReEnter = false);
+  if (isSnapping || isDraggingLabel) return;
 
   if (!event.selection) {
     redrawBrush();
@@ -411,19 +425,35 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
 
   [year0, year1] = adjustYearRange(year0, year1);
 
-  // Update state and notify parent
-  updateYearRange(year0, year1);
-
   // Update the brush position to reflect final constrained values
   const finalX0 = xScale(year0);
   const finalX1 = xScale(year1);
 
   if (brushGroupElm && (Math.abs(finalX0 - x0) > 1 || Math.abs(finalX1 - x1) > 1)) {
-    _preventReEnter = true;
-    d3.select(brushGroupElm).transition().call(brush.move, [finalX0, finalX1]);
+    const generation = ++snapGeneration;
+    isSnapping = true;
+
+    d3.select(brushGroupElm)
+      .transition()
+      .call(brush.move, [finalX0, finalX1])
+      .on("end.publish", () => {
+        if (generation !== snapGeneration) return;
+
+        isSnapping = false;
+        movingHandle = null;
+        brushSelection = [finalX0, finalX1];
+        updateYearRange(year0, year1);
+      })
+      .on("interrupt.publish cancel.publish", () => {
+        if (generation !== snapGeneration) return;
+        isSnapping = false;
+      });
+
+    return;
   }
 
-  // Reset
+  // No snapping animation is needed, so publish immediately.
+  updateYearRange(year0, year1);
   movingHandle = null;
   brushSelection = [finalX0, finalX1];
 }
@@ -573,9 +603,16 @@ function handleLabelMouseMove(event: MouseEvent) {
 }
 
 function handleLabelMouseUp() {
+  const finalRange = yearRangeSelection;
   isDraggingLabel = null;
   window.removeEventListener("mousemove", handleLabelMouseMove);
   window.removeEventListener("mouseup", handleLabelMouseUp);
+
+  if (finalRange) {
+    updateYearRange(finalRange[0], finalRange[1]);
+  }
+
+  movingHandle = null;
 }
 
 // Clean up on unmount
@@ -599,7 +636,7 @@ $effect(() => {
 
       <!-- X-axis grid lines -->
       <g class="x-grid grid">
-        {#each data as point}
+        {#each data as point (point.year)}
           <line
             x1={xScale(point.year)}
             y1={0}
@@ -614,7 +651,7 @@ $effect(() => {
 
       <!-- Y-axis grid lines -->
       <g class="y-grid grid">
-        {#each yTicks as tick}
+        {#each yTicks as tick (tick.value)}
           <line
             x1={0}
             y1={tick.y}
@@ -640,7 +677,7 @@ $effect(() => {
 
       <!-- X-axis ticks and labels -->
       <g class="x-axis-top">
-        {#each xTicks as tick}
+        {#each xTicks as tick (tick.value)}
           <g transform="translate({tick.x}, 10)">
             <text
               y={-tickOffset}
@@ -656,7 +693,7 @@ $effect(() => {
 
       <!-- Y-axis ticks and labels -->
       <g class="y-axis-left">
-        {#each yTicks as tick}
+        {#each yTicks as tick (tick.value)}
           <g transform="translate(10, {tick.y})">
             <text
               x={-tickOffset}
@@ -683,7 +720,7 @@ $effect(() => {
 
       <!-- Data points (rendered after brush so they're on top) -->
       <g class="data-points" style="pointer-events: all;">
-        {#each data as point, i}
+        {#each data as point, i (point.year)}
           <circle
             bind:this={circleElements[i]}
             r={circleRadius}
@@ -706,31 +743,31 @@ $effect(() => {
   </svg>
 
   {#if brushSelection && yearRangeSelection}
-    <div
+    <button
+      type="button"
+      disabled={disableBrushing}
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 whitespace-nowrap shadow-md"
       class:cursor-grab={!disableBrushing && !isDraggingLabel}
       class:cursor-grabbing={isDraggingLabel === "from"}
       style={`left: ${margin.left + brushSelection[0]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px; user-select: none;`}
       aria-hidden={!brushSelection}
-      role={disableBrushing ? undefined : "button"}
-      tabindex={disableBrushing ? undefined : 0}
       onmousedown={(e) => handleLabelMouseDown(e, "from")}
     >
       from <strong>{yearRangeSelection[0]}</strong>
-    </div>
+    </button>
 
-    <div
+    <button
+      type="button"
+      disabled={disableBrushing}
       class="bg-yale-green absolute -translate-x-1/2 transform rounded-sm px-2 py-1 whitespace-nowrap shadow-md"
       class:cursor-grab={!disableBrushing && !isDraggingLabel}
       class:cursor-grabbing={isDraggingLabel === "to"}
       style={`left: ${margin.left + brushSelection[1]}px; top: ${margin.top + innerHeight + FROM_TO_TEXT_VERTICAL_OFFSET}px; user-select: none;`}
       aria-hidden={!brushSelection}
-      role={disableBrushing ? undefined : "button"}
-      tabindex={disableBrushing ? undefined : 0}
       onmousedown={(e) => handleLabelMouseDown(e, "to")}
     >
       to <strong>{yearRangeSelection[1]}</strong>
-    </div>
+    </button>
 
     {#if !disableBrushing}
       <div
@@ -779,14 +816,12 @@ $effect(() => {
       sideOffset={10}
       showArrow={true}
     >
-      {#snippet children()}
-        {#if tooltipData}
-          <div class="flex flex-col text-left font-sans">
-            <span class="font-bold">Year: {tooltipData.year}</span>
-            <span class="capitalize">{key}: {tooltipData[key]}</span>
-          </div>
-        {/if}
-      {/snippet}
+      {#if tooltipData}
+        <div class="flex flex-col text-left font-sans">
+          <span class="font-bold">Year: {tooltipData.year}</span>
+          <span class="capitalize">{key}: {tooltipData[key]}</span>
+        </div>
+      {/if}
     </Tooltip>
   {/if}
 </div>
