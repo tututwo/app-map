@@ -1,22 +1,22 @@
 <script lang="ts">
-// CRITICAL: Import and apply the patch BEFORE anything else
-import { patchMapLibreGL } from "$lib/maplibre-patch";
-
 import { cubicOut } from "svelte/easing";
 import { onMount } from "svelte";
 import * as d3 from "d3";
 
-import MapLibre from "$components/map/maplibreLib/MapLibre.svelte";
-import DeckGLOverlay from "$components/map/maplibreLib/DeckGLOverlay.svelte";
-import FullScreenControl from "$components/map/maplibreLib/controls/FullScreenControl.svelte";
-import GeolocateControl from "$components/map/maplibreLib/controls/GeolocateControl.svelte";
-import NavigationControl from "./maplibreLib/controls/NavigationControl.svelte";
-import CustomControl from "./maplibreLib/controls/CustomControl.svelte";
+import {
+  CustomControl,
+  FullScreenControl,
+  GeolocateControl,
+  MapLibre,
+  NavigationControl,
+} from "svelte-maplibre-gl";
+import { DeckGLOverlay } from "@svelte-maplibre-gl/deckgl";
 
 import Tooltip from "$components/chart/Tooltip.svelte";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
 import { loadMapAssets, type CountyCameraLookup } from "$lib/map/static-assets";
+import { reverseGeocodeCounty } from "$lib/utils/searchCounty2010Census.js";
 // @ts-ignore
 import { topoToGeo, toDeckGLColor } from "../../lib/utils";
 
@@ -139,9 +139,22 @@ const highlightedFeature = $derived.by<CountyFeatureCollection>(() => {
   };
 });
 
-// Add state to track if location was set by geolocator
 let wasSetByGeolocator = $state(false);
-let shouldDisableGeolocatorTracking = $state(false);
+let geolocationGeneration = 0;
+let geolocatorTargetGeoid: string | null = null;
+let observedGeoid = geoid;
+
+function cancelGeolocationSelection() {
+  geolocationGeneration += 1;
+  geolocatorTargetGeoid = null;
+  wasSetByGeolocator = false;
+}
+
+function selectCounty(nextGeoid: string, nextDisplayName: string) {
+  cancelGeolocationSelection();
+  geoid = nextGeoid;
+  displayName = nextDisplayName;
+}
 
 // --- ARCHITECTURE: Layers are now derived state, not a single monolithic object ---
 const baseLayer = $derived(
@@ -182,13 +195,9 @@ const baseLayer = $derived(
     lineWidthMinPixels: 0.5,
     onClick: (info: any) => {
       if (info.object) {
-        // User clicked on map - not from geolocator
-        wasSetByGeolocator = false;
-        shouldDisableGeolocatorTracking = true;
-
-        geoid = info.object.id;
-        const countyData = mapData.get(info.object.id);
-        displayName = countyData?.name || info.object.id;
+        const nextGeoid = String(info.object.id);
+        const countyData = mapData.get(nextGeoid);
+        selectCounty(nextGeoid, countyData?.name || nextGeoid);
       }
     },
     onHover: (info: any) => {
@@ -277,16 +286,33 @@ $effect(() => {
   }
 });
 
-// Add callback for geolocator updates
-function handleGeolocatorUpdate(
-  newGeoid: string,
-  newDisplayName: string,
-  fromGeolocator: boolean = false
-) {
-  if (fromGeolocator) {
-    wasSetByGeolocator = true;
-    shouldDisableGeolocatorTracking = false;
+$effect(() => {
+  const nextGeoid = geoid;
+  if (nextGeoid === observedGeoid) return;
+
+  observedGeoid = nextGeoid;
+  if (nextGeoid !== geolocatorTargetGeoid) {
+    cancelGeolocationSelection();
   }
+});
+
+async function handleGeolocate(event: GeolocationPosition) {
+  const requestGeneration = ++geolocationGeneration;
+  const geoidAtRequest = geoid;
+
+  wasSetByGeolocator = true;
+  mapInstance?.stop();
+
+  const county = await reverseGeocodeCounty(event.coords.latitude, event.coords.longitude);
+
+  if (requestGeneration !== geolocationGeneration || geoid !== geoidAtRequest || !county?.geoid) {
+    return;
+  }
+
+  geolocatorTargetGeoid = county.geoid;
+  observedGeoid = county.geoid;
+  geoid = county.geoid;
+  displayName = county.displayName;
 }
 </script>
 
@@ -295,12 +321,19 @@ function handleGeolocatorUpdate(
   class="relative h-full w-full"
   class:hide-map-controls={hideControls}
   class:at-us-view={isAtUSView}
-  class:hide-geolocator-dot={!wasSetByGeolocator}
+  class:hide-geolocator-dot={!wasSetByGeolocator || mapZoom > 4}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
     class="h-full min-h-[200px] w-full"
     style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+    autoloadGlobalCss={false}
+    canvasContextAttributes={{
+      preserveDrawingBuffer: true,
+      antialias: true,
+      stencil: true,
+      alpha: true,
+    }}
     minZoom={2}
     maxZoom={8}
     bind:pitch={mapPitch}
@@ -316,23 +349,16 @@ function handleGeolocatorUpdate(
         class="flex! size-[29px] items-center justify-center rounded-md"
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() => {
-          // User clicked reset - not from geolocator
-          wasSetByGeolocator = false;
-          shouldDisableGeolocatorTracking = true;
-
-          geoid = "00000";
-          displayName = "All locations";
+          selectCounty("00000", "All locations");
         }}
       ></button>
     </CustomControl>
     <FullScreenControl position="top-left" />
     <GeolocateControl
       position="top-left"
-      {mapZoom}
-      bind:geoid
-      bind:displayName
-      bind:shouldDisableTracking={shouldDisableGeolocatorTracking}
-      onLocationUpdate={handleGeolocatorUpdate}
+      trackUserLocation={false}
+      showUserLocation={true}
+      ongeolocate={handleGeolocate}
     />
 
     <DeckGLOverlay interleaved {layers} />
@@ -374,5 +400,24 @@ function handleGeolocatorUpdate(
 /* Hide geolocator dot when not actively tracking */
 .hide-geolocator-dot :global(.maplibregl-user-location-dot) {
   display: none !important;
+}
+
+:global(.maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon) {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXBsdXMtaWNvbiBsdWNpZGUtcGx1cyI+PHBhdGggZD0iTTUgMTJoMTQiLz48cGF0aCBkPSJNMTIgNXYxNCIvPjwvc3ZnPg==) !important;
+  background-size: 25px;
+}
+
+:global(.maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon) {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLW1pbnVzLWljb24gbHVjaWRlLW1pbnVzIj48cGF0aCBkPSJNNSAxMmgxNCIvPjwvc3ZnPg==) !important;
+  background-size: 25px;
+}
+
+:global(.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon) {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLW1hcC1waW5uZWQtaWNvbiBsdWNpZGUtbWFwLXBpbm5lZCI+PHBhdGggZD0iTTE4IDhjMCAzLjYxMy0zLjg2OSA3LjQyOS01LjM5MyA4Ljc5NWExIDEgMCAwIDEtMS4yMTQgMEM5Ljg3IDE1LjQyOSA2IDExLjYxMyA2IDhhNiA2IDAgMCAxIDEyIDAiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjgiIHI9IjIiLz48cGF0aCBkPSJNOC43MTQgMTRoLTMuNzFhMSAxIDAgMCAwLS45NDguNjgzbC0yLjAwNCA2QTEgMSAwIDAgMCAwIDMgMjJoMThhMSAxIDAgMCAwIC45NDgtMS4zMTZsLTItNmExIDEgMCAwIDAtLjk0OS0uNjg0aC0zLjcxMiIvPjwvc3ZnPg==) !important;
+  background-size: 20px;
+}
+
+:global(.maplibregl-ctrl button.maplibregl-ctrl-fullscreen .maplibregl-ctrl-icon) {
+  background-size: 25px !important;
 }
 </style>

@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { BarSegment } from "$lib/types";
 import SegmentedBar from "./segmentedBar.svelte";
-import MapLibreMap from "$components/map/maplibre-map.svelte";
+import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 let {
   title,
   mapPlaceholderText,
@@ -32,7 +32,7 @@ let {
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
     <div class="  flex h-64 items-center justify-center rounded bg-gray-50">
       <!-- <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span> -->
-      <MapLibreMap
+      <LazyMapLibreMap
         hideControls={true}
         selectedMapColorKey={mapColorKey}
         selectedMapColorDomain={mapColorDomain}

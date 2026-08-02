@@ -38,6 +38,7 @@ export type SideMetricDatum = Record<string, string>;
 export interface DashboardLoadDependencies {
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   depends: (dependency: "app:dashboard") => void;
+  cache?: DashboardResultCache;
 }
 
 export interface DashboardDataResults {
@@ -48,6 +49,43 @@ export interface DashboardDataResults {
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_CACHE_ENTRIES = 12;
+
+export interface DashboardResultCache {
+  read<T>(url: string): Promise<Result<T>> | undefined;
+  write<T>(url: string, result: Promise<Result<T>>): void;
+  discard<T>(url: string, result: Promise<Result<T>>): void;
+}
+
+export function createDashboardResultCache(
+  maxEntries = DEFAULT_CACHE_ENTRIES
+): DashboardResultCache {
+  const entries = new Map<string, Promise<Result<unknown>>>();
+
+  return {
+    read<T>(url: string) {
+      const cached = entries.get(url);
+      if (!cached) return undefined;
+
+      entries.delete(url);
+      entries.set(url, cached);
+      return cached as Promise<Result<T>>;
+    },
+    write<T>(url: string, result: Promise<Result<T>>) {
+      entries.delete(url);
+      entries.set(url, result as Promise<Result<unknown>>);
+
+      while (entries.size > maxEntries) {
+        const oldestUrl = entries.keys().next().value;
+        if (oldestUrl === undefined) break;
+        entries.delete(oldestUrl);
+      }
+    },
+    discard<T>(url: string, result: Promise<Result<T>>) {
+      if (entries.get(url) === result) entries.delete(url);
+    },
+  };
+}
 
 function isTimeoutFailure(error: unknown, signal: AbortSignal): boolean {
   return (
@@ -67,7 +105,7 @@ function timeoutResult(): DashboardError {
   };
 }
 
-async function fetchResult<T>(
+async function fetchResultUncached<T>(
   fetch: DashboardLoadDependencies["fetch"],
   url: string,
   isValid: (value: unknown) => value is T
@@ -116,6 +154,26 @@ async function fetchResult<T>(
   }
 }
 
+function fetchResult<T>(
+  fetch: DashboardLoadDependencies["fetch"],
+  url: string,
+  isValid: (value: unknown) => value is T,
+  cache?: DashboardResultCache
+): Promise<Result<T>> {
+  const cached = cache?.read<T>(url);
+  if (cached) return cached;
+
+  if (!cache) return fetchResultUncached(fetch, url, isValid);
+
+  let pending!: Promise<Result<T>>;
+  pending = fetchResultUncached(fetch, url, isValid).then((result) => {
+    if (!result.ok) cache.discard(url, pending);
+    return result;
+  });
+  cache.write(url, pending);
+  return pending;
+}
+
 function isArray<T>(value: unknown): value is T[] {
   return Array.isArray(value);
 }
@@ -125,7 +183,7 @@ function isSideMetricDatum(value: unknown): value is SideMetricDatum {
 }
 
 export async function loadDashboardData(
-  { fetch, depends }: DashboardLoadDependencies,
+  { fetch, depends, cache }: DashboardLoadDependencies,
   params: DashboardParams,
   parts: ReadonlySet<DashboardPart>
 ): Promise<DashboardDataResults> {
@@ -140,7 +198,8 @@ export async function loadDashboardData(
         results.map = await fetchResult<MapDatum[]>(
           fetch,
           `/api/map_data?from=${params.from}&to=${params.to}`,
-          isArray<MapDatum>
+          isArray<MapDatum>,
+          cache
         );
       })()
     );
@@ -152,7 +211,8 @@ export async function loadDashboardData(
         results.line = await fetchResult<LineDatum[]>(
           fetch,
           `/api/line_chart_data?geoid=${params.geoid}`,
-          isArray<LineDatum>
+          isArray<LineDatum>,
+          cache
         );
       })()
     );
@@ -164,7 +224,8 @@ export async function loadDashboardData(
         results.stacked = await fetchResult<StackedDatum[]>(
           fetch,
           `/api/stacked_bar_chart_data?geoid=${params.geoid}`,
-          isArray<StackedDatum>
+          isArray<StackedDatum>,
+          cache
         );
       })()
     );
@@ -176,7 +237,8 @@ export async function loadDashboardData(
         results.side = await fetchResult<SideMetricDatum>(
           fetch,
           `/api/side_metric_data?geoid=${params.geoid}`,
-          isSideMetricDatum
+          isSideMetricDatum,
+          cache
         );
       })()
     );

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { loadDashboardData } from "$lib/dashboard/data";
+import { createDashboardResultCache, loadDashboardData } from "$lib/dashboard/data";
 
 const params = { from: 2003, to: 2011, geoid: "01001" };
 
@@ -88,6 +88,45 @@ describe("loadDashboardData", () => {
     requests["/api/stacked_bar_chart_data?geoid=01001"].resolve(Response.json([]));
     requests["/api/side_metric_data?geoid=01001"].resolve(Response.json({ geoid: "01001" }));
     await loading;
+  });
+
+  test("shares one in-flight immutable request across consecutive loads", async () => {
+    const response = deferred<Response>();
+    const fetch = vi.fn(() => response.promise);
+    const cache = createDashboardResultCache();
+    const dependencies = { fetch, depends: vi.fn(), cache };
+
+    const first = loadDashboardData(dependencies, params, new Set(["map"]));
+    const second = loadDashboardData(dependencies, params, new Set(["map"]));
+
+    expect(fetch).toHaveBeenCalledOnce();
+    response.resolve(Response.json([{ geoid: "01001" }]));
+
+    await expect(first).resolves.toEqual({
+      map: { ok: true, data: [{ geoid: "01001" }] },
+    });
+    await expect(second).resolves.toEqual({
+      map: { ok: true, data: [{ geoid: "01001" }] },
+    });
+  });
+
+  test("evicts failures so an explicit retry reaches the endpoint", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(Response.json([{ geoid: "01001" }]));
+    const dependencies = {
+      fetch,
+      depends: vi.fn(),
+      cache: createDashboardResultCache(),
+    };
+
+    const failed = await loadDashboardData(dependencies, params, new Set(["map"]));
+    const retried = await loadDashboardData(dependencies, params, new Set(["map"]));
+
+    expect(failed.map).toMatchObject({ ok: false, kind: "http" });
+    expect(retried.map).toEqual({ ok: true, data: [{ geoid: "01001" }] });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   test("returns an HTTP error for one part without discarding another part's success", async () => {

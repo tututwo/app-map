@@ -10,9 +10,6 @@
 @to 
 -->
 <script lang="ts">
-// CRITICAL: Apply MapLibre patch BEFORE importing any components that use MapLibre
-import "$lib/maplibre-patch";
-
 import { resolveRoute } from "$app/paths";
 import { tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
@@ -27,8 +24,6 @@ import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
-import { toJpeg } from "html-to-image";
-import { jsPDF } from "jspdf";
 import { dataFilters } from "$lib/filters.svelte.js";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 
@@ -138,6 +133,8 @@ const introText = $state(
 );
 
 async function exportToPDF() {
+  if (import.meta.env.SSR) return;
+
   if (!mainContent) {
     exportError = "Main content not found";
     return;
@@ -147,6 +144,8 @@ async function exportToPDF() {
   exportError = null;
 
   try {
+    const [{ toJpeg }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
+
     // 2. Wait for Svelte to apply the new widths to the components
     await tick();
     // HACK: Wait a brief moment for the browser to paint the changes before capturing.

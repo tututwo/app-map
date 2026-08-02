@@ -25,7 +25,7 @@ import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 import StackedBar from "$components/bar/stackedBar.svelte";
 
 // Map
-import MapLibreMap from "$components/map/maplibre-map.svelte";
+import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
@@ -374,12 +374,12 @@ function dismissLoadingError() {
           aria-label="Map"
           class="relative flex flex-1 items-center justify-center rounded border border-gray-200"
         >
-          <MapLibreMap
+          <LazyMapLibreMap
             {selectedMapColorKey}
             {selectedMapColorDomain}
             {selectedMapColorRange}
             data={mapData}
-            bind:geoid={() => geoid, updateGeoid}
+            bind:geoid={() => displayNameGeoid, updateGeoid}
             bind:displayName={() => displayName, updateDisplayName}
             {selectedQuantile}
             quantileHighlightEnabled={highlightedGroup !== null}

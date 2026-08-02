@@ -3,6 +3,7 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 /* Yale Typeface Definitions */
 @font-face {
   font-family: "YaleNew";
