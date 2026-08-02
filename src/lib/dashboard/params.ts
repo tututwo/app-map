@@ -38,8 +38,8 @@ export function parseDashboardParams(url: URL): DashboardParams {
   const geoidParam = getSingleValue(url.searchParams, "geoid");
 
   return {
-    from: to - from >= 5 ? from : DEFAULT_DASHBOARD_PARAMS.from,
-    to: to - from >= 5 ? to : DEFAULT_DASHBOARD_PARAMS.to,
+    from: to - from + 1 >= 5 ? from : DEFAULT_DASHBOARD_PARAMS.from,
+    to: to - from + 1 >= 5 ? to : DEFAULT_DASHBOARD_PARAMS.to,
     geoid:
       geoidParam && /^\d{5}$/.test(geoidParam)
         ? normalizeCountyGeoid(geoidParam)

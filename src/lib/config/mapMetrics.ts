@@ -1,52 +1,100 @@
 import type { MapDatum } from "$lib/dashboard/data";
+import { scaleQuantize } from "d3-scale";
 
 export type MapMetricIndex = 0 | 1 | 2;
 export type MapMetricKey = "closure" | "closure_rate_per_10000" | "persistence";
 
-export interface MapMetricConfig {
+export interface MapMetricDefinition {
   readonly label: string;
   readonly description: string;
   readonly value: MapMetricIndex;
-  readonly legendText: readonly string[];
   readonly colorKey: MapMetricKey;
   readonly colorRange: readonly string[];
+}
+
+export interface MapMetricPresentation extends MapMetricDefinition {
+  readonly legendText: readonly string[];
   readonly colorDomain: readonly [number, number];
 }
 
-function defineMetric(config: MapMetricConfig): Readonly<MapMetricConfig> {
-  return Object.freeze(config);
+function defineMetric(config: MapMetricDefinition): Readonly<MapMetricDefinition> {
+  return Object.freeze({
+    ...config,
+    colorRange: Object.freeze([...config.colorRange]),
+  });
 }
 
-export const mapMetricConfigs = Object.freeze([
+export const mapMetricDefinitions = Object.freeze([
   defineMetric({
     label: "Number of closed churches",
     description: "Number of closed churches",
     value: 0,
-    legendText: ["1-12", "13-24", "25-36", "37-48", "49-60"],
     colorKey: "closure",
     colorRange: ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
-    colorDomain: [0, 60],
   }),
   defineMetric({
     label: "Rate of closed churches per 10,000 population",
     description: "Rate of closed churches per 10,000 population",
     value: 1,
-    legendText: ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"],
     colorKey: "closure_rate_per_10000",
     colorRange: ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
-    colorDomain: [0, 1],
   }),
   defineMetric({
     label: "Persistence of open churches",
     description: "Persistence of open churches",
     value: 2,
-    legendText: ["0.0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"],
     colorKey: "persistence",
     colorRange: ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
-    colorDomain: [0, 1],
   }),
-] satisfies readonly MapMetricConfig[]);
+] satisfies readonly MapMetricDefinition[]);
 
-export function getMapMetricValue(datum: MapDatum | undefined, metric: MapMetricConfig): number {
-  return datum?.[metric.colorKey] ?? metric.colorDomain[0];
+function formatBoundary(value: number): string {
+  const rounded = Number(value.toFixed(12));
+  return String(Object.is(rounded, -0) ? 0 : rounded);
+}
+
+export function createMapMetricPresentations(
+  data: readonly MapDatum[]
+): readonly MapMetricPresentation[] {
+  if (data.length === 0) return Object.freeze([]);
+
+  return Object.freeze(
+    mapMetricDefinitions.map((metric) => {
+      const values = data
+        .map((datum) => datum[metric.colorKey])
+        .filter((value) => Number.isFinite(value));
+      const minimum = Math.min(...values);
+      const maximum = Math.max(...values);
+      const lowerBound = Math.min(0, Math.floor(minimum));
+      const upperBound = Math.max(0, Math.ceil(maximum));
+      const colorDomain: [number, number] = [
+        lowerBound,
+        lowerBound === upperBound ? upperBound + 1 : upperBound,
+      ];
+      const thresholds = scaleQuantize<number>()
+        .domain(colorDomain)
+        .range(metric.colorRange.map((_, index) => index))
+        .thresholds();
+      const boundaries = [colorDomain[0], ...thresholds, colorDomain[1]];
+      const legendText = metric.colorRange.map((_, index) => {
+        const closingBracket = index === metric.colorRange.length - 1 ? "]" : ")";
+        return `[${formatBoundary(boundaries[index])}, ${formatBoundary(
+          boundaries[index + 1]
+        )}${closingBracket}`;
+      });
+
+      return Object.freeze({
+        ...metric,
+        colorDomain: Object.freeze(colorDomain),
+        legendText: Object.freeze(legendText),
+      });
+    })
+  );
+}
+
+export function getMapMetricValue(
+  datum: MapDatum | undefined,
+  metric: Pick<MapMetricDefinition, "colorKey">
+): number | undefined {
+  return datum?.[metric.colorKey];
 }

@@ -24,9 +24,11 @@ import { reverseGeocodeCounty } from "$lib/utils/searchCounty2010Census.js";
 
 import { GeoJsonLayer } from "@deck.gl/layers";
 import type {
+  ErrorEvent as MapLibreErrorEvent,
   FlyToOptions,
   GeolocateControl as MapLibreGeolocateControl,
   Map as MapLibreInstance,
+  MapContextEvent,
   MapMouseEvent,
 } from "maplibre-gl";
 
@@ -113,11 +115,47 @@ let mapPitch = $state(0);
 let mapCaptureGeneration = 0;
 let deckRenderedGeneration: number | null = null;
 let deckIsBeforeWaterway = $state(false);
+let deckLayerIndex = $state(-1);
+let waterwayLayerIndex = $state(-1);
+let mapCaptureError = $state<string | null>(null);
 
 function invalidateMapCapture() {
   mapCaptureGeneration += 1;
   deckRenderedGeneration = null;
-  captureState = { state: "loading", revision: mapCaptureGeneration };
+  captureState = mapCaptureError
+    ? { state: "error", revision: mapCaptureGeneration, message: mapCaptureError }
+    : { state: "loading", revision: mapCaptureGeneration };
+}
+
+function publishMapCaptureError(message: string) {
+  mapCaptureError = message;
+  captureState = { state: "error", revision: mapCaptureGeneration, message };
+}
+
+function handleMapError(event: MapLibreErrorEvent) {
+  const details = event as MapLibreErrorEvent & {
+    layer?: unknown;
+    sourceId?: string;
+    tile?: unknown;
+  };
+
+  // Tile, source, sprite, and runtime-layer failures can be partial/recoverable. An error before
+  // MapLibre can serialize any style is the public signal that the initial style itself failed.
+  if (details.tile || details.sourceId || details.layer || mapInstance?.getStyle()) return;
+
+  publishMapCaptureError(`Map style failed to load: ${event.error.message}`);
+}
+
+function handleWebGLContextLost(event: MapContextEvent) {
+  publishMapCaptureError(
+    event.originalEvent.statusMessage || "The map's WebGL rendering context was lost"
+  );
+}
+
+function handleWebGLContextRestored() {
+  mapCaptureError = null;
+  invalidateMapCapture();
+  mapInstance?.triggerRepaint();
 }
 
 function handleDeckAfterRender() {
@@ -140,9 +178,11 @@ function handleMapIdle() {
     return;
   }
 
-  deckIsBeforeWaterway = Boolean(
-    mapInstance.getLayer("deck-layer-group-before:waterway") && mapInstance.getLayer("waterway")
-  );
+  const layerOrder = mapInstance.getLayersOrder();
+  deckLayerIndex = layerOrder.indexOf("deck-layer-group-before:waterway");
+  waterwayLayerIndex = layerOrder.indexOf("waterway");
+  deckIsBeforeWaterway =
+    deckLayerIndex >= 0 && waterwayLayerIndex >= 0 && deckLayerIndex < waterwayLayerIndex;
 
   const generation = mapCaptureGeneration;
   requestAnimationFrame(() => {
@@ -338,6 +378,8 @@ $effect(() => {
   selectedMapColorKey;
   selectedMapColorDomain;
   selectedMapColorRange;
+  geoid;
+  countyCameras[geoid];
 
   if (mapAssetsReady && mapInstance) {
     invalidateMapCapture();
@@ -369,6 +411,19 @@ function flyToCounty(countyZoomData: {
   mapInstance.flyTo(flyToOptions);
 }
 
+function flyToUS() {
+  if (!mapInstance) return;
+
+  mapInstance.stop();
+  mapInstance.flyTo({
+    center: US_MAP_CENTER,
+    zoom: US_MAP_ZOOM,
+    bearing: 0,
+    pitch: 0,
+    essential: true,
+  });
+}
+
 function handleMouseLeave() {
   hoveredCountyId = null;
   tooltipPosition = null;
@@ -385,22 +440,16 @@ function handleMapClick(event: MapMouseEvent) {
   selectCounty(nextGeoid, countyData?.name || nextGeoid);
 }
 
-// Correct use of $effect for a side effect
 $effect(() => {
-  // A special case for the US view
-  if (geoid === "00000") {
-    if (mapInstance) {
-      mapInstance.stop(); // Stop current animation
-      mapInstance.flyTo({
-        center: US_MAP_CENTER,
-        zoom: US_MAP_ZOOM,
-        bearing: 0,
-        pitch: 0,
-        essential: true,
-      });
-    }
-  } else if (countyCameras[geoid]) {
-    flyToCounty(countyCameras[geoid]);
+  const selectedGeoid = geoid;
+  const selectedCountyCamera = countyCameras[selectedGeoid];
+
+  if (!mapAssetsReady || !mapInstance) return;
+
+  if (selectedGeoid !== "00000" && selectedCountyCamera) {
+    flyToCounty(selectedCountyCamera);
+  } else {
+    flyToUS();
   }
 });
 
@@ -472,6 +521,8 @@ async function handleGeolocate(event: GeolocationPosition) {
   data-map-center-latitude={mapCenter[1]}
   data-map-zoom={mapZoom}
   data-deck-before-waterway={deckIsBeforeWaterway}
+  data-deck-layer-index={deckLayerIndex}
+  data-waterway-layer-index={waterwayLayerIndex}
   onmouseleave={handleMouseLeave}
 >
   <MapLibre
@@ -492,8 +543,11 @@ async function handleGeolocate(event: GeolocationPosition) {
     bind:center={mapCenter}
     bind:map={mapInstance}
     onclick={handleMapClick}
+    onerror={handleMapError}
     onmovestart={invalidateMapCapture}
     onidle={handleMapIdle}
+    onwebglcontextlost={handleWebGLContextLost}
+    onwebglcontextrestored={handleWebGLContextRestored}
   >
     <NavigationControl showCompass={false} position="top-left" />
     <CustomControl position="top-left">

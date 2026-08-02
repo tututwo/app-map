@@ -37,11 +37,22 @@ let MapComponent = $state<MapComponent>();
 
 onMount(() => {
   let active = true;
-  captureState = initialMapCaptureState();
+  const revision = captureState.revision + 1;
+  captureState = { state: "loading", revision };
 
-  void import("./maplibre-map.svelte").then(({ default: component }) => {
-    if (active) MapComponent = component;
-  });
+  void import("./maplibre-map.svelte")
+    .then(({ default: component }) => {
+      if (active) MapComponent = component;
+    })
+    .catch((error) => {
+      if (!active) return;
+
+      captureState = {
+        state: "error",
+        revision,
+        message: error instanceof Error ? error.message : "The map module could not be loaded",
+      };
+    });
 
   return () => {
     active = false;
@@ -64,6 +75,13 @@ onMount(() => {
     {selectedQuantile}
     {quantileHighlightEnabled}
   />
+{:else if captureState.state === "error"}
+  <div
+    class="flex h-full min-h-[200px] w-full items-center justify-center bg-red-50 p-4 text-center text-sm text-red-800"
+    role="alert"
+  >
+    Map unavailable: {captureState.message}
+  </div>
 {:else}
   <div class="h-full min-h-[200px] w-full bg-gray-50" aria-hidden="true"></div>
 {/if}

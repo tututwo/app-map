@@ -1,4 +1,11 @@
-import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page,
+  type Route,
+} from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const appOrigin = "http://127.0.0.1:4173";
@@ -8,6 +15,40 @@ const autaugaReverseResponse = {
   address: { county: "Autauga County", state: "Alabama" },
 };
 
+const capitolPlanningRegionSearchResponse = [
+  {
+    lat: "41.76",
+    lon: "-72.68",
+    display_name: "Capitol Planning Region, Connecticut, United States",
+    address: { county: "Capitol Planning Region", state: "Connecticut" },
+  },
+];
+
+const deterministicMapStyle = {
+  version: 8,
+  sources: {
+    waterways: {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    },
+  },
+  layers: [
+    { id: "background", type: "background", paint: { "background-color": "#010203" } },
+    {
+      id: "waterway",
+      type: "line",
+      source: "waterways",
+      paint: { "line-color": "#010203", "line-width": 1 },
+    },
+  ],
+};
+
+const pdfMapPalettes = [
+  ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
+  ["#FAE2C9", "#E9C39B", "#D9A671", "#CB8944", "#B96308"],
+  ["#F1E0FD", "#CCADE3", "#A272C5", "#7836A7", "#5C168E"],
+] as const;
+
 async function enableAutaugaGeolocation(context: BrowserContext) {
   await context.grantPermissions(["geolocation"], { origin: appOrigin });
   await context.setGeolocation({ latitude: 32.5364, longitude: -86.6445 });
@@ -15,6 +56,52 @@ async function enableAutaugaGeolocation(context: BrowserContext) {
 
 async function fulfillJson(route: Route, body: unknown) {
   await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+}
+
+async function useDeterministicMapStyle(page: Page) {
+  await page.route("https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json", (route) =>
+    fulfillJson(route, deterministicMapStyle)
+  );
+}
+
+async function countCountyPalettePixels(canvas: Locator, palette: readonly string[]) {
+  return canvas.evaluate(async (node, expectedHexColors) => {
+    const source = node as HTMLCanvasElement;
+    const expectedColors = expectedHexColors.map((hex) => [
+      Number.parseInt(hex.slice(1, 3), 16),
+      Number.parseInt(hex.slice(3, 5), 16),
+      Number.parseInt(hex.slice(5, 7), 16),
+    ]);
+
+    // This is the same preserved-canvas serialization seam used by the PDF capture library.
+    const image = new Image();
+    image.src = source.toDataURL("image/png");
+    await image.decode();
+
+    const copy = document.createElement("canvas");
+    copy.width = source.width;
+    copy.height = source.height;
+    const context = copy.getContext("2d", { willReadFrequently: true });
+    if (!context) throw new Error("Could not inspect the map canvas");
+
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, copy.width, copy.height).data;
+    let matchingPixels = 0;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      const matchesCountyPalette = expectedColors.some(
+        ([red, green, blue]) =>
+          Math.abs(pixels[index] - red) <= 4 &&
+          Math.abs(pixels[index + 1] - green) <= 4 &&
+          Math.abs(pixels[index + 2] - blue) <= 4 &&
+          pixels[index + 3] >= 250
+      );
+
+      if (matchesCountyPalette) matchingPixels += 1;
+    }
+
+    return { matchingPixels, totalPixels: pixels.length / 4 };
+  }, palette);
 }
 
 async function clickGeolocate(page: Page) {
@@ -123,10 +210,18 @@ test("map canvas keeps the WebGL attributes required for PDF capture", async ({ 
 test("initial camera, Deck ordering, and county-click fly-to survive the upstream migration", async ({
   page,
 }) => {
+  await useDeterministicMapStyle(page);
   await page.goto("/?from=2003&to=2011&geoid=00000");
 
   const map = page.getByRole("region", { name: "Map" }).locator("figure");
   await expect(map).toHaveAttribute("data-map-capture-state", "ready", { timeout: 30_000 });
+
+  const layerIndices = await map.evaluate((element) => ({
+    deck: Number(element.getAttribute("data-deck-layer-index")),
+    waterway: Number(element.getAttribute("data-waterway-layer-index")),
+  }));
+  expect(layerIndices.deck).toBeGreaterThanOrEqual(0);
+  expect(layerIndices.waterway).toBeGreaterThan(layerIndices.deck);
   await expect(map).toHaveAttribute("data-deck-before-waterway", "true");
 
   const initialCamera = await map.evaluate((element) => ({
@@ -161,9 +256,52 @@ test("initial camera, Deck ordering, and county-click fly-to survive the upstrea
   await expect.poll(async () => Number(await map.getAttribute("data-map-zoom"))).toBeGreaterThan(7);
 });
 
+test("a selected GEOID without a county camera resets to the US camera", async ({ page }) => {
+  await useDeterministicMapStyle(page);
+  await page.route("https://nominatim.openstreetmap.org/search?*", (route) =>
+    fulfillJson(route, capitolPlanningRegionSearchResponse)
+  );
+  await page.goto("/?from=2003&to=2011&geoid=01001");
+
+  const map = page.getByRole("region", { name: "Map" }).locator("figure");
+  await expect(map).toHaveAttribute("data-map-capture-state", "ready", { timeout: 30_000 });
+  await expect.poll(async () => Number(await map.getAttribute("data-map-zoom"))).toBeGreaterThan(7);
+  const countyRevision = Number(await map.getAttribute("data-map-capture-revision"));
+
+  const search = page.getByRole("combobox", { name: "Search for a county" });
+  await search.fill("Capitol");
+  await page.getByText("Capitol Planning Region, CT", { exact: true }).click();
+
+  await expect.poll(() => new URL(page.url()).searchParams.get("geoid")).toBe("09110");
+  await expect
+    .poll(async () => Number(await map.getAttribute("data-map-capture-revision")))
+    .toBeGreaterThan(countyRevision);
+  await expect(map).toHaveAttribute("data-map-capture-state", "ready", { timeout: 30_000 });
+  await expect
+    .poll(async () => Number(await map.getAttribute("data-map-center-longitude")))
+    .toBeCloseTo(-98.5795, 1);
+  await expect
+    .poll(async () => Number(await map.getAttribute("data-map-center-latitude")))
+    .toBeCloseTo(39.8283, 1);
+  await expect
+    .poll(async () => Number(await map.getAttribute("data-map-zoom")))
+    .toBeCloseTo(3.5, 1);
+});
+
+test("a fatal initial style failure publishes a map capture error", async ({ page }) => {
+  await page.route("https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json", (route) =>
+    route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
+  );
+  await page.goto("/?from=2003&to=2011&geoid=00000");
+
+  const map = page.getByRole("region", { name: "Map" }).locator("figure");
+  await expect(map).toHaveAttribute("data-map-capture-state", "error", { timeout: 30_000 });
+});
+
 test("PDF export waits for all three maps and captures their rendered canvases", async ({
   page,
 }) => {
+  await useDeterministicMapStyle(page);
   await page.goto("/PDF?from=2004&to=2012&geoid=01001", {
     waitUntil: "domcontentloaded",
   });
@@ -175,6 +313,21 @@ test("PDF export waits for all three maps and captures their rendered canvases",
   });
   await expect(exportButton).toBeEnabled();
 
+  const canvases = page.locator(
+    'main figure[data-map-capture-state="ready"] canvas.maplibregl-canvas'
+  );
+  await expect(canvases).toHaveCount(3);
+
+  for (let index = 0; index < pdfMapPalettes.length; index += 1) {
+    const pixels = await countCountyPalettePixels(canvases.nth(index), pdfMapPalettes[index]);
+    const minimumCountyPixels = Math.max(100, Math.floor(pixels.totalPixels * 0.001));
+
+    expect(
+      pixels.matchingPixels,
+      `PDF map ${index + 1} should contain rendered county-layer pixels`
+    ).toBeGreaterThan(minimumCountyPixels);
+  }
+
   const downloadPromise = page.waitForEvent("download");
   await exportButton.click();
   const download = await downloadPromise;
@@ -185,7 +338,17 @@ test("PDF export waits for all three maps and captures their rendered canvases",
   const pdf = await readFile(downloadPath);
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   expect(pdf.byteLength).toBeGreaterThan(50_000);
-  expect(pdf.toString("latin1")).toContain("/Subtype /Image");
+  expect(pdf.toString("latin1")).toMatch(/\/Subtype\s*\/Image\b/);
+});
+
+test("PDF map failures are surfaced with a reload path", async ({ page }) => {
+  await useDeterministicMapStyle(page);
+  await page.route("**/counties-10m.*.json", (route) => route.abort("failed"));
+  await page.goto("/PDF?from=2004&to=2012&geoid=01001", { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByText(/Map rendering failed:/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Maps unavailable" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reload report" })).toBeVisible();
 });
 
 test("resetting a deep-linked county converges the URL and heading on all locations", async ({

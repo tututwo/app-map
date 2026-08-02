@@ -50,8 +50,16 @@ describe("parseDashboardParams", () => {
     });
   });
 
-  test("uses the default range when fewer than five years separate the endpoints", () => {
+  test("accepts a five-calendar-year inclusive range", () => {
     expect(parseDashboardParams(new URL("https://example.test/?from=2001&to=2005"))).toEqual({
+      from: 2001,
+      to: 2005,
+      geoid: "00000",
+    });
+  });
+
+  test("uses the default range for fewer than five calendar years", () => {
+    expect(parseDashboardParams(new URL("https://example.test/?from=2001&to=2004"))).toEqual({
       from: 2003,
       to: 2011,
       geoid: "00000",

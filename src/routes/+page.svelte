@@ -23,7 +23,11 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 // Map
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 
-import { mapMetricConfigs, type MapMetricIndex } from "$lib/config/mapMetrics";
+import {
+  createMapMetricPresentations,
+  mapMetricDefinitions,
+  type MapMetricIndex,
+} from "$lib/config/mapMetrics";
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
@@ -100,15 +104,20 @@ function highlightGroup(range: string, i: number) {
 
 const lineChartMargin = { top: 25, right: 10, bottom: 20, left: 40 };
 const stackedBarMargin = { top: 10, right: 0, bottom: 10, left: 35 };
-let selectedMapMetric = $state<MapMetricIndex>(mapMetricConfigs[0].value);
+const emptyMapColorDomain = [0, 1] as const;
+let mapMetricPresentations = $derived(createMapMetricPresentations(mapData));
+let selectedMapMetric = $state<MapMetricIndex>(mapMetricDefinitions[0].value);
 let selectedMapMetricString = $derived(String(selectedMapMetric));
-let selectedMapColorKey = $derived(mapMetricConfigs[selectedMapMetric].colorKey);
-let selectedMapColorDomain = $derived(mapMetricConfigs[selectedMapMetric].colorDomain);
-let selectedMapColorRange = $derived(mapMetricConfigs[selectedMapMetric].colorRange);
+let selectedMapDefinition = $derived(mapMetricDefinitions[selectedMapMetric]);
+let selectedMapPresentation = $derived(mapMetricPresentations[selectedMapMetric]);
+let selectedMapColorKey = $derived(selectedMapDefinition.colorKey);
+let selectedMapColorDomain = $derived(selectedMapPresentation?.colorDomain ?? emptyMapColorDomain);
+let selectedMapColorRange = $derived(selectedMapDefinition.colorRange);
 // Data ranges for the legend with corrected colors and widths
 // Usage in your Svelte component:
 let dataRanges = $derived.by(() => {
-  const selectedMetric = mapMetricConfigs[selectedMapMetric];
+  const selectedMetric = selectedMapPresentation;
+  if (!selectedMetric) return [];
 
   return selectedMetric.legendText.map((label, index) => ({
     label,
@@ -229,7 +238,7 @@ function dismissLoadingError() {
                 name="metric"
                 class="flex h-full flex-col justify-between py-2"
               >
-                {#each mapMetricConfigs as metric (metric.value)}
+                {#each mapMetricDefinitions as metric (metric.value)}
                   {@const id = `metric-${metric.value}`}
                   <div class="flex items-center gap-2 transition-colors">
                     <RadioGroup.Item {id} value={String(metric.value)} />
@@ -260,7 +269,7 @@ function dismissLoadingError() {
             <!-- ------------------------------------------------------------------ -->
             <section aria-label="Legend" class="flex flex-col space-y-1">
               <h4 class="mb-1 text-sm font-medium text-gray-500">
-                {mapMetricConfigs.find((m) => m.value === selectedMapMetric)?.label}
+                {selectedMapDefinition.label}
               </h4>
               <div class="flex gap-1.5">
                 {#each dataRanges as range, index (range.label)}

@@ -24,7 +24,11 @@ import PercentageBar from "$components/sideSection/percentageBar.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
-import { getMapMetricValue, mapMetricConfigs } from "$lib/config/mapMetrics";
+import {
+  createMapMetricPresentations,
+  getMapMetricValue,
+  mapMetricDefinitions,
+} from "$lib/config/mapMetrics";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
@@ -43,6 +47,14 @@ let mapCaptureStates = $derived([
   persistenceMapCaptureState,
 ]);
 let allMapsReady = $derived(mapCaptureStates.every(({ state }) => state === "ready"));
+let mapPreparationError = $derived(
+  mapCaptureStates.find(
+    (state): state is Extract<MapCaptureState, { state: "error" }> => state.state === "error"
+  )?.message ?? null
+);
+let visibleExportError = $derived(
+  exportError ?? (mapPreparationError ? `Map rendering failed: ${mapPreparationError}` : null)
+);
 
 // --- ADD THIS ---
 let pdfOverrideWidths = $state<Record<string, number>>({});
@@ -52,6 +64,8 @@ let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
 let geoid = $derived(data.params.geoid);
 let mapData = $derived(data.results.map?.ok ? data.results.map.data : []);
 let lineChartData = $derived(data.results.line?.ok ? data.results.line.data : []);
+const emptyMapColorDomain = [0, 1] as const;
+let mapMetricPresentations = $derived(createMapMetricPresentations(mapData));
 let countyName = $derived(
   geoid === "00000"
     ? "the United States"
@@ -69,23 +83,26 @@ const whichQuantile = (domain: readonly [number, number]) =>
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
 let dataRanges = $derived.by(() => {
-  return mapMetricConfigs.map((m) => {
-    const quantize = whichQuantile(m.colorDomain);
+  return mapMetricDefinitions.map((definition, metricIndex) => {
+    const presentation = mapMetricPresentations[metricIndex];
+    if (!presentation) return [];
+
+    const quantize = whichQuantile(presentation.colorDomain);
 
     // find the raw value (could be 0, undefined, etc.)
     const rec = mapData.find((d) => d.geoid === geoid);
-    const value = getMapMetricValue(rec, m);
+    const value = getMapMetricValue(rec, definition);
 
     // 1..n → subtract 1 for a 0-based index
-    const quantileIndex = quantize(value) - 1;
+    const quantileIndex = value === undefined ? -1 : quantize(value) - 1;
 
-    return m.legendText.map((range, i) => ({
+    return presentation.legendText.map((range, i) => ({
       // only attach popupValue on the matching bucket
-      ...(i === quantileIndex && { popupValue: value.toFixed(2) }),
+      ...(value !== undefined && i === quantileIndex && { popupValue: value.toFixed(2) }),
 
       range,
-      color: m.colorRange[i],
-      textColor: getAccessibleTextColor(m.colorRange[i], "normal"),
+      color: presentation.colorRange[i],
+      textColor: getAccessibleTextColor(presentation.colorRange[i], "normal"),
     }));
   });
 });
@@ -98,6 +115,10 @@ function waitForBrowserPaint(): Promise<void> {
   return new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
   });
+}
+
+function reloadReport() {
+  window.location.reload();
 }
 
 async function exportToPDF() {
@@ -192,7 +213,11 @@ let demographicStatistics = $derived(
         <button
           onclick={exportToPDF}
           disabled={isExporting || !allMapsReady}
-          title={allMapsReady ? "Save this report as a PDF" : "Preparing report maps"}
+          title={allMapsReady
+            ? "Save this report as a PDF"
+            : mapPreparationError
+              ? "Report maps could not be loaded"
+              : "Preparing report maps"}
           class="flex cursor-pointer items-center text-sm text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {#if isExporting}
@@ -213,6 +238,8 @@ let demographicStatistics = $derived(
               ></path>
             </svg>
             Exporting...
+          {:else if mapPreparationError}
+            Maps unavailable
           {:else if !allMapsReady}
             Preparing maps...
           {:else}
@@ -239,7 +266,7 @@ let demographicStatistics = $derived(
     </header>
 
     <!-- Error message -->
-    {#if exportError}
+    {#if visibleExportError}
       <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
         <div class="flex">
           <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -251,7 +278,16 @@ let demographicStatistics = $derived(
           </svg>
           <div class="ml-3">
             <h3 class="text-sm font-medium text-red-800">Export Error</h3>
-            <p class="mt-1 text-sm text-red-700">{exportError}</p>
+            <p class="mt-1 text-sm text-red-700">{visibleExportError}</p>
+            {#if mapPreparationError}
+              <button
+                type="button"
+                class="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100"
+                onclick={reloadReport}
+              >
+                Reload report
+              </button>
+            {/if}
           </div>
         </div>
       </div>
@@ -287,9 +323,9 @@ let demographicStatistics = $derived(
             mapBorderColor="border-blue-100"
             legendData={dataRanges[0]}
             description={introText}
-            mapColorKey={mapMetricConfigs[0].colorKey}
-            mapColorRange={mapMetricConfigs[0].colorRange}
-            mapColorDomain={mapMetricConfigs[0].colorDomain}
+            mapColorKey={mapMetricDefinitions[0].colorKey}
+            mapColorRange={mapMetricDefinitions[0].colorRange}
+            mapColorDomain={mapMetricPresentations[0]?.colorDomain ?? emptyMapColorDomain}
             {mapData}
             {geoid}
             bind:mapCaptureState={closureMapCaptureState}
@@ -299,9 +335,9 @@ let demographicStatistics = $derived(
             mapPlaceholderText="Map"
             legendData={dataRanges[1]}
             description={introText}
-            mapColorKey={mapMetricConfigs[1].colorKey}
-            mapColorRange={mapMetricConfigs[1].colorRange}
-            mapColorDomain={mapMetricConfigs[1].colorDomain}
+            mapColorKey={mapMetricDefinitions[1].colorKey}
+            mapColorRange={mapMetricDefinitions[1].colorRange}
+            mapColorDomain={mapMetricPresentations[1]?.colorDomain ?? emptyMapColorDomain}
             {mapData}
             {geoid}
             bind:mapCaptureState={closureRateMapCaptureState}
@@ -311,9 +347,9 @@ let demographicStatistics = $derived(
             mapPlaceholderText="Map"
             legendData={dataRanges[2]}
             description={introText}
-            mapColorKey={mapMetricConfigs[2].colorKey}
-            mapColorRange={mapMetricConfigs[2].colorRange}
-            mapColorDomain={mapMetricConfigs[2].colorDomain}
+            mapColorKey={mapMetricDefinitions[2].colorKey}
+            mapColorRange={mapMetricDefinitions[2].colorRange}
+            mapColorDomain={mapMetricPresentations[2]?.colorDomain ?? emptyMapColorDomain}
             {mapData}
             {geoid}
             bind:mapCaptureState={persistenceMapCaptureState}
