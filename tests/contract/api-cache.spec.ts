@@ -6,6 +6,8 @@ for (const path of [
   "/api/map_data?from=2003&to=2011",
   "/api/line_chart_data?geoid=00000",
   "/api/stacked_bar_chart_data?geoid=00000",
+  "/api/side_metric_data?geoid=01001",
+  "/api/side_metric_data?geoid=00000",
 ]) {
   test(`${path} exposes the immutable deployment cache contract`, async ({ request }) => {
     const response = await request.get(path);

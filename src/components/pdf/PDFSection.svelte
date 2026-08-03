@@ -5,7 +5,6 @@ import SegmentedBar from "./segmentedBar.svelte";
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 let {
   title,
-  mapPlaceholderText,
   mapBorderColor = "border-gray-300",
   legendData,
   description,
@@ -17,7 +16,6 @@ let {
   mapCaptureState = $bindable<MapCaptureState>(initialMapCaptureState()),
 }: {
   title: string;
-  mapPlaceholderText: string;
   mapBorderColor?: string;
   legendData: BarSegment[];
   description: string;
@@ -34,7 +32,6 @@ let {
   <h2 class="mb-4 text-lg font-semibold text-gray-700">{title}</h2>
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
     <div class="  flex h-64 items-center justify-center rounded bg-gray-50">
-      <!-- <span class="text-4xl font-bold text-gray-400 italic">{mapPlaceholderText}</span> -->
       <LazyMapLibreMap
         hideControls={true}
         selectedMapColorKey={mapColorKey}

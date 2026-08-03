@@ -17,8 +17,7 @@ interface Props {
   description?: string;
   additionalInfo?: Snippet;
   animationDuration?: number;
-  overrideWidth?: number | null;
-  forceStatic?: boolean; // <-- Add this
+  forceStatic?: boolean;
 }
 
 let {
@@ -35,7 +34,6 @@ let {
   description = undefined,
   additionalInfo = undefined,
   animationDuration = 500,
-  overrideWidth = null,
   forceStatic = false,
 }: Props = $props();
 
@@ -83,12 +81,7 @@ $effect(() => {
     animatedAveragePercent.set(averagePercent, { duration });
   }
 });
-// --- ADD THIS DERIVED STATE ---
-// This will decide what width to display and what will-change style to use.
-// --- AND THIS ONE ---
-const displayWidth = $derived(
-  forceStatic ? valuePercent : overrideWidth !== null ? overrideWidth : animatedValuePercent.current
-);
+const displayWidth = $derived(forceStatic ? valuePercent : animatedValuePercent.current);
 
 const displayAveragePercent = $derived(
   forceStatic && averagePercent !== undefined

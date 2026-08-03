@@ -1,5 +1,6 @@
 <script lang="ts">
 import { invalidate } from "$app/navigation";
+import { isNationalGeoid } from "$lib/domain/countyGeoid";
 import { Pointer, CircleHelp } from "lucide-svelte";
 
 import LoadingError from "$components/loadingPage/LoadingError.svelte";
@@ -10,7 +11,7 @@ import Sidebar from "$components/sideSection/Sidebar.svelte";
 import Tooltip from "$components/Tooltip.svelte";
 import Figure from "$components/chart/Figure.svelte";
 
-import PercentageBar from "$components/sideSection/percentageBar.svelte";
+import SideMetricsPanel from "$components/sideSection/SideMetricsPanel.svelte";
 // Reusable UI components
 import { Button } from "bits-ui";
 import * as RadioGroup from "$components/ui/radio-group/index.js";
@@ -24,14 +25,15 @@ import StackedBar from "$components/bar/stackedBar.svelte";
 import LazyMapLibreMap from "$components/map/LazyMapLibreMap.svelte";
 
 import {
+  createLegendRows,
   createMapMetricPresentations,
   mapMetricDefinitions,
   type MapMetricIndex,
 } from "$lib/config/mapMetrics";
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
-import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { createLastGood } from "$lib/dashboard/last-good.svelte";
+import { countyDisplayName } from "$lib/dashboard/presentation";
 import { setDashboardParams } from "$lib/dashboard/navigate-app";
 import type { LineDatum, MapDatum, StackedDatum } from "$lib/dashboard/data";
 import type { PageData } from "./$types";
@@ -67,9 +69,7 @@ let displayNameGeoid = $derived(pendingGeoid ?? geoid);
 let displayName = $derived(
   displayNameOverride?.geoid === displayNameGeoid
     ? displayNameOverride.name
-    : displayNameGeoid === "00000"
-      ? "All locations"
-      : (mapData.find((county) => county.geoid === displayNameGeoid)?.name ?? displayNameGeoid)
+    : (countyDisplayName(mapData, displayNameGeoid) ?? "All locations")
 );
 
 function updateYearRange(nextRange: [number, number]) {
@@ -113,26 +113,14 @@ let selectedMapPresentation = $derived(mapMetricPresentations[selectedMapMetric]
 let selectedMapColorKey = $derived(selectedMapDefinition.colorKey);
 let selectedMapColorDomain = $derived(selectedMapPresentation?.colorDomain ?? emptyMapColorDomain);
 let selectedMapColorRange = $derived(selectedMapDefinition.colorRange);
-// Data ranges for the legend with corrected colors and widths
-// Usage in your Svelte component:
-let dataRanges = $derived.by(() => {
-  const selectedMetric = selectedMapPresentation;
-  if (!selectedMetric) return [];
-
-  return selectedMetric.legendText.map((label, index) => ({
-    label,
-    color: selectedMetric.colorRange[index],
-    // Use AAA compliant text color determination
-    textColor: getAccessibleTextColor(selectedMetric.colorRange[index], "normal"),
-  }));
-});
+let dataRanges = $derived(selectedMapPresentation ? createLegendRows(selectedMapPresentation) : []);
 
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
 let sideResult = $derived(data.results.side);
 let selectedSideMetricData = $derived(
-  geoid !== "00000" && sideResult?.ok ? sideResult.data : undefined
+  !isNationalGeoid(geoid) && sideResult?.ok ? sideResult.data : undefined
 );
 
 let statistics = $derived(
@@ -390,42 +378,7 @@ function dismissLoadingError() {
           <!-- Scrollable container -->
           <div class="absolute inset-0 overflow-y-auto pr-1">
             <!-- Social determinants -->
-            <h4 class="text-lg font-semibold">Social Determinants</h4>
-            {#if statistics.length === 0 && demographicStatistics.length === 0}
-              <p class="mt-2 text-sm text-gray-600">
-                Community and demographic data are unavailable for this location.
-              </p>
-            {:else}
-              {#each statistics as stat (stat.id)}
-                <PercentageBar
-                  title={stat.title}
-                  currentValueDisplay={stat.currentValueDisplay}
-                  currentValue={stat.currentValue}
-                  minValue={stat.minValue}
-                  maxValue={stat.maxValue}
-                  minLabel={stat.minLabel}
-                  maxLabel={stat.maxLabel}
-                  averageValue={stat.averageValue}
-                  averageLabel={stat.averageLabel}
-                  uniqueIdBase={stat.id}
-                />
-              {/each}
-              <h4 class="mt-8 text-lg font-semibold">Demographics</h4>
-              {#each demographicStatistics as stat (stat.id)}
-                <PercentageBar
-                  title={stat.title}
-                  currentValueDisplay={stat.currentValueDisplay}
-                  currentValue={stat.currentValue}
-                  minValue={stat.minValue}
-                  maxValue={stat.maxValue}
-                  minLabel={stat.minLabel}
-                  maxLabel={stat.maxLabel}
-                  averageValue={stat.averageValue}
-                  averageLabel={stat.averageLabel}
-                  uniqueIdBase={stat.id}
-                />
-              {/each}
-            {/if}
+            <SideMetricsPanel {statistics} {demographicStatistics} />
           </div>
         </div>
       </div>

@@ -87,6 +87,42 @@ function discoverMapRanges(columns) {
 }
 
 /**
+ * Derive the year-window bounds implied by the discovered map ranges, and
+ * assert the set is exactly "every window within bounds meeting the minimum
+ * gap" — the runtime domain module (src/lib/domain/yearWindow.ts) relies on
+ * that algebra describing the generated files completely.
+ *
+ * @param {string[]} mapRanges
+ * @returns {{ minYear: number, maxYear: number, minGap: number }}
+ */
+export function deriveYearWindowBounds(mapRanges) {
+  const windows = mapRanges.map((range) => range.split("-").map(Number));
+  const minYear = Math.min(...windows.map(([from]) => from));
+  const maxYear = Math.max(...windows.map(([, to]) => to));
+  const minGap = Math.min(...windows.map(([from, to]) => to - from));
+
+  const expected = new Set();
+  for (let from = minYear; from <= maxYear - minGap; from += 1) {
+    for (let to = from + minGap; to <= maxYear; to += 1) {
+      expected.add(`${from}-${to}`);
+    }
+  }
+
+  const actual = new Set(mapRanges);
+  const missing = [...expected].filter((range) => !actual.has(range));
+  const extra = [...actual].filter((range) => !expected.has(range));
+  if (missing.length > 0 || extra.length > 0) {
+    throw new Error(
+      `Map ranges are not fully described by bounds ${minYear}-${maxYear} with minimum gap ${minGap}` +
+        (missing.length ? `; missing: ${missing.join(", ")}` : "") +
+        (extra.length ? `; unexpected: ${extra.join(", ")}` : "")
+    );
+  }
+
+  return { minYear, maxYear, minGap };
+}
+
+/**
  * @template {{ year: number }} T
  * @param {CsvRow[]} rows
  * @param {(row: CsvRow) => T} project
@@ -196,6 +232,7 @@ export async function buildGeneratedData({ sources, outputDir, force = false }) 
   if (mapRanges.length === 0) {
     throw new Error("No complete map year ranges were found in the source CSV headers");
   }
+  deriveYearWindowBounds(mapRanges);
 
   const temporaryOutput = `${resolve(outputDir)}.tmp-${process.pid}-${Date.now()}`;
   const mapOutput = join(temporaryOutput, "map");
@@ -274,6 +311,14 @@ async function main() {
   const sources = await resolveDefaultSources();
   const outputDir = join(repositoryRoot, "src/lib/server/data/generated");
   const result = await buildGeneratedData({ sources, outputDir });
+
+  // Client-importable bounds live outside server/ so the browser bundle can
+  // use them; rewritten on every run (idempotent) so they never drift.
+  const bounds = deriveYearWindowBounds(result.mapRanges);
+  const boundsPath = join(repositoryRoot, "src/lib/generated/year-window-bounds.json");
+  await mkdir(dirname(boundsPath), { recursive: true });
+  await writeFile(boundsPath, `${JSON.stringify(bounds)}\n`);
+
   const action = result.generated ? "generated" : "current";
   console.log(`[prebuild-data] ${action}: ${result.mapRanges.length} map ranges`);
 }

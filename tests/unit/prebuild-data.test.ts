@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildGeneratedData } from "../../scripts/prebuild-data.mjs";
+import { buildGeneratedData, deriveYearWindowBounds } from "../../scripts/prebuild-data.mjs";
 
 const temporaryDirectories: string[] = [];
 
@@ -144,5 +144,26 @@ describe("dashboard data prebuild", () => {
     await expect(
       buildGeneratedData({ sources: fixture.sourcePaths, outputDir: fixture.outputDir })
     ).resolves.toEqual({ generated: true, mapRanges: ["2001-2006"] });
+  });
+});
+
+describe("deriveYearWindowBounds", () => {
+  it("derives bounds from a complete range set", () => {
+    expect(deriveYearWindowBounds(["2001-2006"])).toEqual({
+      minYear: 2001,
+      maxYear: 2006,
+      minGap: 5,
+    });
+    expect(deriveYearWindowBounds(["2001-2006", "2001-2007", "2002-2007"])).toEqual({
+      minYear: 2001,
+      maxYear: 2007,
+      minGap: 5,
+    });
+  });
+
+  it("rejects a range set the bounds algebra cannot fully describe", () => {
+    expect(() => deriveYearWindowBounds(["2001-2006", "2001-2008"])).toThrow(
+      /missing: 2001-2007, 2002-2007, 2002-2008, 2003-2008/
+    );
   });
 });

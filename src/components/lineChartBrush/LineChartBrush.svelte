@@ -10,6 +10,7 @@ import * as d3 from "d3";
 import { untrack, getContext } from "svelte";
 import { ArrowLeftToLine } from "lucide-svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
+import { YEAR_WINDOW_BOUNDS, clampYearWindow } from "$lib/domain/yearWindow";
 import type { D3BrushEvent } from "d3-brush";
 
 import { gsap } from "gsap";
@@ -57,10 +58,12 @@ const exampleData = [
   { year: 2021, close: 120 },
 ];
 
-// Configurable parameters
-const MIN_YEAR_SPAN = 5;
-const MIN_YEAR_START = 2001;
-const MAX_YEAR_END = 2021;
+// Year-window rules are owned by the domain module (data-driven)
+const {
+  minGap: MIN_YEAR_SPAN,
+  minYear: MIN_YEAR_START,
+  maxYear: MAX_YEAR_END,
+} = YEAR_WINDOW_BOUNDS;
 const ALERT_COLOR = "hsla(0, 0%, 53%, 1)";
 const FROM_TO_TEXT_VERTICAL_OFFSET = 10;
 
@@ -78,7 +81,7 @@ let {
   disableBrushing = false,
 }: IProps = $props();
 
-// Visual styling props - matching lineChart.svelte aesthetic
+// Visual styling props
 const chartBackgroundColor = "hsla(206, 100%, 96%, 1)";
 const lineColor = "hsla(0, 0%, 53%, 1)";
 const circleColor = "hsla(211, 99%, 21%, 1)";
@@ -334,10 +337,14 @@ function redrawBrush() {
 }
 
 // Keep the visible selection in sync when navigation changes the input range.
+// yearRangeSelection is read via untrack: depending on it reactively would
+// re-run this effect on every onBrush frame and snap the selection back to
+// the URL range mid-gesture, making direct brush drags a silent no-op.
 $effect(() => {
   const nextRange: [number, number] = [yearRange[0], yearRange[1]];
+  const currentSelection = untrack(() => yearRangeSelection);
 
-  if (nextRange[0] === yearRangeSelection[0] && nextRange[1] === yearRangeSelection[1]) {
+  if (nextRange[0] === currentSelection[0] && nextRange[1] === currentSelection[1]) {
     return;
   }
 
@@ -475,48 +482,13 @@ function handleCircleMouseLeave() {
   tooltipData = null;
 }
 
-// Update your existing adjustYearRange function
 function adjustYearRange(year0: number, year1: number) {
-  // Apply constraints based on which handle was moving
-  if (year1 - year0 < MIN_YEAR_SPAN) {
-    if (movingHandle === "end") {
-      year1 = year0 + MIN_YEAR_SPAN;
-
-      // If extending end goes beyond max, move start back
-      if (year1 > MAX_YEAR_END) {
-        year1 = MAX_YEAR_END;
-        year0 = year1 - MIN_YEAR_SPAN;
-      }
-    } else if (movingHandle === "start") {
-      year0 = year1 - MIN_YEAR_SPAN;
-
-      // If extending start goes beyond min, move end forward
-      if (year0 < MIN_YEAR_START) {
-        year0 = MIN_YEAR_START;
-        year1 = year0 + MIN_YEAR_SPAN;
-      }
-    } else {
-      // New selection or drag - expand from center
-      const center = (year0 + year1) / 2;
-      year0 = Math.max(MIN_YEAR_START, Math.floor(center - MIN_YEAR_SPAN / 2));
-      year1 = Math.min(MAX_YEAR_END, year0 + MIN_YEAR_SPAN);
-
-      // Adjust if we hit boundaries
-      if (year1 > MAX_YEAR_END) {
-        year1 = MAX_YEAR_END;
-        year0 = year1 - MIN_YEAR_SPAN;
-      }
-      if (year0 < MIN_YEAR_START) {
-        year0 = MIN_YEAR_START;
-        year1 = year0 + MIN_YEAR_SPAN;
-      }
-    }
-  }
-
-  // Final boundary constraints
-  year0 = Math.max(MIN_YEAR_START, Math.min(MAX_YEAR_END - MIN_YEAR_SPAN, year0));
-  year1 = Math.min(MAX_YEAR_END, Math.max(MIN_YEAR_START + MIN_YEAR_SPAN, year1));
-  return [year0, year1];
+  const { from, to } = clampYearWindow(
+    year0,
+    year1,
+    movingHandle === "start" ? "from" : movingHandle === "end" ? "to" : null
+  );
+  return [from, to];
 }
 
 // Refined instruction animation
@@ -622,6 +594,18 @@ $effect(() => {
     window.removeEventListener("mouseup", handleLabelMouseUp);
   };
 });
+
+// The data-point circles render above the brush (they need hover tooltips),
+// so a mousedown on one would never reach d3's listeners in the brush group.
+// Re-dispatch it onto the topmost brush element under the cursor instead.
+function forwardMousedownToBrush(event: MouseEvent) {
+  if (disableBrushing || !brushGroupElm) return;
+  const brushTarget = document
+    .elementsFromPoint(event.clientX, event.clientY)
+    .find((el) => brushGroupElm!.contains(el) && el !== brushGroupElm);
+  if (!brushTarget) return;
+  brushTarget.dispatchEvent(new MouseEvent("mousedown", event));
+}
 </script>
 
 <div class="relative h-full w-full" bind:this={svgBoundary}>
@@ -635,7 +619,7 @@ $effect(() => {
       <g bind:this={brushGroupElm} class="brush-group"></g>
 
       <!-- X-axis grid lines -->
-      <g class="x-grid grid">
+      <g class="x-grid grid" pointer-events="none">
         {#each data as point (point.year)}
           <line
             x1={xScale(point.year)}
@@ -650,7 +634,7 @@ $effect(() => {
       </g>
 
       <!-- Y-axis grid lines -->
-      <g class="y-grid grid">
+      <g class="y-grid grid" pointer-events="none">
         {#each yTicks as tick (tick.value)}
           <line
             x1={0}
@@ -673,10 +657,11 @@ $effect(() => {
         fill="none"
         stroke={gridLineColor}
         stroke-width="1.5"
+        pointer-events="none"
       />
 
       <!-- X-axis ticks and labels -->
-      <g class="x-axis-top">
+      <g class="x-axis-top" pointer-events="none">
         {#each xTicks as tick (tick.value)}
           <g transform="translate({tick.x}, 10)">
             <text
@@ -692,7 +677,7 @@ $effect(() => {
       </g>
 
       <!-- Y-axis ticks and labels -->
-      <g class="y-axis-left">
+      <g class="y-axis-left" pointer-events="none">
         {#each yTicks as tick (tick.value)}
           <g transform="translate(10, {tick.y})">
             <text
@@ -716,6 +701,7 @@ $effect(() => {
         stroke={lineColor}
         stroke-linejoin="round"
         stroke-linecap="round"
+        pointer-events="none"
       />
 
       <!-- Data points (rendered after brush so they're on top) -->
@@ -736,6 +722,7 @@ $effect(() => {
             onmouseleave={handleCircleMouseLeave}
             onfocus={() => handleCircleMouseEnter(point)}
             onblur={handleCircleMouseLeave}
+            onmousedown={forwardMousedownToBrush}
           />
         {/each}
       </g>

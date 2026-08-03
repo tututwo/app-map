@@ -1,4 +1,5 @@
 import type { MapDatum } from "$lib/dashboard/data";
+import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { scaleQuantize } from "d3-scale";
 
 export type MapMetricIndex = 0 | 1 | 2;
@@ -97,4 +98,33 @@ export function getMapMetricValue(
   metric: Pick<MapMetricDefinition, "colorKey">
 ): number | undefined {
   return datum?.[metric.colorKey];
+}
+
+export interface LegendRow {
+  readonly label: string;
+  readonly color: string;
+  readonly textColor: string;
+}
+
+/** Legend rows for a metric — the one place bucket labels meet colors. */
+export function createLegendRows(presentation: MapMetricPresentation): LegendRow[] {
+  return presentation.legendText.map((label, index) => ({
+    label,
+    color: presentation.colorRange[index],
+    textColor: getAccessibleTextColor(presentation.colorRange[index], "normal"),
+  }));
+}
+
+/**
+ * Which legend bucket a value falls into (0-based), or -1 when there is no
+ * value. Uses the same quantize thresholds the legend text was built from.
+ */
+export function quantileIndexOf(
+  presentation: MapMetricPresentation,
+  value: number | undefined
+): number {
+  if (value === undefined) return -1;
+  return scaleQuantize<number>()
+    .domain(presentation.colorDomain)
+    .range(presentation.colorRange.map((_, index) => index))(value);
 }

@@ -39,7 +39,6 @@ let isLoading = $state(false);
 let selectedCountyKey = $state<string | undefined>(undefined);
 let open = $state(false);
 
-$inspect(displayName);
 const displayedValue = $derived(open ? searchValue : displayName || "");
 const debouncedSearchValue = new Debounced(() => searchValue, 1000);
 $effect(async () => {

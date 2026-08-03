@@ -1,21 +1,9 @@
-import { error, json, type RequestHandler } from "@sveltejs/kit";
-import { readSideMetric } from "$lib/server/data/side-metric-data";
+import { NATIONAL_GEOID } from "$lib/domain/countyGeoid";
+import { readSideMetric } from "$lib/server/data/by-geoid";
+import { createByGeoidEndpoint } from "$lib/server/geoid-endpoint";
 
-export const GET: RequestHandler = async ({ url }) => {
-  const geoid = url.searchParams.get("geoid") ?? "00000";
-
-  if (!/^\d{5}$/.test(geoid)) {
-    throw error(400, "Invalid geoid");
-  }
-
-  if (geoid === "00000") {
-    return json({ geoid });
-  }
-
-  const row = await readSideMetric(geoid);
-  if (!row) {
-    throw error(404, "Data not found");
-  }
-
-  return json(row);
-};
+// The side-metric dataset publishes no national values; the sentinel gets an
+// explicit empty response instead of a county row.
+export const GET = createByGeoidEndpoint(readSideMetric, {
+  national: () => ({ geoid: NATIONAL_GEOID }),
+});

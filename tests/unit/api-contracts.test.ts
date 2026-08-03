@@ -92,12 +92,12 @@ describe("current dashboard endpoint contracts", () => {
       });
     });
 
-    it("accepts a five-year inclusive span before reporting absent data", async () => {
+    it("rejects a window below the generated minimum gap", async () => {
       await expectHttpError(
         getMapData,
         "/api/map_data?from=2001&to=2005",
-        404,
-        "Data not available for year range 2001-2005"
+        400,
+        "Year range must span at least 6 calendar years"
       );
     });
 
@@ -106,7 +106,7 @@ describe("current dashboard endpoint contracts", () => {
         getMapData,
         "/api/map_data?from=2001&to=2004",
         400,
-        "Minimum 5-year span required"
+        "Year range must span at least 6 calendar years"
       );
     });
 
@@ -128,12 +128,14 @@ describe("current dashboard endpoint contracts", () => {
       );
     });
 
-    it("reports a valid but absent range", async () => {
+    it("rejects the formerly accepted five-year inclusive window", async () => {
+      // Legal windows can never be absent: the prebuild asserts the generated
+      // set is exactly the algebra the domain module validates against.
       await expectHttpError(
         getMapData,
         "/api/map_data?from=2002&to=2006",
-        404,
-        "Data not available for year range 2002-2006"
+        400,
+        "Year range must span at least 6 calendar years"
       );
     });
 
@@ -295,7 +297,7 @@ describe("current dashboard endpoint contracts", () => {
         getSideMetricData,
         "/api/side_metric_data?geoid=99999",
         404,
-        "Data not found"
+        "No data found for geoid 99999"
       );
     });
   });

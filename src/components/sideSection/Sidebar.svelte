@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Download, FileChartColumnIncreasing } from "lucide-svelte";
+import { dashboardSearch } from "$lib/dashboard/presentation";
 import SocialShare from "$components/sideSection/socialShare.svelte";
 
 let { from, to, geoid, children }: { from: number; to: number; geoid: string; children: any } =
@@ -46,7 +47,7 @@ let { from, to, geoid, children }: { from: number; to: number; geoid: string; ch
         <SocialShare />
         <a
           class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
-          href={`/PDF?from=${from ?? ""}&to=${to ?? ""}&geoid=${geoid ?? "00000"}`}
+          href={`/PDF?${dashboardSearch({ from, to, geoid })}`}
           target="_blank"
         >
           <FileChartColumnIncreasing size={24} strokeWidth={1.5} color="white" />
@@ -54,7 +55,7 @@ let { from, to, geoid, children }: { from: number; to: number; geoid: string; ch
         </a>
         <a
           class="flex w-full items-center gap-3 font-light opacity-90 transition-opacity hover:opacity-100"
-          href={`/api/download_data?from=${from ?? ""}&to=${to ?? ""}&geoid=${geoid ?? "00000"}`}
+          href={`/api/download_data?${dashboardSearch({ from, to, geoid })}`}
           target="_blank"
         >
           <Download size={24} strokeWidth={1.5} color="white" />

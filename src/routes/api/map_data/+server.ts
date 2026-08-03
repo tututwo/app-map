@@ -1,43 +1,16 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
+import { yearWindowViolation } from "$lib/domain/yearWindow";
 import { DASHBOARD_CACHE_CONTROL } from "$lib/server/data/compressed-asset";
 import { readMapRange } from "$lib/server/data/map-data";
 
-export interface CountyData {
+interface CountyData {
   geoid: string;
   name: string;
   closure: number;
   closure_rate_per_10000: number;
   persistence: number;
   reopening: number;
-}
-
-function validateYearRange(from: number, to: number): { valid: boolean; error?: string } {
-  // Check if years are within valid range
-  if (from < 2001 || from > 2021 || to < 2001 || to > 2021) {
-    return {
-      valid: false,
-      error: "Year range must be within 2001-2021",
-    };
-  }
-
-  // Check if 'from' is before 'to'
-  if (from > to) {
-    return {
-      valid: false,
-      error: "Start year must be before or equal to end year",
-    };
-  }
-
-  // Check minimum 5-year span
-  if (to - from + 1 < 5) {
-    return {
-      valid: false,
-      error: "Minimum 5-year span required",
-    };
-  }
-
-  return { valid: true };
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -55,14 +28,9 @@ export const GET: RequestHandler = async ({ url }) => {
     const from = parseInt(fromParam);
     const to = parseInt(toParam);
 
-    if (isNaN(from) || isNaN(to)) {
-      throw error(400, "from and to must be valid integers");
-    }
-
-    // Validate year range
-    const validation = validateYearRange(from, to);
-    if (!validation.valid) {
-      throw error(400, validation.error!);
+    const violation = yearWindowViolation(from, to);
+    if (violation) {
+      throw error(400, violation);
     }
 
     const dataText = await readMapRange(`${from}-${to}`);

@@ -13,6 +13,7 @@ import {
 import { DeckGLOverlay } from "@svelte-maplibre-gl/deckgl";
 
 import Tooltip from "$components/chart/Tooltip.svelte";
+import { NATIONAL_GEOID, isNationalGeoid } from "$lib/domain/countyGeoid";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
 import type { MapDatum } from "$lib/dashboard/data";
@@ -95,7 +96,7 @@ let {
   selectedMapColorDomain = [],
   selectedMapColorRange = ["#FEDFF0", "#E9A9CC", "#D476AA", "#C14288", "#B01169"],
   data = [],
-  geoid = $bindable("00000"),
+  geoid = $bindable(NATIONAL_GEOID),
   displayName = $bindable<string | null>(null),
   shouldDisableGeolocatorTracking = $bindable(false),
   captureState = $bindable<MapCaptureState>(initialMapCaptureState()),
@@ -104,7 +105,7 @@ let {
   quantileHighlightEnabled = false,
 }: Props = $props();
 
-let isAtUSView = $derived(geoid === "00000");
+let isAtUSView = $derived(isNationalGeoid(geoid));
 
 // --- Map State (Source of Truth) ---
 let mapInstance = $state<MapLibreInstance | undefined>(undefined);
@@ -446,7 +447,7 @@ $effect(() => {
 
   if (!mapAssetsReady || !mapInstance) return;
 
-  if (selectedGeoid !== "00000" && selectedCountyCamera) {
+  if (!isNationalGeoid(selectedGeoid) && selectedCountyCamera) {
     flyToCounty(selectedCountyCamera);
   } else {
     flyToUS();
@@ -556,7 +557,7 @@ async function handleGeolocate(event: GeolocationPosition) {
         class="flex! size-[29px] items-center justify-center rounded-md"
         style="background-image: url(https://static.thenounproject.com/png/619932-200.png); background-size: 24px; background-position: center; background-repeat: no-repeat;"
         onclick={() => {
-          selectCounty("00000", "All locations");
+          selectCounty(NATIONAL_GEOID, "All locations");
         }}
       ></button>
     </CustomControl>

@@ -1,5 +1,6 @@
 <script lang="ts">
 import type { MapDatum } from "$lib/dashboard/data";
+import { NATIONAL_GEOID } from "$lib/domain/countyGeoid";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import { onMount } from "svelte";
 
@@ -24,7 +25,7 @@ let {
   selectedMapColorDomain,
   selectedMapColorRange,
   data,
-  geoid = $bindable("00000"),
+  geoid = $bindable(NATIONAL_GEOID),
   displayName = $bindable<string | null>(null),
   shouldDisableGeolocatorTracking = $bindable(false),
   captureState = $bindable<MapCaptureState>(initialMapCaptureState()),

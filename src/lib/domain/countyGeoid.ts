@@ -1,3 +1,10 @@
+/** Sentinel geoid for the national aggregate ("all locations"). */
+export const NATIONAL_GEOID = "00000";
+
+export function isNationalGeoid(geoid: string): boolean {
+  return geoid === NATIONAL_GEOID;
+}
+
 const COUNTY_DISPLAY_ALIASES: Readonly<Record<string, string>> = {
   "South Central Connecticut Planning Region": "New Haven County",
 };

@@ -37,31 +37,33 @@ describe("parseDashboardParams", () => {
     });
   });
 
-  test("uses per-parameter defaults for years outside 2001 through 2021", () => {
+  test("clamps years outside the data bounds onto the nearest legal window", () => {
     expect(parseDashboardParams(new URL("https://example.test/?from=2000&to=2012"))).toEqual({
-      from: 2003,
+      from: 2001,
       to: 2012,
       geoid: "00000",
     });
     expect(parseDashboardParams(new URL("https://example.test/?from=2004&to=2022"))).toEqual({
       from: 2004,
-      to: 2011,
+      to: 2021,
       geoid: "00000",
     });
   });
 
-  test("accepts a five-calendar-year inclusive range", () => {
+  test("widens a window below the generated minimum gap onto the nearest legal one", () => {
     expect(parseDashboardParams(new URL("https://example.test/?from=2001&to=2005"))).toEqual({
       from: 2001,
-      to: 2005,
+      to: 2006,
       geoid: "00000",
     });
-  });
-
-  test("uses the default range for fewer than five calendar years", () => {
     expect(parseDashboardParams(new URL("https://example.test/?from=2001&to=2004"))).toEqual({
-      from: 2003,
-      to: 2011,
+      from: 2001,
+      to: 2006,
+      geoid: "00000",
+    });
+    expect(parseDashboardParams(new URL("https://example.test/?from=2010&to=2012"))).toEqual({
+      from: 2008,
+      to: 2013,
       geoid: "00000",
     });
   });

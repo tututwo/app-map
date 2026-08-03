@@ -11,6 +11,7 @@
 -->
 <script lang="ts">
 import { resolveRoute } from "$app/paths";
+import { isNationalGeoid } from "$lib/domain/countyGeoid";
 import { tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
 
@@ -20,20 +21,20 @@ import Figure from "$components/chart/Figure.svelte";
 
 import LineChartBrush from "$components/lineChartBrush/LineChartBrush.svelte";
 
-import PercentageBar from "$components/sideSection/percentageBar.svelte";
+import SideMetricsPanel from "$components/sideSection/SideMetricsPanel.svelte";
 import DataSection from "$components/pdf/PDFSection.svelte";
 
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import {
+  createLegendRows,
   createMapMetricPresentations,
   getMapMetricValue,
   mapMetricDefinitions,
+  quantileIndexOf,
 } from "$lib/config/mapMetrics";
+import { countyDisplayName, dashboardSearch } from "$lib/dashboard/presentation";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
-import { getAccessibleTextColor } from "$lib/utils/accessibleTextColor";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
-
-import { scaleQuantize } from "d3-scale";
 // State management for PDF export
 let mainContent = $state<HTMLElement | null>(null);
 let isExporting = $state(false);
@@ -56,9 +57,6 @@ let visibleExportError = $derived(
   exportError ?? (mapPreparationError ? `Map rendering failed: ${mapPreparationError}` : null)
 );
 
-// --- ADD THIS ---
-let pdfOverrideWidths = $state<Record<string, number>>({});
-
 let { data }: { data: PageData } = $props();
 let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
 let geoid = $derived(data.params.geoid);
@@ -66,19 +64,7 @@ let mapData = $derived(data.results.map?.ok ? data.results.map.data : []);
 let lineChartData = $derived(data.results.line?.ok ? data.results.line.data : []);
 const emptyMapColorDomain = [0, 1] as const;
 let mapMetricPresentations = $derived(createMapMetricPresentations(mapData));
-let countyName = $derived(
-  geoid === "00000"
-    ? "the United States"
-    : (mapData.find((county) => county.geoid === geoid)?.name ?? geoid)
-);
-
-const n = 5;
-
-// build a quantize scale that clamps out-of-range values
-const whichQuantile = (domain: readonly [number, number]) =>
-  scaleQuantize<number, number>()
-    .domain(domain)
-    .range(Array.from({ length: n }, (_, i) => i + 1)); // [1,2,3,4,5]
+let countyName = $derived(countyDisplayName(mapData, geoid) ?? "the United States");
 
 const lineChartMargin = { top: 30, right: 10, bottom: 20, left: 40 };
 
@@ -87,22 +73,18 @@ let dataRanges = $derived.by(() => {
     const presentation = mapMetricPresentations[metricIndex];
     if (!presentation) return [];
 
-    const quantize = whichQuantile(presentation.colorDomain);
+    const value = getMapMetricValue(
+      mapData.find((d) => d.geoid === geoid),
+      definition
+    );
+    const quantileIndex = quantileIndexOf(presentation, value);
 
-    // find the raw value (could be 0, undefined, etc.)
-    const rec = mapData.find((d) => d.geoid === geoid);
-    const value = getMapMetricValue(rec, definition);
-
-    // 1..n → subtract 1 for a 0-based index
-    const quantileIndex = value === undefined ? -1 : quantize(value) - 1;
-
-    return presentation.legendText.map((range, i) => ({
+    return createLegendRows(presentation).map((row, i) => ({
       // only attach popupValue on the matching bucket
       ...(value !== undefined && i === quantileIndex && { popupValue: value.toFixed(2) }),
-
-      range,
-      color: presentation.colorRange[i],
-      textColor: getAccessibleTextColor(presentation.colorRange[i], "normal"),
+      range: row.label,
+      color: row.color,
+      textColor: row.textColor,
     }));
   });
 });
@@ -196,7 +178,7 @@ async function exportToPDF() {
 }
 
 let selectedSideMetricData = $derived(
-  geoid !== "00000" && data.results.side?.ok ? data.results.side.data : undefined
+  !isNationalGeoid(geoid) && data.results.side?.ok ? data.results.side.data : undefined
 );
 let statistics = $derived(
   createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs)
@@ -258,7 +240,7 @@ let demographicStatistics = $derived(
         </form>
       </div>
       <Button.Root
-        href={`${resolveRoute("/", {})}?from=${yearRange[0]}&to=${yearRange[1]}&geoid=${geoid}`}
+        href={`${resolveRoute("/", {})}?${dashboardSearch({ from: yearRange[0], to: yearRange[1], geoid })}`}
         class="cursor-pointer text-gray-500 hover:text-gray-700"
       >
         <X class="h-5 w-5" />
@@ -319,7 +301,6 @@ let demographicStatistics = $derived(
         <div class="space-y-8 lg:col-span-2">
           <DataSection
             title="Total number of closed church"
-            mapPlaceholderText="Map"
             mapBorderColor="border-blue-100"
             legendData={dataRanges[0]}
             description={introText}
@@ -332,7 +313,6 @@ let demographicStatistics = $derived(
           />
           <DataSection
             title="Rate of closed churches per 10,000 population"
-            mapPlaceholderText="Map"
             legendData={dataRanges[1]}
             description={introText}
             mapColorKey={mapMetricDefinitions[1].colorKey}
@@ -344,7 +324,6 @@ let demographicStatistics = $derived(
           />
           <DataSection
             title="Persistence of open churches"
-            mapPlaceholderText="Map"
             legendData={dataRanges[2]}
             description={introText}
             mapColorKey={mapMetricDefinitions[2].colorKey}
@@ -361,46 +340,7 @@ let demographicStatistics = $derived(
             <!-- Scrollable container -->
             <div class="absolute inset-0 overflow-y-auto pr-1">
               <!-- Social determinants -->
-              <h4 class="text-lg font-semibold">Social Determinants</h4>
-              {#if statistics.length === 0 && demographicStatistics.length === 0}
-                <p class="mt-2 text-sm text-gray-600">
-                  Community and demographic data are unavailable for this location.
-                </p>
-              {:else}
-                {#each statistics as stat (stat.id)}
-                  <PercentageBar
-                    title={stat.title}
-                    currentValueDisplay={stat.currentValueDisplay}
-                    currentValue={stat.currentValue}
-                    minValue={stat.minValue}
-                    maxValue={stat.maxValue}
-                    minLabel={stat.minLabel}
-                    maxLabel={stat.maxLabel}
-                    averageValue={stat.averageValue}
-                    averageLabel={stat.averageLabel}
-                    uniqueIdBase={stat.id}
-                    overrideWidth={pdfOverrideWidths[stat.id]}
-                    forceStatic={isExporting}
-                  />
-                {/each}
-                <h4 class="mt-4 text-lg font-semibold">Demographics</h4>
-                {#each demographicStatistics as stat (stat.id)}
-                  <PercentageBar
-                    title={stat.title}
-                    currentValueDisplay={stat.currentValueDisplay}
-                    currentValue={stat.currentValue}
-                    minValue={stat.minValue}
-                    maxValue={stat.maxValue}
-                    minLabel={stat.minLabel}
-                    maxLabel={stat.maxLabel}
-                    averageValue={stat.averageValue}
-                    averageLabel={stat.averageLabel}
-                    uniqueIdBase={stat.id}
-                    overrideWidth={pdfOverrideWidths[stat.id]}
-                    forceStatic={isExporting}
-                  />
-                {/each}
-              {/if}
+              <SideMetricsPanel {statistics} {demographicStatistics} forceStatic={isExporting} />
             </div>
           </div>
         </div>

@@ -1,7 +1,12 @@
 import { error, type RequestHandler } from "@sveltejs/kit";
 import { socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
-import { isConnecticutPlanningRegionGeoid, normalizeCountyGeoid } from "$lib/domain/countyGeoid";
-import { readSideMetric } from "$lib/server/data/side-metric-data";
+import {
+  NATIONAL_GEOID,
+  isConnecticutPlanningRegionGeoid,
+  isNationalGeoid,
+  normalizeCountyGeoid,
+} from "$lib/domain/countyGeoid";
+import { readSideMetric } from "$lib/server/data/by-geoid";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { csvFormat } from "d3";
 import JSZip from "jszip";
@@ -11,7 +16,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     // Parse query parameters
     const fromParam = url.searchParams.get("from");
     const toParam = url.searchParams.get("to");
-    const requestedGeoid = url.searchParams.get("geoid") ?? "00000";
+    const requestedGeoid = url.searchParams.get("geoid") ?? NATIONAL_GEOID;
     const geoid = normalizeCountyGeoid(requestedGeoid);
 
     // Validate required parameters
@@ -67,10 +72,9 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     ]);
 
     const selectedSideMetricData = await readSideMetric(geoid);
-    const statistics =
-      geoid === "00000"
-        ? []
-        : createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs);
+    const statistics = isNationalGeoid(geoid)
+      ? []
+      : createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs);
 
     const zip = new JSZip();
 
