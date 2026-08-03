@@ -1,3 +1,7 @@
+import { browser } from "$app/environment";
+import { goto } from "$app/navigation";
+import { page } from "$app/state";
+
 export type DashboardParamsUpdate = {
   from?: number;
   to?: number;
@@ -53,4 +57,16 @@ export function createDashboardParamsWriter({
       if (pendingNavigation?.id === id) pendingNavigation = undefined;
     });
   };
+}
+
+// Lazily initialized only in the browser, so the pending-navigation closure is never shared by SSR requests.
+let clientWriter: DashboardParamsWriter | undefined;
+
+export function setDashboardParams(update: DashboardParamsUpdate): Promise<void> {
+  if (!browser) {
+    throw new Error("Dashboard parameters can only be changed in the browser");
+  }
+
+  clientWriter ??= createDashboardParamsWriter({ getCurrentUrl: () => page.url, goto });
+  return clientWriter(update);
 }

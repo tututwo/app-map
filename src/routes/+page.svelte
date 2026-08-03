@@ -34,7 +34,7 @@ import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/c
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { createLastGood } from "$lib/dashboard/last-good.svelte";
 import { countyDisplayName } from "$lib/dashboard/presentation";
-import { setDashboardParams } from "$lib/dashboard/navigate-app";
+import { setDashboardParams } from "$lib/dashboard/navigate";
 import type { LineDatum, MapDatum, StackedDatum } from "$lib/dashboard/data";
 import type { PageData } from "./$types";
 
@@ -180,7 +180,7 @@ function dismissLoadingError() {
         <p class="mt-2 text-right text-sm text-gray-500">Data source: research center data port</p>
       </header>
       <div class="w-fullitems-center flex h-[calc(20vh-50px)] justify-center">
-        <Figure exclude="">
+        <Figure>
           <LineChartBrush
             key="close"
             margin={lineChartMargin}
@@ -237,15 +237,13 @@ function dismissLoadingError() {
                       style={metric.value === selectedMapMetric ? "font-weight:800" : ""}
                     >
                       {metric.label}
-                      {#if metric.description}
-                        <Tooltip description={metric.description} class="-ml-1 h-4 w-4">
-                          <span
-                            class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
-                          >
-                            <CircleHelp strokeWidth={1.5} color="white" />
-                          </span>
-                        </Tooltip>
-                      {/if}
+                      <Tooltip description={metric.label} class="-ml-1 h-4 w-4">
+                        <span
+                          class="bg-yale-blue inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full text-xs"
+                        >
+                          <CircleHelp strokeWidth={1.5} color="white" />
+                        </span>
+                      </Tooltip>
                     </Label>
                   </div>
                 {/each}

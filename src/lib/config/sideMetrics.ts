@@ -4,12 +4,11 @@ export interface SideMetricFieldConfig {
   readonly id: string;
   readonly field: string;
   readonly title: string;
-  readonly type?: SideMetricValueType;
-  readonly range?: readonly [number, number];
-  readonly labels?: readonly [string, string];
+  readonly type: SideMetricValueType;
+  readonly range: readonly [number, number];
+  readonly labels: readonly [string, string];
   readonly average?: number;
   readonly averageLabel?: string;
-  readonly transform?: (value: unknown) => number;
 }
 
 // These are unweighted arithmetic means of each finite field across the 3,221

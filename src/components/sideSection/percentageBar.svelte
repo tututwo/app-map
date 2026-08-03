@@ -1,7 +1,5 @@
 <script lang="ts">
-import type { Snippet } from "svelte";
 import { Tween, prefersReducedMotion } from "svelte/motion";
-import { untrack } from "svelte";
 
 interface Props {
   title?: string;
@@ -14,9 +12,6 @@ interface Props {
   averageValue?: number;
   averageLabel?: string;
   uniqueIdBase?: string;
-  description?: string;
-  additionalInfo?: Snippet;
-  animationDuration?: number;
   forceStatic?: boolean;
 }
 
@@ -31,17 +26,11 @@ let {
   averageValue = undefined,
   averageLabel = undefined,
   uniqueIdBase = "stat",
-  description = undefined,
-  additionalInfo = undefined,
-  animationDuration = 500,
   forceStatic = false,
 }: Props = $props();
 
-// Use a simple const instead of $state for static values
-const titleId = `${uniqueIdBase}-title-${crypto.randomUUID().slice(0, 8)}`;
-const descriptionId = description
-  ? `${uniqueIdBase}-desc-${crypto.randomUUID().slice(0, 8)}`
-  : undefined;
+const animationDuration = 500;
+const titleId = `${uniqueIdBase}-title`;
 
 // Calculate the actual percentage values
 const valuePercent = $derived(
@@ -100,20 +89,13 @@ const valuePercentRounded = $derived(Math.round(animatedValuePercent.current));
 const averagePercentRounded = $derived(
   animatedAveragePercent ? Math.round(animatedAveragePercent.current) : undefined
 );
-
-// This effect is removed as it's a duplicate of the one above
 </script>
 
-<article class="w-full" role="region" aria-labelledby={titleId} aria-describedby={descriptionId}>
+<article class="w-full" role="region" aria-labelledby={titleId}>
   <header class="">
     <h2 id={titleId} class="">
       {title}
     </h2>
-    {#if description}
-      <p id={descriptionId} class="mt-1 text-sm text-gray-600">
-        {description}
-      </p>
-    {/if}
   </header>
 
   <div class="flex items-center gap-x-2">
@@ -201,12 +183,6 @@ const averagePercentRounded = $derived(
       </div>
     </div>
   </div>
-
-  {#if additionalInfo}
-    <div class="mt-3 text-sm text-gray-600">
-      {@render additionalInfo()}
-    </div>
-  {/if}
 
   <hr class="my-2 border-t border-gray-200" />
 </article>

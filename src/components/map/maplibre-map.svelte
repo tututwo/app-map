@@ -1,7 +1,8 @@
 <script lang="ts">
 import { cubicOut } from "svelte/easing";
 import { onMount } from "svelte";
-import * as d3 from "d3";
+import { scaleQuantize } from "d3-scale";
+import { geoContains } from "d3-geo";
 
 import {
   CustomControl,
@@ -218,17 +219,14 @@ const geoData = $derived.by<CountyFeatureCollection>(() => {
 
 const colorScale = $derived.by(() => {
   if (!selectedMapColorKey || data.length === 0) return () => "#ccc";
-  return d3.scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
+  return scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
 });
 
 // Calculate which values fall into the selected quantile
 const quantileThresholds = $derived.by(() => {
   if (!selectedMapColorKey || selectedQuantile < 0 || !quantileHighlightEnabled) return null;
 
-  const scale = d3
-    .scaleQuantize<string>()
-    .domain(selectedMapColorDomain)
-    .range(selectedMapColorRange);
+  const scale = scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
 
   const thresholds = scale.thresholds();
   const min = selectedMapColorDomain[0];
@@ -432,7 +430,7 @@ function handleMouseLeave() {
 
 function handleMapClick(event: MapMouseEvent) {
   const clickedCounty = geoData.features.find((feature) =>
-    d3.geoContains(feature, [event.lngLat.lng, event.lngLat.lat])
+    geoContains(feature, [event.lngLat.lng, event.lngLat.lat])
   );
   if (!clickedCounty?.id) return;
 
@@ -588,7 +586,6 @@ async function handleGeolocate(event: GeolocationPosition) {
     {#if hoveredCountyData}
       <MapTooltipCard
         data={hoveredCountyData}
-        autoGenerate={true}
         excludeFields={["geoid", "name", "reopening"]}
         {selectedMapColorKey}
         selectedMapColorKeyBackgroundColor={selectedMapColorRange[4]}

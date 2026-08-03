@@ -1,16 +1,11 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
-import type { TransitionConfig } from "svelte/transition";
 import { fade } from "svelte/transition";
 import { Tween } from "svelte/motion";
 import { cubicOut } from "svelte/easing";
-import { cn } from "$lib/utils.js";
 
 type Side = "top" | "bottom" | "left" | "right";
 type Align = "start" | "center" | "end";
-
-// A helper type for transition functions
-type TransitionFn = (node: Element, params?: any) => TransitionConfig;
 
 interface TooltipProps {
   x: number;
@@ -22,17 +17,7 @@ interface TooltipProps {
   align?: Align;
   alignOffset?: number;
   showArrow?: boolean;
-  arrowPadding?: number;
-  collisionPadding?: number;
-  inTransition?: TransitionFn;
-  inTransitionParams?: any;
-  outTransition?: TransitionFn;
-  outTransitionParams?: any;
   children?: Snippet;
-  class?: string;
-  arrowClass?: string;
-  description?: string;
-  ref?: HTMLDivElement | null;
 }
 
 let {
@@ -45,20 +30,11 @@ let {
   align = "center",
   alignOffset = 0,
   showArrow = false,
-  arrowPadding = 8,
-  collisionPadding = 8,
-  // Provide safe defaults for transitions to prevent errors
-  inTransition = fade,
-  inTransitionParams = { duration: 150 },
-  outTransition = fade,
-  outTransitionParams = { duration: 100 },
   children,
-  class: className,
-  arrowClass,
-  description,
-  ref = $bindable(null),
-  ...restProps
 }: TooltipProps = $props();
+
+const arrowPadding = 8;
+const collisionPadding = 8;
 
 let tooltipElement = $state<HTMLDivElement | null>(null);
 let actualSide = $state<Side>(preferredSide);
@@ -77,12 +53,6 @@ function getViewportBounds() {
     height: window.innerHeight,
   };
 }
-
-$effect(() => {
-  if (tooltipElement) {
-    ref = tooltipElement;
-  }
-});
 
 $effect(() => {
   if (!open || !tooltipElement || !boundary) return;
@@ -241,11 +211,15 @@ $effect(() => {
   }
 });
 
-// Default tooltip styles that can be overridden
-const defaultTooltipClass =
+const tooltipClass =
   "pointer-events-none fixed z-50 border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-md dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50";
 
-const defaultArrowClass = "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950";
+const arrowClass =
+  "absolute -z-10 size-2.5 rotate-45 border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 " +
+  "data-[side=bottom]:-top-[6px] data-[side=bottom]:border-t-0 data-[side=bottom]:border-l-0 " +
+  "data-[side=left]:-right-[6px] data-[side=left]:border-b-0 data-[side=left]:border-l-0 " +
+  "data-[side=right]:-left-[6px] data-[side=right]:border-t-0 data-[side=right]:border-r-0 " +
+  "data-[side=top]:-bottom-[6px] data-[side=top]:border-r-0 data-[side=top]:border-b-0";
 </script>
 
 {#if open}
@@ -256,25 +230,16 @@ const defaultArrowClass = "border-gray-200 bg-white dark:border-gray-800 dark:bg
     data-side={actualSide}
     data-align={actualAlign}
     data-slot="tooltip"
-    class={cn(defaultTooltipClass, className)}
+    class={tooltipClass}
     style="left: {tooltipPos.x.current}px; top: {tooltipPos.y.current}px;"
-    in:inTransition={inTransitionParams}
-    out:outTransition={outTransitionParams}
-    {...restProps}
+    in:fade={{ duration: 150 }}
+    out:fade={{ duration: 100 }}
   >
     {@render children?.()}
     {#if showArrow}
       <div
         data-slot="tooltip-arrow"
-        class={cn(
-          "absolute -z-10 size-2.5 rotate-45 border",
-          "data-[side=bottom]:-top-[6px] data-[side=bottom]:border-t-0 data-[side=bottom]:border-l-0",
-          "data-[side=left]:-right-[6px] data-[side=left]:border-b-0 data-[side=left]:border-l-0",
-          "data-[side=right]:-left-[6px] data-[side=right]:border-t-0 data-[side=right]:border-r-0",
-          "data-[side=top]:-bottom-[6px] data-[side=top]:border-r-0 data-[side=top]:border-b-0",
-          defaultArrowClass,
-          arrowClass
-        )}
+        class={arrowClass}
         style={arrowStyle}
         data-side={actualSide}
       ></div>

@@ -4,10 +4,7 @@ import { normalizeCountyGeoid, resolveCountyDisplay } from "$lib/domain/countyGe
 /**
  * @typedef {{
  *   county?: string;
- *   administrative_area_level_2?: string;
- *   state_district?: string;
  *   state?: string;
- *   administrative_area_level_1?: string;
  * }} NominatimAddress
  */
 
@@ -43,34 +40,15 @@ let currentAbortController = null;
 /** @type {Map<string, string>} */
 const GEOID_MAP = new Map();
 
-// Initialize the GEOID map from CSV data
-
+// Initialize the GEOID map from CSV data (dsv plugin yields one object per row,
+// first column is "County, State", second is the GEOID)
 counties_geoid.forEach((row) => {
-  // Handle different CSV formats - could be array or object
-  let countyState, geoid;
-
-  if (Array.isArray(row)) {
-    countyState = row[0];
-    geoid = row[1];
-  } else if (typeof row === "object") {
-    // Object format (if using d3-dsv or similar parser)
-    const keys = Object.keys(row);
-    countyState = row[keys[0]];
-    geoid = row[keys[1]];
-  }
+  const keys = Object.keys(row);
+  const countyState = row[keys[0]];
+  const geoid = row[keys[1]];
 
   if (countyState && geoid) {
-    // Remove quotes if present
-    const cleanKey = countyState.replace(/^"|"$/g, "").trim();
-    const cleanGeoid = geoid.toString().trim();
-
-    // Store the cleaned key
-    GEOID_MAP.set(cleanKey, cleanGeoid);
-
-    // Debug: log CT entries
-    // if (cleanKey.includes("Connecticut") && index < 20) {
-    //   console.log(`Stored: "${cleanKey}" -> "${cleanGeoid}"`);
-    // }
+    GEOID_MAP.set(countyState.replace(/^"|"$/g, "").trim(), geoid.toString().trim());
   }
 });
 
@@ -209,11 +187,8 @@ export async function searchCounties(query) {
       let state = null;
 
       if (location.address) {
-        countyName =
-          location.address.county ||
-          location.address.administrative_area_level_2 ||
-          location.address.state_district;
-        state = location.address.state || location.address.administrative_area_level_1 || null;
+        countyName = location.address.county;
+        state = location.address.state || null;
       }
 
       // If we don't have county info, try reverse geocoding
@@ -242,8 +217,7 @@ export async function searchCounties(query) {
 
         const reverseData = /** @type {NominatimLocation} */ (await reverseResponse.json());
         if (reverseData.address) {
-          countyName =
-            reverseData.address.county || reverseData.address.administrative_area_level_2;
+          countyName = reverseData.address.county;
           state = reverseData.address.state || null;
         }
       }
@@ -313,11 +287,8 @@ export async function reverseGeocodeCounty(lat, lon) {
     const reverseData = /** @type {NominatimLocation} */ (await reverseResponse.json());
 
     if (reverseData.address) {
-      const countyName =
-        reverseData.address.county ||
-        reverseData.address.administrative_area_level_2 ||
-        reverseData.address.state_district;
-      const state = reverseData.address.state || reverseData.address.administrative_area_level_1;
+      const countyName = reverseData.address.county;
+      const state = reverseData.address.state;
 
       if (countyName && state) {
         // Look up GEOID using the original county name

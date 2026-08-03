@@ -1,17 +1,9 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
+import type { MapDatum } from "$lib/dashboard/data";
 import { yearWindowViolation } from "$lib/domain/yearWindow";
 import { DASHBOARD_CACHE_CONTROL } from "$lib/server/data/compressed-asset";
 import { readMapRange } from "$lib/server/data/map-data";
-
-interface CountyData {
-  geoid: string;
-  name: string;
-  closure: number;
-  closure_rate_per_10000: number;
-  persistence: number;
-  reopening: number;
-}
 
 export const GET: RequestHandler = async ({ url }) => {
   try {
@@ -40,7 +32,7 @@ export const GET: RequestHandler = async ({ url }) => {
     }
 
     if (geoidParam) {
-      const county = (JSON.parse(dataText) as CountyData[]).find(
+      const county = (JSON.parse(dataText) as MapDatum[]).find(
         (candidate) => candidate.geoid === geoidParam
       );
       if (!county) {

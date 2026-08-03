@@ -90,35 +90,3 @@ export function getAccessibleTextColor(backgroundColor, textSize = "normal") {
     return contrastWithWhite > contrastWithBlack ? "#FFFFFF" : "#000000";
   }
 }
-
-/**
- * Get detailed contrast information for debugging
- * @param {string} backgroundColor - Hex color string
- * @param {string} textSize - 'normal' or 'large'
- * @returns {object} Detailed contrast information
- */
-export function getContrastInfo(backgroundColor, textSize = "normal") {
-  const bgLuminance = getRelativeLuminance(backgroundColor);
-  const contrastWithWhite = getContrastRatio(1, bgLuminance);
-  const contrastWithBlack = getContrastRatio(bgLuminance, 0);
-  const requiredContrastAAA = textSize === "large" ? 4.5 : 7.0;
-  const requiredContrastAA = textSize === "large" ? 3.0 : 4.5;
-
-  const recommendedColor = getAccessibleTextColor(backgroundColor, textSize);
-  const recommendedContrast =
-    recommendedColor === "#FFFFFF" ? contrastWithWhite : contrastWithBlack;
-
-  return {
-    backgroundColor,
-    backgroundLuminance: bgLuminance.toFixed(4),
-    contrastWithWhite: contrastWithWhite.toFixed(2),
-    contrastWithBlack: contrastWithBlack.toFixed(2),
-    recommendedTextColor: recommendedColor,
-    recommendedContrast: recommendedContrast.toFixed(2),
-    meetsAAA: recommendedContrast >= requiredContrastAAA,
-    meetsAA: recommendedContrast >= requiredContrastAA,
-    whitePassesAAA: contrastWithWhite >= requiredContrastAAA,
-    blackPassesAAA: contrastWithBlack >= requiredContrastAAA,
-    textSize,
-  };
-}

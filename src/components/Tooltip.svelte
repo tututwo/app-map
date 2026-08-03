@@ -10,7 +10,6 @@ let {
 }>();
 
 let isVisible = $state(false);
-let tooltipElement: HTMLDivElement | null = $state(null);
 
 function showTooltip() {
   isVisible = true;
@@ -27,7 +26,6 @@ function hideTooltip() {
 
   {#if isVisible}
     <div
-      bind:this={tooltipElement}
       class="absolute z-50 mt-1 -ml-3 w-max max-w-xs rounded bg-gray-900 px-3 py-2 text-sm text-white shadow-lg"
       role="tooltip"
     >

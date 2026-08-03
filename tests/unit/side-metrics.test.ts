@@ -3,11 +3,7 @@ import { resolve } from "node:path";
 import { csvParse } from "d3";
 import { describe, expect, it } from "vitest";
 
-import {
-  demographicMetricConfigs,
-  socialDeterminantMetricConfigs,
-  type SideMetricFieldConfig,
-} from "$lib/config/sideMetrics";
+import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 
 describe("side-metric domain contract", () => {
@@ -191,37 +187,6 @@ describe("createSideMetricData", () => {
         maxLabel: "100%",
         averageValue: 28,
         averageLabel: "County average",
-      },
-    ]);
-  });
-
-  it("contains a throwing custom transform without losing other metrics", () => {
-    const configs: readonly SideMetricFieldConfig[] = [
-      {
-        id: "broken",
-        field: "broken",
-        title: "Broken",
-        transform: () => {
-          throw new Error("bad input");
-        },
-      },
-      {
-        id: "valid-zero",
-        field: "zero",
-        title: "Valid zero",
-      },
-    ];
-
-    expect(createSideMetricData({ broken: "1", zero: "0" }, configs)).toEqual([
-      {
-        id: "valid-zero",
-        title: "Valid zero",
-        currentValueDisplay: "0",
-        currentValue: 0,
-        minValue: 0,
-        maxValue: 100,
-        minLabel: "0",
-        maxLabel: "100",
       },
     ]);
   });

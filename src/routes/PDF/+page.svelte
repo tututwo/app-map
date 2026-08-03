@@ -281,7 +281,7 @@ let demographicStatistics = $derived(
       </h1>
 
       <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
-        <Figure exclude="">
+        <Figure>
           <LineChartBrush
             key="close"
             margin={lineChartMargin}
