@@ -13,7 +13,10 @@ type Props = {
   data?: MapDatum[];
   geoid?: string;
   displayName?: string | null;
-  shouldDisableGeolocatorTracking?: boolean;
+  geolocation?: {
+    begin(onAbort: () => void): AbortSignal;
+    commit(geoid: string, displayName: string, signal: AbortSignal): void;
+  };
   captureState?: MapCaptureState;
   hideControls?: boolean;
   selectedQuantile?: number;
@@ -27,7 +30,7 @@ let {
   data,
   geoid = $bindable(NATIONAL_GEOID),
   displayName = $bindable<string | null>(null),
-  shouldDisableGeolocatorTracking = $bindable(false),
+  geolocation,
   captureState = $bindable<MapCaptureState>(initialMapCaptureState()),
   hideControls,
   selectedQuantile,
@@ -70,7 +73,7 @@ onMount(() => {
     {data}
     bind:geoid
     bind:displayName
-    bind:shouldDisableGeolocatorTracking
+    {geolocation}
     bind:captureState
     {hideControls}
     {selectedQuantile}

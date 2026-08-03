@@ -18,6 +18,7 @@ import { NATIONAL_GEOID, isNationalGeoid } from "$lib/domain/countyGeoid";
 import MapTooltipCard from "./tooltipContent/mapTooltipCard.svelte";
 
 import type { MapDatum } from "$lib/dashboard/data";
+import { quantileIndexOf } from "$lib/config/mapMetrics";
 import { loadMapAssets, type CountyCameraLookup } from "$lib/map/static-assets";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import { toDeckGLColor } from "$lib/map/color";
@@ -78,6 +79,12 @@ onMount(() => {
   };
 });
 
+/** Seam to the page-owned County Selection for async geolocation selects. */
+type GeolocationSeam = {
+  begin(onAbort: () => void): AbortSignal;
+  commit(geoid: string, displayName: string, signal: AbortSignal): void;
+};
+
 type Props = {
   selectedMapColorKey?: string;
   selectedMapColorDomain?: readonly number[];
@@ -85,7 +92,7 @@ type Props = {
   data?: MapDatum[];
   geoid?: string;
   displayName?: string | null;
-  shouldDisableGeolocatorTracking?: boolean;
+  geolocation?: GeolocationSeam;
   captureState?: MapCaptureState;
   hideControls?: boolean;
   selectedQuantile?: number;
@@ -99,7 +106,7 @@ let {
   data = [],
   geoid = $bindable(NATIONAL_GEOID),
   displayName = $bindable<string | null>(null),
-  shouldDisableGeolocatorTracking = $bindable(false),
+  geolocation,
   captureState = $bindable<MapCaptureState>(initialMapCaptureState()),
   hideControls = false,
   selectedQuantile = -1,
@@ -222,24 +229,14 @@ const colorScale = $derived.by(() => {
   return scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
 });
 
-// Calculate which values fall into the selected quantile
-const quantileThresholds = $derived.by(() => {
-  if (!selectedMapColorKey || selectedQuantile < 0 || !quantileHighlightEnabled) return null;
-
-  const scale = scaleQuantize<string>().domain(selectedMapColorDomain).range(selectedMapColorRange);
-
-  const thresholds = scale.thresholds();
-  const min = selectedMapColorDomain[0];
-  const max = selectedMapColorDomain[1];
-
-  // Calculate the range for the selected quantile
-  if (selectedQuantile === 0) {
-    return [min, thresholds[0]];
-  } else if (selectedQuantile === thresholds.length) {
-    return [thresholds[thresholds.length - 1], max];
-  } else {
-    return [thresholds[selectedQuantile - 1], thresholds[selectedQuantile]];
-  }
+// The highlighted legend bucket, or null. Bucket membership is answered by
+// mapMetrics' quantileIndexOf — the same algebra the legend labels use.
+const highlightedQuantile = $derived(
+  selectedMapColorKey && quantileHighlightEnabled && selectedQuantile >= 0 ? selectedQuantile : null
+);
+const quantileColoring = $derived({
+  colorDomain: [selectedMapColorDomain[0] ?? 0, selectedMapColorDomain[1] ?? 1] as [number, number],
+  colorRange: selectedMapColorRange,
 });
 
 // --- Tooltip State (Derived State) ---
@@ -265,17 +262,13 @@ const highlightedFeature = $derived.by<CountyFeatureCollection>(() => {
 
 let wasSetByGeolocator = $state(false);
 let geolocateControl = $state<MapLibreGeolocateControl>();
-let geolocationSessionGeneration = 0;
-let activeGeolocationSession: number | null = null;
-let reverseGeocodeGeneration = 0;
-let geolocatorTargetGeoid: string | null = null;
-let observedGeoid = geoid;
+let geolocationSession: AbortSignal | null = null;
+let reverseGeocodeSequence = 0;
 
-function cancelGeolocationSelection() {
-  activeGeolocationSession = null;
-  geolocationSessionGeneration += 1;
-  reverseGeocodeGeneration += 1;
-  geolocatorTargetGeoid = null;
+/** Turn the MapLibre geolocate control off; fired when a newer selection aborts our intent. */
+function stopGeolocationTracking() {
+  geolocationSession = null;
+  reverseGeocodeSequence += 1;
   wasSetByGeolocator = false;
 
   let triggerCount = 0;
@@ -287,12 +280,9 @@ function cancelGeolocationSelection() {
     if (!geolocateControl.trigger()) break;
     triggerCount += 1;
   }
-
-  shouldDisableGeolocatorTracking = false;
 }
 
 function selectCounty(nextGeoid: string, nextDisplayName: string) {
-  cancelGeolocationSelection();
   geoid = nextGeoid;
   displayName = nextDisplayName;
 }
@@ -315,9 +305,9 @@ const baseLayer = $derived(
       let color: string = colorScale(value) as any;
 
       // Check if this county should be highlighted based on quantile selection
-      if (quantileThresholds && value !== undefined && value !== null) {
-        const [min, max] = quantileThresholds;
-        const isInSelectedQuantile = value >= min && value <= max;
+      if (highlightedQuantile !== null && value !== undefined && value !== null) {
+        const isInSelectedQuantile =
+          quantileIndexOf(quantileColoring, value) === highlightedQuantile;
 
         if (isInSelectedQuantile) {
           // Keep the original color for selected quantile
@@ -344,7 +334,8 @@ const baseLayer = $derived(
         selectedMapColorRange,
         selectedQuantile,
         quantileHighlightEnabled,
-        quantileThresholds,
+        highlightedQuantile,
+        quantileColoring,
       ],
     },
     transitions: {
@@ -452,38 +443,32 @@ $effect(() => {
   }
 });
 
-$effect(() => {
-  if (shouldDisableGeolocatorTracking) cancelGeolocationSelection();
-});
-
-$effect(() => {
-  const nextGeoid = geoid;
-  if (nextGeoid === observedGeoid) return;
-
-  observedGeoid = nextGeoid;
-  if (nextGeoid !== geolocatorTargetGeoid) {
-    cancelGeolocationSelection();
-  }
-});
-
 function handleGeolocationTrackingStart() {
-  activeGeolocationSession = ++geolocationSessionGeneration;
-  reverseGeocodeGeneration += 1;
+  if (!geolocation) return;
+
+  // Invalidate the old session before begin() aborts its intent, so the old
+  // onAbort wrapper does not turn the control we are just starting back off.
+  geolocationSession = null;
+  const signal = geolocation.begin(() => {
+    if (signal === geolocationSession) stopGeolocationTracking();
+  });
+  geolocationSession = signal;
+  reverseGeocodeSequence += 1;
 }
 
 function handleGeolocationTrackingEnd() {
   if (geolocateControl?._watchState === "OFF") {
-    activeGeolocationSession = null;
-    reverseGeocodeGeneration += 1;
+    geolocationSession = null;
+    reverseGeocodeSequence += 1;
     wasSetByGeolocator = false;
   }
 }
 
 async function handleGeolocate(event: GeolocationPosition) {
-  const sessionGeneration = activeGeolocationSession;
-  if (sessionGeneration === null || geolocateControl?._watchState === "OFF") return;
+  const session = geolocationSession;
+  if (!session || session.aborted || geolocateControl?._watchState === "OFF") return;
 
-  const requestGeneration = ++reverseGeocodeGeneration;
+  const requestSequence = ++reverseGeocodeSequence;
   const geoidAtRequest = geoid;
 
   wasSetByGeolocator = true;
@@ -492,19 +477,16 @@ async function handleGeolocate(event: GeolocationPosition) {
   const county = await reverseGeocodeCounty(event.coords.latitude, event.coords.longitude);
 
   if (
-    sessionGeneration !== activeGeolocationSession ||
-    requestGeneration !== reverseGeocodeGeneration ||
+    session !== geolocationSession ||
+    session.aborted ||
+    requestSequence !== reverseGeocodeSequence ||
     geoid !== geoidAtRequest ||
     !county?.geoid
   ) {
     return;
   }
 
-  geolocatorTargetGeoid = county.geoid;
-  observedGeoid = county.geoid;
-  geoid = county.geoid;
-  displayName = county.displayName;
-  shouldDisableGeolocatorTracking = false;
+  geolocation?.commit(county.geoid, county.displayName, session);
 }
 </script>
 

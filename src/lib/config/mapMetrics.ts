@@ -113,10 +113,11 @@ export function createLegendRows(presentation: MapMetricPresentation): LegendRow
 
 /**
  * Which legend bucket a value falls into (0-based), or -1 when there is no
- * value. Uses the same quantize thresholds the legend text was built from.
+ * value. Uses the same quantize thresholds the legend text was built from —
+ * the one bucket algebra shared by the legend and the map's quantile dimming.
  */
 export function quantileIndexOf(
-  presentation: MapMetricPresentation,
+  presentation: Pick<MapMetricPresentation, "colorDomain" | "colorRange">,
   value: number | undefined
 ): number {
   if (value === undefined) return -1;

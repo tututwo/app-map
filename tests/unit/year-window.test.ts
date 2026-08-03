@@ -1,6 +1,19 @@
 import { describe, expect, test } from "vitest";
 
-import { YEAR_WINDOW_BOUNDS, clampYearWindow, yearWindowViolation } from "$lib/domain/yearWindow";
+import {
+  YEAR_WINDOW_BOUNDS,
+  clampYearWindow,
+  inferAdjustedEdge,
+  yearWindowViolation,
+} from "$lib/domain/yearWindow";
+
+describe("inferAdjustedEdge", () => {
+  test("names the edge that moved more, defaulting to 'to' on ties", () => {
+    expect(inferAdjustedEdge([100, 200], [80, 200])).toBe("from");
+    expect(inferAdjustedEdge([100, 200], [100, 230])).toBe("to");
+    expect(inferAdjustedEdge([100, 200], [110, 210])).toBe("to");
+  });
+});
 
 describe("YEAR_WINDOW_BOUNDS", () => {
   test("matches the generated data", () => {

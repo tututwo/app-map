@@ -12,45 +12,42 @@ import {
 } from "lucide-svelte";
 import type { ComponentType } from "svelte";
 
-// Props for the component
 interface Props {
   url?: string;
   title?: string;
-  text?: string;
-  hashtags?: string;
-  via?: string;
-  media?: string;
-  fbAppId?: string;
   className?: string;
 }
 
-let {
-  url = "",
-  title = "",
-  text = "",
-  hashtags = "",
-  via = "",
-  media = "",
-  fbAppId = "",
-  className = "",
-}: Props = $props();
+let { url = "", title = "", className = "" }: Props = $props();
 
-// Reactive state for URL and title
 let currentUrl = $state(url);
 let currentTitle = $state(title);
+let open = $state(false);
+
+onMount(() => {
+  currentUrl = url || window.location.href;
+  currentTitle = title || document.title;
+});
+
+$effect(() => {
+  if (url) currentUrl = url;
+  if (title) currentTitle = title;
+});
+
+function openShare(shareUrl: string) {
+  window.open(shareUrl, "_blank", "noopener,noreferrer");
+}
 
 type ShareOption = {
   label: string;
   icon: ComponentType;
-  shareonClass: string;
-  action?: () => void;
+  action: () => void;
 };
 
 const shareOptions: ShareOption[] = [
   {
     label: "Copy link",
     icon: Link,
-    shareonClass: "copy-url",
     action: async () => {
       try {
         await navigator.clipboard.writeText(currentUrl);
@@ -63,110 +60,45 @@ const shareOptions: ShareOption[] = [
   {
     label: "Email",
     icon: Mail,
-    shareonClass: "email",
+    action: () => {
+      window.location.href = `mailto:?subject=${encodeURIComponent(currentTitle)}&body=${encodeURIComponent(currentUrl)}`;
+    },
   },
   {
     label: "Facebook",
     icon: Facebook,
-    shareonClass: "facebook",
+    action: () =>
+      openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`),
   },
   {
     label: "Bluesky",
     icon: MessageSquare,
-    shareonClass: "bluesky",
+    action: () =>
+      openShare(
+        `https://bsky.app/intent/compose?text=${encodeURIComponent(`${currentTitle} ${currentUrl}`)}`
+      ),
   },
   {
     label: "X",
     icon: Twitter,
-    shareonClass: "twitter",
+    action: () =>
+      openShare(
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(currentTitle)}`
+      ),
   },
   {
     label: "LinkedIn",
     icon: Linkedin,
-    shareonClass: "linkedin",
+    action: () =>
+      openShare(
+        `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`
+      ),
   },
 ];
 
-let open = $state(false);
-let shareContainer: HTMLDivElement = $state(undefined);
-let shareonModule: any = null;
-
-// Set default values on mount
-onMount(() => {
-  currentUrl = url || window.location.href;
-  currentTitle = title || document.title;
-
-  // Preload Shareon module
-  import("shareon").then((module) => {
-    shareonModule = module;
-    import("shareon/css");
-  });
-});
-
-// Update reactive values when props change
-$effect(() => {
-  if (url) currentUrl = url;
-  if (title) currentTitle = title;
-});
-
-// Initialize Shareon each time the popover opens
-$effect(() => {
-  if (open && shareContainer && shareonModule && typeof window !== "undefined") {
-    // Ensure the container has the latest data attributes
-    shareContainer.setAttribute("data-url", currentUrl);
-    shareContainer.setAttribute("data-title", currentTitle);
-    if (text) shareContainer.setAttribute("data-text", text);
-    if (media) shareContainer.setAttribute("data-media", media);
-    if (fbAppId) shareContainer.setAttribute("data-fb-app-id", fbAppId);
-
-    // Set platform-specific attributes on the buttons
-    const buttons = shareContainer.querySelectorAll("a");
-    buttons.forEach((button) => {
-      const className = button.className;
-
-      if (className === "facebook" && hashtags) {
-        button.setAttribute("data-hashtags", hashtags.split(",")[0]);
-      }
-
-      if (className === "bluesky" && text) {
-        button.setAttribute("data-text", text);
-      }
-
-      if (className === "twitter") {
-        if (via) button.setAttribute("data-via", via);
-        if (hashtags) button.setAttribute("data-hashtags", hashtags);
-      }
-
-      if ((className === "mastodon" || className === "tumblr") && via) {
-        button.setAttribute("data-via", via);
-      }
-
-      if ((className === "telegram" || className === "whatsapp" || className === "viber") && text) {
-        button.setAttribute("data-text", text);
-      }
-    });
-
-    // Initialize Shareon with a small delay to ensure DOM is ready
-    setTimeout(() => {
-      shareonModule.init();
-    }, 100);
-  }
-});
-
-// Handle button clicks
 function handleShareClick(option: ShareOption) {
-  if (option.action) {
-    // Custom action (copy link)
-    option.action();
-    open = false;
-  } else if (typeof window !== "undefined" && shareContainer) {
-    // Trigger the corresponding hidden Shareon button
-    const shareonButton = shareContainer.querySelector(`.${option.shareonClass}`);
-    if (shareonButton instanceof HTMLElement) {
-      shareonButton.click();
-      setTimeout(() => (open = false), 100);
-    }
-  }
+  option.action();
+  open = false;
 }
 </script>
 
@@ -187,16 +119,6 @@ function handleShareClick(option: ShareOption) {
     >
       <Popover.Arrow class="fill-[#286DC0]" width={16} height={8} />
       <div class="p-2">
-        <!-- Hidden Shareon container -->
-        {#if typeof window !== "undefined"}
-          <div bind:this={shareContainer} class="shareon hidden">
-            {#each shareOptions as option (option.label)}
-              <a class={option.shareonClass}></a>
-            {/each}
-          </div>
-        {/if}
-
-        <!-- YOUR ORIGINAL UI - UNCHANGED -->
         {#each shareOptions as option (option.label)}
           <button
             onclick={() => handleShareClick(option)}
@@ -210,21 +132,3 @@ function handleShareClick(option: ShareOption) {
     </Popover.Content>
   </Popover.Portal>
 </Popover.Root>
-
-<style>
-/* Hide the actual Shareon buttons but keep them functional */
-:global(.shareon) {
-  position: absolute;
-  left: -9999px;
-}
-
-/* Override Shareon's default styles to ensure functionality without visibility */
-:global(.shareon > *) {
-  display: inline-block !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-:global(#bits-37 > svg > polygon) {
-  fill: #286dc0 !important;
-}
-</style>

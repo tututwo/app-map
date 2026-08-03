@@ -110,24 +110,6 @@ async function clickGeolocate(page: Page) {
   await geolocate.click();
 }
 
-async function delayAutaugaReverseGeocode(page: Page) {
-  let markRequested!: () => void;
-  let releaseResponse!: () => void;
-  let markFulfilled!: () => void;
-  const requested = new Promise<void>((resolve) => (markRequested = resolve));
-  const released = new Promise<void>((resolve) => (releaseResponse = resolve));
-  const fulfilled = new Promise<void>((resolve) => (markFulfilled = resolve));
-
-  await page.route("https://nominatim.openstreetmap.org/reverse?*", async (route) => {
-    markRequested();
-    await released;
-    await fulfillJson(route, autaugaReverseResponse);
-    markFulfilled();
-  });
-
-  return { requested, releaseResponse, fulfilled };
-}
-
 async function delayBrowserGeolocation(page: Page) {
   await page.addInitScript(() => {
     const state = {
@@ -426,64 +408,6 @@ test("a county search cancels geolocation before the browser emits a position", 
   );
 });
 
-test("a delayed reverse geocode cannot overwrite a later reset", async ({ context, page }) => {
-  await enableAutaugaGeolocation(context);
-  const reverseGeocode = await delayAutaugaReverseGeocode(page);
-  await page.goto("/?from=2003&to=2011&geoid=01003");
-
-  await clickGeolocate(page);
-  await reverseGeocode.requested;
-
-  await page
-    .getByRole("region", { name: "Map" })
-    .getByRole("button", { name: "Fly to the center of the map" })
-    .click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("geoid")).toBe("00000");
-
-  reverseGeocode.releaseResponse();
-  await reverseGeocode.fulfilled;
-  await page.waitForTimeout(750);
-
-  // Migration tripwire: releasing the stale response must leave the newer reset authoritative.
-  expect(new URL(page.url()).searchParams.get("geoid")).toBe("00000");
-  await expect(page.getByRole("region", { name: "Line chart" }).locator("h1")).toContainText(
-    "All locations"
-  );
-});
-
-test("a delayed reverse geocode cannot overwrite a later county search", async ({
-  context,
-  page,
-}) => {
-  await enableAutaugaGeolocation(context);
-  const reverseGeocode = await delayAutaugaReverseGeocode(page);
-  await page.route("https://nominatim.openstreetmap.org/search?*", (route) =>
-    fulfillJson(route, [
-      {
-        lat: "30.66",
-        lon: "-87.75",
-        display_name: "Baldwin County, Alabama, United States",
-        address: { county: "Baldwin County", state: "Alabama" },
-      },
-    ])
-  );
-  await page.goto("/?from=2003&to=2011&geoid=00000");
-
-  await clickGeolocate(page);
-  await reverseGeocode.requested;
-
-  const search = page.getByRole("combobox", { name: "Search for a county" });
-  await search.fill("Baldwin");
-  await page.getByText("Baldwin County, Alabama", { exact: true }).click();
-  await expect.poll(() => new URL(page.url()).searchParams.get("geoid")).toBe("01003");
-
-  reverseGeocode.releaseResponse();
-  await reverseGeocode.fulfilled;
-  await page.waitForTimeout(750);
-
-  // Migration tripwire: releasing the stale response must leave the newer search authoritative.
-  expect(new URL(page.url()).searchParams.get("geoid")).toBe("01003");
-  await expect(page.getByRole("region", { name: "Line chart" }).locator("h1")).toContainText(
-    "Baldwin County, Alabama"
-  );
-});
+// The stale-async-selection races ("a delayed reverse geocode cannot overwrite a later
+// reset/search") moved to tests/unit/county-selection.svelte.test.ts — the latest-wins
+// policy now lives in the CountySelection module, so unit races cover them exactly.

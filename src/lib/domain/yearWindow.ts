@@ -70,6 +70,19 @@ export function clampYearWindow(
 }
 
 /**
+ * Which edge of a window a drag gesture is moving, inferred from which end
+ * changed more between two selections (in any shared unit — pixels or years).
+ */
+export function inferAdjustedEdge(
+  previous: readonly [number, number],
+  next: readonly [number, number]
+): Exclude<AdjustedEdge, null> {
+  const fromDelta = Math.abs(next[0] - previous[0]);
+  const toDelta = Math.abs(next[1] - previous[1]);
+  return fromDelta > toDelta ? "from" : "to";
+}
+
+/**
  * Why a window is illegal, as a human-readable message — or null when it is
  * legal. Serves the API validators; UI code wanting a cheap predicate can
  * compare spans against YEAR_WINDOW_BOUNDS.minGap directly.

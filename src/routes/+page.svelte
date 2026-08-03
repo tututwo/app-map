@@ -33,6 +33,7 @@ import {
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { createLastGood } from "$lib/dashboard/last-good.svelte";
+import { CountySelection } from "$lib/dashboard/county-selection.svelte";
 import { countyDisplayName } from "$lib/dashboard/presentation";
 import { setDashboardParams } from "$lib/dashboard/navigate";
 import type { LineDatum, MapDatum, StackedDatum } from "$lib/dashboard/data";
@@ -60,16 +61,18 @@ let lineChartData = $derived(lineState.value ?? []);
 let stackedBarData = $derived(stackedState.value ?? []);
 
 let highlightedGroup = $state<string | null>(null);
-let pendingGeoid = $state<string | null>(null);
-let shouldDisableGeolocatorTracking = $state(false);
-let geoidNavigationGeneration = 0;
-let displayNameOverride = $state<{ geoid: string; name: string | null } | null>(null);
 
-let displayNameGeoid = $derived(pendingGeoid ?? geoid);
+const selection = new CountySelection({
+  navigate: setDashboardParams,
+  settled: () => data.params.geoid,
+});
+
+$effect(() => selection.observeSettled(data.params.geoid));
+
 let displayName = $derived(
-  displayNameOverride?.geoid === displayNameGeoid
-    ? displayNameOverride.name
-    : (countyDisplayName(mapData, displayNameGeoid) ?? "All locations")
+  selection.nameOverride !== undefined
+    ? selection.nameOverride
+    : (countyDisplayName(mapData, selection.geoid) ?? "All locations")
 );
 
 function updateYearRange(nextRange: [number, number]) {
@@ -77,18 +80,22 @@ function updateYearRange(nextRange: [number, number]) {
 }
 
 function updateGeoid(nextGeoid: string) {
-  shouldDisableGeolocatorTracking = true;
-  const generation = ++geoidNavigationGeneration;
-  pendingGeoid = nextGeoid;
-
-  void setDashboardParams({ geoid: nextGeoid }).finally(() => {
-    if (generation === geoidNavigationGeneration) pendingGeoid = null;
-  });
+  void selection.select(nextGeoid);
 }
 
 function updateDisplayName(nextDisplayName: string | null) {
-  displayNameOverride = { geoid: pendingGeoid ?? geoid, name: nextDisplayName };
+  selection.setDisplayName(nextDisplayName);
 }
+
+// The geolocation seam: the map opens an intent per tracking session and
+// commits through it, so a newer selection always cancels the older session.
+const geolocation = {
+  begin: (onAbort: () => void) => selection.newIntent(onAbort),
+  commit: (nextGeoid: string, nextDisplayName: string, signal: AbortSignal) => {
+    void selection.select(nextGeoid, { fromIntent: signal });
+    selection.setDisplayName(nextDisplayName);
+  },
+};
 
 let selectedQuantile = $state(0);
 function highlightGroup(range: string, i: number) {
@@ -157,7 +164,7 @@ function dismissLoadingError() {
   <!-- Use the Sidebar component -->
   <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>
     <CountySearch
-      bind:geoid={() => geoid, updateGeoid}
+      bind:geoid={() => selection.geoid, updateGeoid}
       bind:displayName={() => displayName, updateDisplayName}
     />
   </Sidebar>
@@ -182,7 +189,6 @@ function dismissLoadingError() {
       <div class="w-fullitems-center flex h-[calc(20vh-50px)] justify-center">
         <Figure>
           <LineChartBrush
-            key="close"
             margin={lineChartMargin}
             bind:yearRange={() => yearRange, updateYearRange}
             data={lineChartData}
@@ -297,9 +303,9 @@ function dismissLoadingError() {
             {selectedMapColorDomain}
             {selectedMapColorRange}
             data={mapData}
-            bind:geoid={() => displayNameGeoid, updateGeoid}
+            bind:geoid={() => selection.geoid, updateGeoid}
             bind:displayName={() => displayName, updateDisplayName}
-            bind:shouldDisableGeolocatorTracking
+            {geolocation}
             {selectedQuantile}
             quantileHighlightEnabled={highlightedGroup !== null}
           />
@@ -336,14 +342,6 @@ function dismissLoadingError() {
                   neutral: "hsla(0, 0%, 75%, 1)",
                   positive: "hsla(145, 63%, 32%, 1)",
                 }}
-                chartBackgroundColor="hsla(0, 0%, 100%, 1)"
-                gridLineColor="hsla(0, 0%, 90%, 1)"
-                showYGridlines={true}
-                showXGridlines={false}
-                showChartBorder={false}
-                barPadding={0.3}
-                yTickCount={3}
-                yTickPosition="left"
               />
 
               {#snippet figcaption()}

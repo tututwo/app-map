@@ -34,6 +34,7 @@ import {
 } from "$lib/config/mapMetrics";
 import { countyDisplayName, dashboardSearch } from "$lib/dashboard/presentation";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
+import { pageImageOffsets } from "$lib/pdf/paginate";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 // State management for PDF export
 let mainContent = $state<HTMLElement | null>(null);
@@ -151,21 +152,21 @@ async function exportToPDF() {
     tempImage.src = imgData;
     await new Promise((resolve) => (tempImage.onload = resolve));
 
-    const imgWidth = pageWidth - 40;
+    const PAGE_MARGIN = 20;
+    const imgWidth = pageWidth - PAGE_MARGIN * 2;
     const imgHeight = (tempImage.height * imgWidth) / tempImage.width;
 
-    pdf.addImage(imgData, "PNG", 20, 20, imgWidth, Math.min(imgHeight, pageHeight - 40));
-
-    if (imgHeight > pageHeight - 40) {
-      let remainingHeight = imgHeight - (pageHeight - 40);
-      let yOffset = -(pageHeight - 40);
-      while (remainingHeight > 0) {
-        pdf.addPage();
-        const currentPageHeight = Math.min(remainingHeight, pageHeight - 40);
-        pdf.addImage(imgData, "PNG", 20, yOffset, imgWidth, imgHeight);
-        remainingHeight -= currentPageHeight;
-        yOffset -= pageHeight;
-      }
+    // Draw the full image on every page at a rising negative offset; the page
+    // clips to its band, so successive pages show successive slices.
+    const [firstOffset, ...continuationOffsets] = pageImageOffsets(
+      imgHeight,
+      pageHeight,
+      PAGE_MARGIN
+    );
+    pdf.addImage(imgData, "JPEG", PAGE_MARGIN, firstOffset, imgWidth, imgHeight);
+    for (const offset of continuationOffsets) {
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", PAGE_MARGIN, offset, imgWidth, imgHeight);
     }
 
     pdf.save(`${countyName}_${yearRange[0]}-${yearRange[1]}.pdf`);
@@ -283,7 +284,6 @@ let demographicStatistics = $derived(
       <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
         <Figure>
           <LineChartBrush
-            key="close"
             margin={lineChartMargin}
             {yearRange}
             data={lineChartData}

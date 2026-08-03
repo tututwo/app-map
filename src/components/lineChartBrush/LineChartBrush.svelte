@@ -10,14 +10,16 @@ import * as d3 from "d3";
 import { untrack, getContext } from "svelte";
 import { ArrowLeftToLine } from "lucide-svelte";
 import Tooltip from "$components/chart/Tooltip.svelte";
-import { YEAR_WINDOW_BOUNDS, clampYearWindow } from "$lib/domain/yearWindow";
+import { YEAR_WINDOW_BOUNDS, clampYearWindow, inferAdjustedEdge } from "$lib/domain/yearWindow";
+import type { AdjustedEdge } from "$lib/domain/yearWindow";
 import type { D3BrushEvent } from "d3-brush";
 
-import { gsap } from "gsap";
-
-import { MorphSVGPlugin } from "gsap/MorphSVGPlugin";
-
-gsap.registerPlugin(MorphSVGPlugin);
+import {
+  animateLineChart,
+  fadeInInstruction,
+  fadeOutInstruction,
+  flashSelectionWarning,
+} from "./animations";
 
 type IDatum = {
   year: number;
@@ -28,35 +30,8 @@ type IProps = {
   data?: IDatum[];
   margin?: { top: number; right: number; bottom: number; left: number };
   yearRange?: [number, number];
-  key?: "close";
-  yAxisTickCount?: number;
-  extendYAxis?: boolean;
   disableBrushing?: boolean;
 };
-
-const exampleData = [
-  { year: 2001, close: 70 },
-  { year: 2002, close: 50 },
-  { year: 2003, close: 40 },
-  { year: 2004, close: 60 },
-  { year: 2005, close: 100 },
-  { year: 2006, close: 120 },
-  { year: 2007, close: 40 },
-  { year: 2008, close: 10 },
-  { year: 2009, close: 30 },
-  { year: 2010, close: 50 },
-  { year: 2011, close: 50 },
-  { year: 2012, close: 20 },
-  { year: 2013, close: 20 },
-  { year: 2014, close: 20 },
-  { year: 2015, close: 90 },
-  { year: 2016, close: 120 },
-  { year: 2017, close: 40 },
-  { year: 2018, close: 10 },
-  { year: 2019, close: 30 },
-  { year: 2020, close: 90 },
-  { year: 2021, close: 120 },
-];
 
 // Year-window rules are owned by the domain module (data-driven)
 const {
@@ -66,18 +41,17 @@ const {
 } = YEAR_WINDOW_BOUNDS;
 const ALERT_COLOR = "hsla(0, 0%, 53%, 1)";
 const FROM_TO_TEXT_VERTICAL_OFFSET = 10;
+const Y_AXIS_TICK_COUNT = 2;
+const key = "close" as const;
 
 // Add tick formatter for y-axis
 const yTickFormatter = d3.format("~s"); // SI-prefix with trimmed zeros
 
 // Component props
 let {
-  data = exampleData,
+  data = [],
   margin = { top: 50, right: 30, bottom: 80, left: 80 },
   yearRange = $bindable([2003, 2011]),
-  key = "close",
-  yAxisTickCount = 2,
-  extendYAxis = false,
   disableBrushing = false,
 }: IProps = $props();
 
@@ -93,7 +67,7 @@ const tickLength = 6;
 const tickOffset = 20;
 
 // Get responsive dimensions from Figure context
-const figure: any = getContext("Figure");
+const figure = getContext("Figure") as { getWidth(): number; getHeight(): number };
 const width = $derived(figure.getWidth());
 const height = $derived(figure.getHeight());
 // Computed dimensions
@@ -106,68 +80,26 @@ const xScale = $derived(
 );
 
 const yScale = $derived.by(() => {
-  // Get the data extent
   const [minValue, maxValue] = d3.extent(data, (d) => d[key]) as [number, number];
 
-  // Determine if we should start from 0
-  // Start from 0 for smaller values, use data minimum for larger values
-  const startFromZero = maxValue <= 1000;
-  const domainMin = startFromZero ? 0 : minValue;
+  // Start from 0 for smaller values, use the data minimum for larger values
+  const domainMin = maxValue <= 1000 ? 0 : minValue;
 
-  // Create a temporary scale to get nice tick values
-  const tempScale = d3.scaleLinear().domain([domainMin, maxValue]).nice().range([innerHeight, 0]);
-
-  // Get the nice domain
-  const [niceMin, niceMax] = tempScale.domain();
-
-  // Optionally extend the maximum
-  let finalMax = niceMax;
-  if (extendYAxis) {
-    // Get the tick values using the same count we'll use for display
-    const ticks = tempScale.ticks(yAxisTickCount);
-    const tickInterval = ticks.length > 1 ? ticks[1] - ticks[0] : 50;
-    finalMax = niceMax + tickInterval;
-  }
-
-  // Return the final scale
-  return d3.scaleLinear().domain([niceMin, finalMax]).range([innerHeight, 0]);
+  return d3.scaleLinear().domain([domainMin, maxValue]).nice().range([innerHeight, 0]);
 });
 
 // Axis ticks
 const xTicks = $derived(xScale.ticks().map((d) => ({ value: d, x: xScale(d) })));
 const yTicks = $derived.by(() => {
-  // Get the domain from yScale
-  const [min, max] = yScale.domain();
-
-  // Calculate the tick interval (same as used in yScale)
-  const tempScale = d3.scaleLinear().domain([min, max]).range([innerHeight, 0]);
-
-  // Use the appropriate tick count based on whether we're extending
-  const tickCount = extendYAxis ? yAxisTickCount + 1 : yAxisTickCount;
-  let ticks = tempScale.ticks(tickCount);
+  let ticks = yScale.ticks(Y_AXIS_TICK_COUNT);
 
   // Ensure 0 is included if the scale starts from 0
+  const [min] = yScale.domain();
   if (min === 0 && !ticks.includes(0)) {
-    // Add 0 at the beginning and sort
     ticks = [0, ...ticks].sort((a, b) => a - b);
   }
 
-  // If we have nice ticks from D3, use them
-  if (ticks.length > 0) {
-    return ticks.map((d) => ({ value: d, y: yScale(d) }));
-  }
-
-  // Fallback: generate ticks manually
-  const tickInterval = 50; // default interval
-  const finalTicks = [];
-
-  // Generate ticks from min to max (inclusive) with consistent interval
-  for (let tick = min; tick <= max; tick += tickInterval) {
-    finalTicks.push(tick);
-  }
-
-  // Map to the format expected by the template
-  return finalTicks.map((d) => ({ value: d, y: yScale(d) }));
+  return ticks.map((d) => ({ value: d, y: yScale(d) }));
 });
 
 // Line generator
@@ -182,16 +114,7 @@ function flashWarningEffect() {
   if (!brushGroupElm) return;
 
   const selectionRect = d3.select(brushGroupElm).select(".selection").node();
-  if (!selectionRect) return;
-
-  // This tween will animate the fill to a light red and then automatically
-  // animate back to the original color thanks to yoyo: true.
-  gsap.to(selectionRect, {
-    fill: ALERT_COLOR, // A light, non-jarring red
-    duration: 0.1,
-    yoyo: true, // Go back to the original value
-    repeat: 1, // Play the tween forward, then backward (yoyo) once
-  });
+  if (selectionRect) flashSelectionWarning(selectionRect as Element, ALERT_COLOR);
 }
 
 // Add new state for instruction animation
@@ -202,22 +125,12 @@ let isDraggingLabel = $state<"from" | "to" | null>(null);
 let dragStartX = $state(0);
 let dragStartYear = $state(0);
 
-// Path data
-//! IMPORTANT: this is not used, because we use gsap to animate the path. instead of relying on svelte's reactivity to update the path immediately;
-//! IMPORTANT:  we created an effect to update the path and circles with gsap MANUALLY when data changes.
-// let pathData = $derived(line(data));
-
-// --- 2. THE PATH ELEMENT REF IS STILL NEEDED (Already done) ---
+// The path and circles are animated by gsap (see ./animations.ts), not by
+// Svelte reactivity — this effect hands the new geometry to the animator.
 let pathElement = $state<SVGPathElement>();
-
-// +++ 3. ADD A STATE ARRAY FOR THE CIRCLE ELEMENTS +++
 let circleElements = $state<Array<SVGCircleElement | undefined>>([]);
-
-// +++ Add a flag to track the first run +++
 let isInitialRender = true;
-
-// +++ 4. Declare a variable to hold the timeline instance +++
-let chartTimeline: gsap.core.Timeline | null = null;
+let chartTimeline: ReturnType<typeof animateLineChart> = null;
 
 $effect(() => {
   if (!pathElement || !data.length) return;
@@ -225,65 +138,21 @@ $effect(() => {
   const newPath = line(data);
   if (!newPath) return;
 
-  const newCirclesData = data.map((point) => ({
-    cx: xScale(point.year),
-    cy: yScale(point[key]),
-  }));
-
-  if (isInitialRender) {
-    // Initial render is the same: use gsap.set() for instant positioning
-    gsap.set(pathElement, { attr: { d: newPath } });
-    newCirclesData.forEach((circleData, i) => {
-      const circleEl = circleElements[i];
-      if (circleEl) {
-        gsap.set(circleEl, { attr: circleData });
-      }
-    });
-    isInitialRender = false;
-  } else {
-    // --- 2. Implement the Timeline logic for updates ---
-
-    // First, if there's an old timeline running, kill it.
-    if (chartTimeline) {
-      chartTimeline.kill();
-    }
-
-    // Create a new timeline with shared defaults
-    const timeline = gsap.timeline({
-      defaults: {
-        duration: 0.8,
-        ease: "power2.inOut",
-      },
-    });
-    chartTimeline = timeline;
-
-    // Add the path animation to the timeline
-    timeline.to(pathElement, {
-      morphSVG: newPath,
-    });
-
-    // Loop and add the circle animations to the timeline
-    newCirclesData.forEach((circleData, i) => {
-      const circleEl = circleElements[i];
-      if (circleEl) {
-        // Add the tween and use the "<" position parameter
-        // to make it start at the same time as the previous tween
-        timeline.to(
-          circleEl,
-          {
-            attr: circleData,
-          },
-          "<"
-        );
-      }
-    });
-  }
+  chartTimeline = animateLineChart({
+    pathElement,
+    circleElements,
+    path: newPath,
+    circles: data.map((point) => ({ cx: xScale(point.year), cy: yScale(point[key]) })),
+    isInitial: isInitialRender,
+    previousTimeline: chartTimeline,
+  });
+  isInitialRender = false;
 });
 // Brush state - store year range instead of pixel coordinates
 let brushGroupElm = $state<SVGGElement>();
 let brushSelection = $state<[number, number] | null>(null);
 let yearRangeSelection = $state<[number, number]>(yearRange);
-let movingHandle = $state<"start" | "end" | null>(null);
+let movingHandle = $state<AdjustedEdge>(null);
 let isSnapping = false;
 let snapGeneration = 0;
 
@@ -378,19 +247,9 @@ function onBrush(event: D3BrushEvent<IDatum>) {
 
   const [x0, x1] = event.selection as [number, number];
 
-  // Track which handle is moving by comparing with previous selection
+  // Track which handle is moving by comparing with the previous selection
   if (event.mode === "handle" && brushSelection) {
-    const [prevX0, prevX1] = brushSelection;
-
-    // Determine which handle moved by checking which end changed more
-    const startDelta = Math.abs(x0 - prevX0);
-    const endDelta = Math.abs(x1 - prevX1);
-
-    if (startDelta > endDelta) {
-      movingHandle = "start";
-    } else {
-      movingHandle = "end";
-    }
+    movingHandle = inferAdjustedEdge(brushSelection, [x0, x1]);
   }
 
   // Update previous selection for next comparison
@@ -418,10 +277,6 @@ function onBrushEnd(event: D3BrushEvent<IDatum>) {
 
   if (!event.selection) {
     redrawBrush();
-    // Clear selection
-    // yearRangeSelection = null;
-    // movingHandle = null;
-    // brushSelection = null;
     return;
   }
 
@@ -483,54 +338,21 @@ function handleCircleMouseLeave() {
 }
 
 function adjustYearRange(year0: number, year1: number) {
-  const { from, to } = clampYearWindow(
-    year0,
-    year1,
-    movingHandle === "start" ? "from" : movingHandle === "end" ? "to" : null
-  );
+  const { from, to } = clampYearWindow(year0, year1, movingHandle);
   return [from, to];
 }
 
-// Refined instruction animation
+// Drag-instruction fade-in on first interaction, fade-out when the brush clears
 $effect(() => {
   if (instructionElement && brushSelection && !hasInteracted) {
     hasInteracted = true;
-
-    // Minimalist fade and slide
-    gsap.fromTo(
-      instructionElement,
-      {
-        opacity: 0,
-        y: 10,
-      },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 2,
-        delay: 0.5,
-        ease: "power3.out",
-      }
-    );
-
-    // Fade to subtle after initial appearance
-    gsap.to(instructionElement, {
-      opacity: 0.6,
-      duration: 1,
-      delay: 4,
-      ease: "power2.inOut",
-    });
+    fadeInInstruction(instructionElement);
   }
 });
 
-// Clean exit animation
 $effect(() => {
   if (instructionElement && !brushSelection && hasInteracted) {
-    gsap.to(instructionElement, {
-      opacity: 0,
-      y: 5,
-      duration: 0.3,
-      ease: "power2.in",
-    });
+    fadeOutInstruction(instructionElement);
   }
 });
 
@@ -548,30 +370,25 @@ function handleLabelMouseDown(event: MouseEvent, type: "from" | "to") {
   window.addEventListener("mouseup", handleLabelMouseUp);
 }
 
+// One path for "move one window edge" — shared by handle drags (via d3-brush)
+// and label drags: clamp through the domain module, then puppet the brush.
+function moveEdge(edge: "from" | "to", year: number) {
+  if (!brushGroupElm) return;
+
+  movingHandle = edge;
+  const [year0, year1] =
+    edge === "from" ? [year, yearRangeSelection[1]] : [yearRangeSelection[0], year];
+  const [adjusted0, adjusted1] = adjustYearRange(year0, year1);
+  d3.select(brushGroupElm).call(brush.move, [xScale(adjusted0), xScale(adjusted1)]);
+}
+
+const pixelsPerYear = $derived(innerWidth / (MAX_YEAR_END - MIN_YEAR_START));
+
 function handleLabelMouseMove(event: MouseEvent) {
-  if (!isDraggingLabel || !yearRangeSelection || !brushGroupElm) return;
+  if (!isDraggingLabel) return;
 
-  const deltaX = event.clientX - dragStartX;
-  const deltaYear = Math.round(xScale.invert(xScale(dragStartYear) + deltaX) - dragStartYear);
-
-  let newYear0 = yearRangeSelection[0];
-  let newYear1 = yearRangeSelection[1];
-
-  if (isDraggingLabel === "from") {
-    newYear0 = dragStartYear + deltaYear;
-  } else {
-    newYear1 = dragStartYear + deltaYear;
-  }
-
-  // Apply constraints
-  // Set movingHandle temporarily to match the label being dragged
-  movingHandle = isDraggingLabel === "from" ? "start" : "end";
-  [newYear0, newYear1] = adjustYearRange(newYear0, newYear1);
-
-  // Update brush programmatically
-  const x0 = xScale(newYear0);
-  const x1 = xScale(newYear1);
-  d3.select(brushGroupElm).call(brush.move, [x0, x1]);
+  const deltaYear = Math.round((event.clientX - dragStartX) / pixelsPerYear);
+  moveEdge(isDraggingLabel, dragStartYear + deltaYear);
 }
 
 function handleLabelMouseUp() {
@@ -786,7 +603,7 @@ function forwardMousedownToBrush(event: MouseEvent) {
       aria-hidden={!brushSelection}
     >
       {#if isSelectionInvalid}
-        Minimum 5 years
+        Minimum {MIN_YEAR_SPAN} years
       {:else}
         {yearSpan} years
       {/if}

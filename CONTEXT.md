@@ -19,6 +19,17 @@ The sentinel geoid meaning "all locations / the United States". Owned by
 `src/lib/domain/countyGeoid.ts` as `NATIONAL_GEOID` / `isNationalGeoid()` —
 never compare against the string literal.
 
+## County Selection
+
+The one owner of "which county is selected and why":
+`src/lib/dashboard/county-selection.svelte.ts`, instantiated by the dashboard
+route. Selection intents (search, map click, geolocation) race, and the newest
+choice always wins. Async selectors open an **intent** (`newIntent()` →
+`AbortSignal`) before resolving and pass the signal back when committing; any
+newer selection aborts the intent, and the abort tells the opener (the map's
+geolocate control) to stand down. The optimistic geoid and display-name
+override live here; the settled geoid stays in the URL.
+
 ## County geoid
 
 Five-digit FIPS identifier for a county. Connecticut planning-region geoids

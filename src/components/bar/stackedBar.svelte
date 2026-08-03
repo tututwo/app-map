@@ -30,27 +30,22 @@ let {
     neutral: "hsla(0, 0%, 75%, 1)",
     positive: "hsla(145, 63%, 32%, 1)",
   },
-  gridLineColor = "hsla(0, 0%, 90%, 1)",
-  showXGridlines = false,
-  showYGridlines = true,
-  showChartBorder = true,
-  chartBackgroundColor = "white",
-  xTickPosition = "bottom",
-  yTickPosition = "left",
-  yTickCount = 5,
-  tickLength = 6,
-  tickOffset = 10,
-  barPadding = 0.1,
-  animationDuration = 800,
-  segmentDuration = 400,
-  yearStaggerDelay = 100,
-  segmentStaggerDelay = 100,
-  enableTooltip = true,
 } = $props();
+
+// Fixed styling — the dashboard's one rendering of this chart
+const gridLineColor = "hsla(0, 0%, 90%, 1)";
+const chartBackgroundColor = "hsla(0, 0%, 100%, 1)";
+const yTickCount = 3;
+const tickLength = 6;
+const tickOffset = 10;
+const barPadding = 0.3;
+const animationDuration = 800;
+const segmentDuration = 400;
+const yearStaggerDelay = 100;
+const segmentStaggerDelay = 100;
 
 // State variables
 let hoveredBar = $state(null);
-let hoveredSegment = $state(null);
 let svgElement = $state(null);
 let containerElement = $state(null);
 let tooltipData = $state(null);
@@ -96,8 +91,10 @@ const processedData = $derived(() => {
   });
 });
 
-// Create the stack generator
-const stack = d3.stack().keys(keys).order(d3.stackOrderNone).offset(d3.stackOffsetDiverging);
+// Create the stack generator (derived so a keys change rebuilds it)
+const stack = $derived(
+  d3.stack().keys(keys).order(d3.stackOrderNone).offset(d3.stackOffsetDiverging)
+);
 
 // Generate stacked data
 const stackedData = $derived(() => {
@@ -330,21 +327,19 @@ $effect(() => {
   <svg bind:this={svgElement} {width} {height} class="h-full w-full">
     <g transform={`translate(${margin.left},${margin.top})`}>
       <rect x={0} y={0} width={innerWidth} height={innerHeight} fill={chartBackgroundColor} />
-      {#if showYGridlines}
-        <g class="y-grid">
-          {#each yTicks as tick}
-            <line
-              x1={0}
-              y1={yScale()(tick)}
-              x2={innerWidth}
-              y2={yScale()(tick)}
-              stroke={gridLineColor}
-              stroke-width="1"
-              shape-rendering="crispEdges"
-            />
-          {/each}
-        </g>
-      {/if}
+      <g class="y-grid">
+        {#each yTicks as tick (tick)}
+          <line
+            x1={0}
+            y1={yScale()(tick)}
+            x2={innerWidth}
+            y2={yScale()(tick)}
+            stroke={gridLineColor}
+            stroke-width="1"
+            shape-rendering="crispEdges"
+          />
+        {/each}
+      </g>
       <line
         x1={0}
         y1={zeroY}
@@ -354,34 +349,6 @@ $effect(() => {
         stroke-width="2"
         shape-rendering="crispEdges"
       />
-      {#if showXGridlines}
-        <g class="x-grid">
-          {#each processedData() as d}
-            {@const x = xScale(d.year) + xScale.bandwidth() / 2}
-            <line
-              x1={x}
-              y1={0}
-              x2={x}
-              y2={innerHeight}
-              stroke={gridLineColor}
-              stroke-width="1"
-              shape-rendering="crispEdges"
-            />
-          {/each}
-        </g>
-      {/if}
-      {#if showChartBorder}
-        <rect
-          x={0}
-          y={0}
-          width={innerWidth}
-          height={innerHeight}
-          fill="none"
-          stroke={gridLineColor}
-          stroke-width="1.5"
-          shape-rendering="crispEdges"
-        />
-      {/if}
       <g class="bars-visual"></g>
       {#if hoveredBar}
         {@const year = hoveredBar.year}
@@ -404,88 +371,43 @@ $effect(() => {
         {/if}
       {/if}
       <g class="bars-interaction"></g>
-      {#if xTickPosition !== "none"}
-        {#if xTickPosition === "bottom" || xTickPosition === "both"}
-          <g class="x-axis" transform={`translate(0,${innerHeight - margin.top - margin.bottom})`}>
-            {#each processedData() as d}
-              {@const x = xScale(d.year) + xScale.bandwidth() / 2}
-              <g transform={`translate(${x},0)`}>
-                {#if showXAxisLabels()}
-                  <text
-                    y={tickOffset + tickLength}
-                    text-anchor="middle"
-                    dominant-baseline="hanging"
-                    class="fill-gray-600 text-sm font-medium"
-                    in:fly={{ y: 10, duration: 300, easing: cubicOut }}
-                    out:fly={{ y: 15, duration: 250, easing: cubicOut }}
-                  >
-                    {d.year}
-                  </text>
-                {/if}
-              </g>
-            {/each}
+      <g class="x-axis" transform={`translate(0,${innerHeight - margin.top - margin.bottom})`}>
+        {#each processedData() as d (d.year)}
+          {@const x = xScale(d.year) + xScale.bandwidth() / 2}
+          <g transform={`translate(${x},0)`}>
+            {#if showXAxisLabels()}
+              <text
+                y={tickOffset + tickLength}
+                text-anchor="middle"
+                dominant-baseline="hanging"
+                class="fill-gray-600 text-sm font-medium"
+                in:fly={{ y: 10, duration: 300, easing: cubicOut }}
+                out:fly={{ y: 15, duration: 250, easing: cubicOut }}
+              >
+                {d.year}
+              </text>
+            {/if}
           </g>
-        {/if}
-        {#if xTickPosition === "top" || xTickPosition === "both"}
-          <g class="x-axis">
-            {#each processedData() as d}
-              {@const x = xScale(d.year) + xScale.bandwidth() / 2}
-              <g transform={`translate(${x},0)`}>
-                {#if showXAxisLabels()}
-                  <text
-                    y={-tickOffset - tickLength}
-                    text-anchor="middle"
-                    dominant-baseline="auto"
-                    class="fill-gray-600 text-sm font-medium"
-                    in:fly={{ y: -10, duration: 300, easing: cubicOut }}
-                    out:fly={{ y: -15, duration: 250, easing: cubicOut }}
-                  >
-                    {d.year}
-                  </text>
-                {/if}
-              </g>
-            {/each}
+        {/each}
+      </g>
+      <g class="y-axis">
+        {#each yTicks as tick (tick)}
+          <g transform={`translate(10,${yScale()(tick)})`}>
+            <text
+              x={-tickOffset - tickLength}
+              text-anchor="end"
+              dominant-baseline="middle"
+              class="fill-gray-600 text-sm font-medium"
+            >
+              {yTickFormatter(tick)}
+            </text>
           </g>
-        {/if}
-      {/if}
-      {#if yTickPosition !== "none"}
-        {#if yTickPosition === "left" || yTickPosition === "both"}
-          <g class="y-axis">
-            {#each yTicks as tick}
-              <g transform={`translate(10,${yScale()(tick)})`}>
-                <text
-                  x={-tickOffset - tickLength}
-                  text-anchor="end"
-                  dominant-baseline="middle"
-                  class="fill-gray-600 text-sm font-medium"
-                >
-                  {yTickFormatter(tick)}
-                </text>
-              </g>
-            {/each}
-          </g>
-        {/if}
-        {#if yTickPosition === "right" || yTickPosition === "both"}
-          <g class="y-axis">
-            {#each yTicks as tick}
-              <g transform={`translate(${innerWidth},${yScale()(tick)})`}>
-                <text
-                  x={tickOffset + tickLength}
-                  text-anchor="start"
-                  dominant-baseline="middle"
-                  class="fill-gray-600 text-sm font-medium"
-                >
-                  {yTickFormatter(tick)}
-                </text>
-              </g>
-            {/each}
-          </g>
-        {/if}
-      {/if}
+        {/each}
+      </g>
     </g>
   </svg>
 
-  {#if containerElement && enableTooltip}
+  {#if containerElement}
     <Tooltip
       open={tooltipOpen}
       x={tooltipX}
@@ -503,7 +425,7 @@ $effect(() => {
               Year: {tooltipData.year}
             </p>
             <div class="space-y-1 border-t border-gray-200 pt-2 dark:border-gray-700">
-              {#each keys as key}
+              {#each keys as key (key)}
                 <div class="flex items-center justify-between">
                   <span class="text-gray-700 capitalize dark:text-gray-300">{key}:</span>
                   <span class="font-medium text-gray-900 dark:text-gray-50">
