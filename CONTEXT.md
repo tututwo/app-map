@@ -36,3 +36,15 @@ Five-digit FIPS identifier for a county. Connecticut planning-region geoids
 (`091x0`) are display-level aliases; South Central (`09170`) is normalized to
 New Haven County (`09009`) because every dataset has that proven fallback
 (`normalizeCountyGeoid`).
+
+## Remote functions (the data plane)
+
+All dashboard data flows through SvelteKit remote functions in
+`src/lib/dashboard/data.remote.ts` (experimental flags enabled in
+`svelte.config.js`). Every function is a `prerender`: its enumerated inputs
+(every legal Year Window, every geoid) are compiled to static payloads served
+from the CDN and cached client-side via the browser Cache API, with
+`dynamic: true` keeping a server fallback. Page `load` functions await the
+same queries so server-rendered HTML ships with data; components hold the
+deduplicated instances reactively (`.ready` / `.current` / `.error`). The only
+hand-written HTTP endpoint left is `/api/download_data` (ZIP export).

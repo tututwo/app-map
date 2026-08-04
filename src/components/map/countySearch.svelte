@@ -41,7 +41,7 @@ let open = $state(false);
 
 const displayedValue = $derived(open ? searchValue : displayName || "");
 const debouncedSearchValue = new Debounced(() => searchValue, 1000);
-$effect(async () => {
+$effect(() => {
   const searchTerm = debouncedSearchValue.current;
 
   if (!searchTerm || searchTerm.length < 3) {
@@ -52,14 +52,17 @@ $effect(async () => {
 
   isLoading = true;
 
-  try {
-    suggestions = await searchCounties(searchTerm);
-  } catch (error) {
-    console.error("Search error:", error);
-    suggestions = [];
-  } finally {
-    isLoading = false;
-  }
+  searchCounties(searchTerm)
+    .then((result) => {
+      suggestions = result;
+    })
+    .catch((error) => {
+      console.error("Search error:", error);
+      suggestions = [];
+    })
+    .finally(() => {
+      isLoading = false;
+    });
 });
 
 function handleValueChange(value: string | undefined) {
@@ -110,7 +113,7 @@ function handleOpenChange(isOpen: boolean) {
   }
 }
 
-type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
+type ItemChildrenProps = ComponentProps<typeof Combobox.Item>["children"] extends
   | ((props: infer P) => any)
   | undefined
   ? P
@@ -124,10 +127,10 @@ type ItemChildrenProps = ComponentProps<Combobox.Item>["children"] extends
   onValueChange={handleValueChange}
   onOpenChange={handleOpenChange}
   items={suggestions.map((s) => ({ value: s.key, label: s.displayName }))}
-  class="group relative w-full {className} text-xs"
   inputValue={displayedValue}
 >
-  <div class="relative w-full">
+  <!-- Combobox.Root renders no element, so the class lives on this wrapper. -->
+  <div class="relative w-full {className}">
     <Combobox.Input
       oninput={handleInput}
       {placeholder}

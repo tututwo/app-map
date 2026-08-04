@@ -1,18 +1,13 @@
-import { dashboardResultCache } from "$lib/dashboard/client-cache";
-import { loadDashboardData, type DashboardPart } from "$lib/dashboard/data";
+import { getLineSeries, getMapData, getSideMetric } from "$lib/dashboard/data.remote";
 import { parseDashboardParams } from "$lib/dashboard/params";
 
 import type { PageLoad } from "./$types";
 
-const PDF_PARTS = new Set<DashboardPart>(["map", "line", "side"]);
+// Resolve the report's remote queries before render so the page — including
+// server-rendered HTML — awaits already-settled instances instead of showing
+// the boundary's pending state.
+export const load: PageLoad = async ({ url }) => {
+  const { from, to, geoid } = parseDashboardParams(url);
 
-export const load: PageLoad = async ({ fetch, depends, url }) => {
-  const params = parseDashboardParams(url);
-  const results = await loadDashboardData(
-    { fetch, depends, cache: dashboardResultCache },
-    params,
-    PDF_PARTS
-  );
-
-  return { params, results };
+  await Promise.allSettled([getMapData({ from, to }), getLineSeries(geoid), getSideMetric(geoid)]);
 };

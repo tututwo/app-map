@@ -6,12 +6,15 @@ import {
   isNationalGeoid,
   normalizeCountyGeoid,
 } from "$lib/domain/countyGeoid";
-import { readSideMetric } from "$lib/server/data/by-geoid";
+import { yearWindowViolation } from "$lib/domain/yearWindow";
+import type { MapDatum } from "$lib/dashboard/data";
+import { readLineSeries, readSideMetric, readStackedSeries } from "$lib/server/data/by-geoid";
+import { readMapRange } from "$lib/server/data/map-data";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
 import { csvFormat } from "d3";
 import JSZip from "jszip";
 
-export const GET: RequestHandler = async ({ url, fetch }) => {
+export const GET: RequestHandler = async ({ url }) => {
   try {
     // Parse query parameters
     const fromParam = url.searchParams.get("from");
@@ -31,45 +34,40 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
       throw error(400, "from and to must be valid integers");
     }
 
-    // Build query parameters for API calls
-    const baseParams = new URLSearchParams({
-      from: fromParam,
-      to: toParam,
-      geoid,
-    });
+    if (!/^\d{5}$/.test(geoid)) {
+      throw error(400, "Invalid geoid");
+    }
 
-    // Make parallel requests to all three APIs
-    const [lineChartResponse, mapDataResponse, stackedBarResponse] = await Promise.all([
-      fetch(`/api/line_chart_data?${baseParams.toString()}`),
-      fetch(`/api/map_data?${baseParams.toString()}`),
-      fetch(`/api/stacked_bar_chart_data?${baseParams.toString()}`),
+    if (yearWindowViolation(from, to)) {
+      throw error(400, "Failed to fetch map data");
+    }
+
+    // Read the generated datasets directly
+    const [lineSeries, stackedSeries, mapText] = await Promise.all([
+      readLineSeries(geoid),
+      readStackedSeries(geoid),
+      readMapRange(`${from}-${to}`),
     ]);
 
-    // Check if all requests were successful
-    if (!lineChartResponse.ok) {
-      console.error("Line chart API error:", await lineChartResponse.text());
-      throw error(lineChartResponse.status, "Failed to fetch line chart data");
+    if (!lineSeries) {
+      throw error(404, "Failed to fetch line chart data");
+    }
+    if (!stackedSeries) {
+      throw error(404, "Failed to fetch stacked bar data");
     }
 
-    const hasKnownMapDataGap =
-      isConnecticutPlanningRegionGeoid(geoid) && mapDataResponse.status === 404;
+    const mapData = mapText
+      ? (JSON.parse(mapText) as MapDatum[]).filter((row) => row.geoid === geoid)
+      : [];
 
-    if (!mapDataResponse.ok && !hasKnownMapDataGap) {
-      console.error("Map data API error:", await mapDataResponse.text());
-      throw error(mapDataResponse.status, "Failed to fetch map data");
+    // Connecticut planning regions have no map rows; their download ships an
+    // empty map CSV instead of failing the whole archive.
+    if (mapData.length === 0 && !isConnecticutPlanningRegionGeoid(geoid)) {
+      throw error(404, "Failed to fetch map data");
     }
 
-    if (!stackedBarResponse.ok) {
-      console.error("Stacked bar API error:", await stackedBarResponse.text());
-      throw error(stackedBarResponse.status, "Failed to fetch stacked bar data");
-    }
-
-    // Parse JSON responses
-    const [lineChartData, stackedBarData, mapData] = await Promise.all([
-      (await lineChartResponse.json()).filter((row: any) => row.year >= from && row.year <= to),
-      (await stackedBarResponse.json()).filter((row: any) => row.year >= from && row.year <= to),
-      hasKnownMapDataGap ? [] : await mapDataResponse.json(),
-    ]);
+    const lineChartData = lineSeries.filter((row) => row.year >= from && row.year <= to);
+    const stackedBarData = stackedSeries.filter((row) => row.year >= from && row.year <= to);
 
     const selectedSideMetricData = await readSideMetric(geoid);
     const statistics = isNationalGeoid(geoid)
@@ -77,24 +75,10 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
       : createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs);
 
     const zip = new JSZip();
-
-    if (Array.isArray(lineChartData)) {
-      const lineChartCsv = csvFormat(lineChartData);
-      zip.file("line_chart_data.csv", lineChartCsv);
-    }
-
-    if (Array.isArray(mapData)) {
-      const mapDataCsv = csvFormat(mapData);
-      zip.file("map_data.csv", mapDataCsv);
-    }
-
-    if (Array.isArray(stackedBarData)) {
-      const stackedBarCsv = csvFormat(stackedBarData);
-      zip.file("stacked_bar_chart_data.csv", stackedBarCsv);
-    }
-
-    const statisticsCsv = csvFormat(statistics);
-    zip.file("statistics.csv", statisticsCsv);
+    zip.file("line_chart_data.csv", csvFormat(lineChartData));
+    zip.file("map_data.csv", csvFormat(mapData));
+    zip.file("stacked_bar_chart_data.csv", csvFormat(stackedBarData));
+    zip.file("statistics.csv", csvFormat(statistics));
 
     const zipContent = await zip.generateAsync({ type: "nodebuffer" });
 

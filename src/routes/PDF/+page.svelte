@@ -10,12 +10,12 @@
 @to 
 -->
 <script lang="ts">
-import { resolveRoute } from "$app/paths";
+import { resolve } from "$app/paths";
+import { page } from "$app/state";
 import { isNationalGeoid } from "$lib/domain/countyGeoid";
 import { tick } from "svelte";
 import { Download, FileText, X } from "lucide-svelte";
 
-import type { PageData } from "./$types";
 import { Button } from "bits-ui";
 import Figure from "$components/chart/Figure.svelte";
 
@@ -32,6 +32,9 @@ import {
   mapMetricDefinitions,
   quantileIndexOf,
 } from "$lib/config/mapMetrics";
+import { getLineSeries, getMapData, getSideMetric } from "$lib/dashboard/data.remote";
+import type { LineDatum, MapDatum } from "$lib/dashboard/data";
+import { parseDashboardParams } from "$lib/dashboard/params";
 import { countyDisplayName, dashboardSearch } from "$lib/dashboard/presentation";
 import { initialMapCaptureState, type MapCaptureState } from "$lib/map/capture";
 import { pageImageOffsets } from "$lib/pdf/paginate";
@@ -58,11 +61,15 @@ let visibleExportError = $derived(
   exportError ?? (mapPreparationError ? `Map rendering failed: ${mapPreparationError}` : null)
 );
 
-let { data }: { data: PageData } = $props();
-let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
-let geoid = $derived(data.params.geoid);
-let mapData = $derived(data.results.map?.ok ? data.results.map.data : []);
-let lineChartData = $derived(data.results.line?.ok ? data.results.line.data : []);
+const params = $derived(parseDashboardParams(page.url));
+let yearRange = $derived<[number, number]>([params.from, params.to]);
+let geoid = $derived(params.geoid);
+// Each part degrades to an empty chart on failure — the report renders with
+// whatever data it has, matching the dashboard's tolerance.
+let mapData = $derived(
+  await getMapData({ from: params.from, to: params.to }).catch((): MapDatum[] => [])
+);
+let lineChartData = $derived(await getLineSeries(geoid).catch((): LineDatum[] => []));
 const emptyMapColorDomain = [0, 1] as const;
 let mapMetricPresentations = $derived(createMapMetricPresentations(mapData));
 let countyName = $derived(countyDisplayName(mapData, geoid) ?? "the United States");
@@ -178,8 +185,10 @@ async function exportToPDF() {
   }
 }
 
+// Some locations (Connecticut planning regions) publish no side metrics; the
+// panel renders its "unavailable" state instead of failing the report.
 let selectedSideMetricData = $derived(
-  !isNationalGeoid(geoid) && data.results.side?.ok ? data.results.side.data : undefined
+  !isNationalGeoid(geoid) ? await getSideMetric(geoid).catch(() => undefined) : undefined
 );
 let statistics = $derived(
   createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs)
@@ -189,162 +198,178 @@ let demographicStatistics = $derived(
 );
 </script>
 
-<div class="flex min-h-screen items-start justify-center bg-gray-100 p-4 sm:p-8">
-  <div class="w-full max-w-6xl rounded-lg bg-white p-6 shadow-xl sm:p-8">
-    <header class="mb-6 flex items-center justify-between border-b border-gray-300 pb-4">
-      <div class="flex items-center space-x-4">
-        <button
-          onclick={exportToPDF}
-          disabled={isExporting || !allMapsReady}
-          title={allMapsReady
-            ? "Save this report as a PDF"
-            : mapPreparationError
-              ? "Report maps could not be loaded"
-              : "Preparing report maps"}
-          class="flex cursor-pointer items-center text-sm text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {#if isExporting}
-            <svg class="mr-1.5 h-4 w-4 animate-spin" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-                fill="none"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            Exporting...
-          {:else if mapPreparationError}
-            Maps unavailable
-          {:else if !allMapsReady}
-            Preparing maps...
-          {:else}
-            <FileText class="mr-1.5 h-4 w-4" />
-            Save as PDF
-          {/if}
-        </button>
-        <form method="GET" action="/api/download_data" target="_blank">
-          <input type="hidden" name="from" value={yearRange[0]} />
-          <input type="hidden" name="to" value={yearRange[1]} />
-          <input type="hidden" name="geoid" value={geoid} />
-          <button type="submit" class="flex items-center text-sm text-gray-700 hover:text-gray-900">
-            <Download class="mr-1.5 h-4 w-4" />
-            Download data
-          </button>
-        </form>
-      </div>
-      <Button.Root
-        href={`${resolveRoute("/", {})}?${dashboardSearch({ from: yearRange[0], to: yearRange[1], geoid })}`}
-        class="cursor-pointer text-gray-500 hover:text-gray-700"
-      >
-        <X class="h-5 w-5" />
-      </Button.Root>
-    </header>
-
-    <!-- Error message -->
-    {#if visibleExportError}
-      <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-        <div class="flex">
-          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Export Error</h3>
-            <p class="mt-1 text-sm text-red-700">{visibleExportError}</p>
-            {#if mapPreparationError}
-              <button
-                type="button"
-                class="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100"
-                onclick={reloadReport}
-              >
-                Reload report
-              </button>
+<svelte:boundary>
+  <div class="flex min-h-screen items-start justify-center bg-gray-100 p-4 sm:p-8">
+    <div class="w-full max-w-6xl rounded-lg bg-white p-6 shadow-xl sm:p-8">
+      <header class="mb-6 flex items-center justify-between border-b border-gray-300 pb-4">
+        <div class="flex items-center space-x-4">
+          <button
+            onclick={exportToPDF}
+            disabled={isExporting || !allMapsReady}
+            title={allMapsReady
+              ? "Save this report as a PDF"
+              : mapPreparationError
+                ? "Report maps could not be loaded"
+                : "Preparing report maps"}
+            class="flex cursor-pointer items-center text-sm text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {#if isExporting}
+              <svg class="mr-1.5 h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Exporting...
+            {:else if mapPreparationError}
+              Maps unavailable
+            {:else if !allMapsReady}
+              Preparing maps...
+            {:else}
+              <FileText class="mr-1.5 h-4 w-4" />
+              Save as PDF
             {/if}
-          </div>
+          </button>
+          <form method="GET" action="/api/download_data" target="_blank">
+            <input type="hidden" name="from" value={yearRange[0]} />
+            <input type="hidden" name="to" value={yearRange[1]} />
+            <input type="hidden" name="geoid" value={geoid} />
+            <button
+              type="submit"
+              class="flex items-center text-sm text-gray-700 hover:text-gray-900"
+            >
+              <Download class="mr-1.5 h-4 w-4" />
+              Download data
+            </button>
+          </form>
         </div>
-      </div>
-    {/if}
+        <Button.Root
+          href={`${resolve("/")}?${dashboardSearch({ from: yearRange[0], to: yearRange[1], geoid })}`}
+          class="cursor-pointer text-gray-500 hover:text-gray-700"
+        >
+          <X class="h-5 w-5" />
+        </Button.Root>
+      </header>
 
-    <main bind:this={mainContent}>
-      <h1 class="mb-2 text-2xl font-bold text-gray-800">
-        Closed Churches in {countyName} ({yearRange[0]}-{yearRange[1]})
-      </h1>
-
-      <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
-        <Figure>
-          <LineChartBrush
-            margin={lineChartMargin}
-            {yearRange}
-            data={lineChartData}
-            disableBrushing={true}
-          />
-
-          {#snippet figcaption()}
-            This is a caption for the line chart showing church closures over time.
-          {/snippet}
-        </Figure>
-        <!-- <span class="text-5xl font-bold text-gray-400 italic">Line Chart</span> -->
-      </div>
-
-      <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div class="space-y-8 lg:col-span-2">
-          <DataSection
-            title="Total number of closed church"
-            mapBorderColor="border-blue-100"
-            legendData={dataRanges[0]}
-            description={introText}
-            mapColorKey={mapMetricDefinitions[0].colorKey}
-            mapColorRange={mapMetricDefinitions[0].colorRange}
-            mapColorDomain={mapMetricPresentations[0]?.colorDomain ?? emptyMapColorDomain}
-            {mapData}
-            {geoid}
-            bind:mapCaptureState={closureMapCaptureState}
-          />
-          <DataSection
-            title="Rate of closed churches per 10,000 population"
-            legendData={dataRanges[1]}
-            description={introText}
-            mapColorKey={mapMetricDefinitions[1].colorKey}
-            mapColorRange={mapMetricDefinitions[1].colorRange}
-            mapColorDomain={mapMetricPresentations[1]?.colorDomain ?? emptyMapColorDomain}
-            {mapData}
-            {geoid}
-            bind:mapCaptureState={closureRateMapCaptureState}
-          />
-          <DataSection
-            title="Persistence of open churches"
-            legendData={dataRanges[2]}
-            description={introText}
-            mapColorKey={mapMetricDefinitions[2].colorKey}
-            mapColorRange={mapMetricDefinitions[2].colorRange}
-            mapColorDomain={mapMetricPresentations[2]?.colorDomain ?? emptyMapColorDomain}
-            {mapData}
-            {geoid}
-            bind:mapCaptureState={persistenceMapCaptureState}
-          />
-        </div>
-
-        <div class="space-y-8 lg:col-span-1">
-          <div class="relative h-[calc(100%)] p-2">
-            <!-- Scrollable container -->
-            <div class="absolute inset-0 overflow-y-auto pr-1">
-              <!-- Social determinants -->
-              <SideMetricsPanel {statistics} {demographicStatistics} forceStatic={isExporting} />
+      <!-- Error message -->
+      {#if visibleExportError}
+        <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <div class="flex">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-red-800">Export Error</h3>
+              <p class="mt-1 text-sm text-red-700">{visibleExportError}</p>
+              {#if mapPreparationError}
+                <button
+                  type="button"
+                  class="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-100"
+                  onclick={reloadReport}
+                >
+                  Reload report
+                </button>
+              {/if}
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      {/if}
+
+      <main bind:this={mainContent}>
+        <h1 class="mb-2 text-2xl font-bold text-gray-800">
+          Closed Churches in {countyName} ({yearRange[0]}-{yearRange[1]})
+        </h1>
+
+        <div class="mb-8 flex h-48 items-center justify-center rounded border-gray-300">
+          <Figure>
+            <LineChartBrush
+              margin={lineChartMargin}
+              {yearRange}
+              data={lineChartData}
+              disableBrushing={true}
+            />
+
+            {#snippet figcaption()}
+              This is a caption for the line chart showing church closures over time.
+            {/snippet}
+          </Figure>
+          <!-- <span class="text-5xl font-bold text-gray-400 italic">Line Chart</span> -->
+        </div>
+
+        <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div class="space-y-8 lg:col-span-2">
+            <DataSection
+              title="Total number of closed church"
+              mapBorderColor="border-blue-100"
+              legendData={dataRanges[0]}
+              description={introText}
+              mapColorKey={mapMetricDefinitions[0].colorKey}
+              mapColorRange={mapMetricDefinitions[0].colorRange}
+              mapColorDomain={mapMetricPresentations[0]?.colorDomain ?? emptyMapColorDomain}
+              {mapData}
+              {geoid}
+              bind:mapCaptureState={closureMapCaptureState}
+            />
+            <DataSection
+              title="Rate of closed churches per 10,000 population"
+              legendData={dataRanges[1]}
+              description={introText}
+              mapColorKey={mapMetricDefinitions[1].colorKey}
+              mapColorRange={mapMetricDefinitions[1].colorRange}
+              mapColorDomain={mapMetricPresentations[1]?.colorDomain ?? emptyMapColorDomain}
+              {mapData}
+              {geoid}
+              bind:mapCaptureState={closureRateMapCaptureState}
+            />
+            <DataSection
+              title="Persistence of open churches"
+              legendData={dataRanges[2]}
+              description={introText}
+              mapColorKey={mapMetricDefinitions[2].colorKey}
+              mapColorRange={mapMetricDefinitions[2].colorRange}
+              mapColorDomain={mapMetricPresentations[2]?.colorDomain ?? emptyMapColorDomain}
+              {mapData}
+              {geoid}
+              bind:mapCaptureState={persistenceMapCaptureState}
+            />
+          </div>
+
+          <div class="space-y-8 lg:col-span-1">
+            <div class="relative h-[calc(100%)] p-2">
+              <!-- Scrollable container -->
+              <div class="absolute inset-0 overflow-y-auto pr-1">
+                <!-- Social determinants -->
+                <SideMetricsPanel {statistics} {demographicStatistics} forceStatic={isExporting} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
-</div>
+
+  <!-- No pending snippet: server rendering awaits the report data instead of
+     emitting a placeholder, so the HTML ships with content. -->
+  {#snippet failed(_, reset)}
+    <div class="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-100">
+      <p class="text-gray-700">The report data could not be loaded.</p>
+      <button class="rounded bg-[#00356b] px-4 py-2 text-white hover:bg-[#002855]" onclick={reset}>
+        Try again
+      </button>
+    </div>
+  {/snippet}
+</svelte:boundary>

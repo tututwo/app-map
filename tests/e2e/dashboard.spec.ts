@@ -78,7 +78,7 @@ test("dashboard and report data are present in server-rendered HTML", async ({ r
 
 test("concurrent brush and county changes converge on one complete URL", async ({ page }) => {
   let delayMapRequests = false;
-  await page.route("**/api/map_data?*", async (route) => {
+  await page.route("**/remote/*/getMapData/*", async (route) => {
     if (delayMapRequests) await new Promise((resolve) => setTimeout(resolve, 2_500));
     await route.continue().catch(() => {});
   });
@@ -115,7 +115,7 @@ test("concurrent brush and county changes converge on one complete URL", async (
 
 test("a failed navigation keeps last-good data and retry recovers", async ({ page }) => {
   let failNextMapRequest = false;
-  await page.route("**/api/map_data?*", async (route) => {
+  await page.route("**/remote/*/getMapData/*", async (route) => {
     if (failNextMapRequest) {
       failNextMapRequest = false;
       await route.fulfill({ status: 503, body: "temporarily unavailable" });
@@ -140,7 +140,7 @@ test("a failed navigation keeps last-good data and retry recovers", async ({ pag
 
 test("a dismissed load error is shown again after recovery", async ({ page }) => {
   let failNextMapRequest = false;
-  await page.route("**/api/map_data?*", async (route) => {
+  await page.route("**/remote/*/getMapData/*", async (route) => {
     if (failNextMapRequest) {
       failNextMapRequest = false;
       await route.fulfill({ status: 503, body: "temporarily unavailable" });

@@ -3,7 +3,7 @@
  * @param {string} hexColor - Hex color string (with or without #)
  * @returns {number} Relative luminance value between 0 and 1
  */
-function getRelativeLuminance(hexColor) {
+function getRelativeLuminance(hexColor: string): number {
   // Remove the # if present
   const hex = hexColor.replace("#", "");
 
@@ -13,7 +13,7 @@ function getRelativeLuminance(hexColor) {
   const b = parseInt(hex.substr(4, 2), 16) / 255;
 
   // Apply gamma correction for each channel
-  const gammaCorrect = (value) => {
+  const gammaCorrect = (value: number) => {
     return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
   };
 
@@ -31,7 +31,7 @@ function getRelativeLuminance(hexColor) {
  * @param {number} luminance2 - Relative luminance of second color
  * @returns {number} Contrast ratio between 1 and 21
  */
-function getContrastRatio(luminance1, luminance2) {
+function getContrastRatio(luminance1: number, luminance2: number): number {
   const lighter = Math.max(luminance1, luminance2);
   const darker = Math.min(luminance1, luminance2);
   return (lighter + 0.05) / (darker + 0.05);
@@ -43,7 +43,7 @@ function getContrastRatio(luminance1, luminance2) {
  * @param {string} textSize - 'normal' or 'large' (affects contrast requirements)
  * @returns {string} Either '#000000' (black) or '#FFFFFF' (white)
  */
-export function getAccessibleTextColor(backgroundColor, textSize = "normal") {
+export function getAccessibleTextColor(backgroundColor: string, textSize = "normal"): string {
   const bgLuminance = getRelativeLuminance(backgroundColor);
 
   // Calculate contrast ratios with pure black and white

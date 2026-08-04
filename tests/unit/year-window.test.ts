@@ -4,6 +4,7 @@ import {
   YEAR_WINDOW_BOUNDS,
   clampYearWindow,
   inferAdjustedEdge,
+  legalYearWindows,
   yearWindowViolation,
 } from "$lib/domain/yearWindow";
 
@@ -18,6 +19,18 @@ describe("inferAdjustedEdge", () => {
 describe("YEAR_WINDOW_BOUNDS", () => {
   test("matches the generated data", () => {
     expect(YEAR_WINDOW_BOUNDS).toEqual({ minYear: 2001, maxYear: 2021, minGap: 5 });
+  });
+});
+
+describe("legalYearWindows", () => {
+  test("enumerates exactly the windows the validator accepts", () => {
+    const windows = legalYearWindows();
+    const { minYear, maxYear, minGap } = YEAR_WINDOW_BOUNDS;
+    const span = maxYear - minYear - minGap + 1;
+
+    expect(windows).toHaveLength((span * (span + 1)) / 2);
+    expect(windows.every(({ from, to }) => yearWindowViolation(from, to) === null)).toBe(true);
+    expect(new Set(windows.map(({ from, to }) => `${from}-${to}`)).size).toBe(windows.length);
   });
 });
 

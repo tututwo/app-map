@@ -70,6 +70,22 @@ export function clampYearWindow(
 }
 
 /**
+ * Every legal Year Window, in the same "everything within bounds meeting the
+ * minimum gap" algebra the prebuild asserts. Enumerates the prerender inputs
+ * for the map remote function.
+ */
+export function legalYearWindows(): YearWindow[] {
+  const { minYear, maxYear, minGap } = YEAR_WINDOW_BOUNDS;
+  const windows: YearWindow[] = [];
+  for (let from = minYear; from <= maxYear - minGap; from += 1) {
+    for (let to = from + minGap; to <= maxYear; to += 1) {
+      windows.push({ from, to });
+    }
+  }
+  return windows;
+}
+
+/**
  * Which edge of a window a drag gesture is moving, inferred from which end
  * changed more between two selections (in any shared unit — pixels or years).
  */
@@ -84,8 +100,8 @@ export function inferAdjustedEdge(
 
 /**
  * Why a window is illegal, as a human-readable message — or null when it is
- * legal. Serves the API validators; UI code wanting a cheap predicate can
- * compare spans against YEAR_WINDOW_BOUNDS.minGap directly.
+ * legal. Serves the remote-function schemas; UI code wanting a cheap predicate
+ * can compare spans against YEAR_WINDOW_BOUNDS.minGap directly.
  */
 export function yearWindowViolation(from: number, to: number): string | null {
   const { minYear, maxYear, minGap } = YEAR_WINDOW_BOUNDS;

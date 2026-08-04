@@ -7,7 +7,18 @@ const config = {
   // for more information about preprocessors
   preprocess: vitePreprocess(),
 
+  compilerOptions: {
+    experimental: {
+      // Required for await expressions in components (PDF report page).
+      async: true,
+    },
+  },
+
   kit: {
+    experimental: {
+      // Dashboard data flows through remote functions (src/lib/dashboard/data.remote.ts).
+      remoteFunctions: true,
+    },
     // adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
     // If your environment is not supported, or you settled on a specific environment, switch out the adapter.
     // See https://svelte.dev/docs/kit/adapters for more information about adapters.

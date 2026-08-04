@@ -1,8 +1,5 @@
 import { read } from "$app/server";
 
-export const DASHBOARD_CACHE_CONTROL =
-  "public, max-age=300, s-maxage=31536000, stale-while-revalidate=86400";
-
 export async function readCompressedText(asset: string): Promise<string> {
   const body = read(asset).body;
   if (!body) throw new Error("Generated dashboard asset had no response body");

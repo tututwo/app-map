@@ -1,5 +1,4 @@
 <script lang="ts">
-import { invalidate } from "$app/navigation";
 import { isNationalGeoid } from "$lib/domain/countyGeoid";
 import { Pointer, CircleHelp } from "lucide-svelte";
 
@@ -32,7 +31,6 @@ import {
 } from "$lib/config/mapMetrics";
 import { demographicMetricConfigs, socialDeterminantMetricConfigs } from "$lib/config/sideMetrics";
 import { createSideMetricData } from "$lib/utils/sideMetricTransformation";
-import { createLastGood } from "$lib/dashboard/last-good.svelte";
 import { CountySelection } from "$lib/dashboard/county-selection.svelte";
 import { countyDisplayName } from "$lib/dashboard/presentation";
 import { setDashboardParams } from "$lib/dashboard/navigate";
@@ -41,33 +39,37 @@ import type { PageData } from "./$types";
 
 let { data }: { data: PageData } = $props();
 
-const mapState = createLastGood<MapDatum[]>();
-const lineState = createLastGood<LineDatum[]>();
-const stackedState = createLastGood<StackedDatum[]>();
+const params = $derived(data.params);
 
-function syncDashboardResults() {
-  if (data.results.map) mapState.update(data.results.map);
-  if (data.results.line) lineState.update(data.results.line);
-  if (data.results.stacked) stackedState.update(data.results.stacked);
-}
+// Charts keep the last good data while a new selection loads or a fetch fails
+// (the ?? deriveds below prefer fresh load results, so no seeding needed).
+let lastGoodMap = $state.raw<MapDatum[]>([]);
+let lastGoodLine = $state.raw<LineDatum[]>([]);
+let lastGoodStacked = $state.raw<StackedDatum[]>([]);
+$effect(() => {
+  if (data.map.value) lastGoodMap = data.map.value;
+});
+$effect(() => {
+  if (data.line.value) lastGoodLine = data.line.value;
+});
+$effect(() => {
+  if (data.stacked.value) lastGoodStacked = data.stacked.value;
+});
 
-syncDashboardResults();
-$effect(syncDashboardResults);
-
-let yearRange = $derived<[number, number]>([data.params.from, data.params.to]);
-let geoid = $derived(data.params.geoid);
-let mapData = $derived(mapState.value ?? []);
-let lineChartData = $derived(lineState.value ?? []);
-let stackedBarData = $derived(stackedState.value ?? []);
+let yearRange = $derived<[number, number]>([params.from, params.to]);
+let geoid = $derived(params.geoid);
+let mapData = $derived(data.map.value ?? lastGoodMap);
+let lineChartData = $derived(data.line.value ?? lastGoodLine);
+let stackedBarData = $derived(data.stacked.value ?? lastGoodStacked);
 
 let highlightedGroup = $state<string | null>(null);
 
 const selection = new CountySelection({
   navigate: setDashboardParams,
-  settled: () => data.params.geoid,
+  settled: () => params.geoid,
 });
 
-$effect(() => selection.observeSettled(data.params.geoid));
+$effect(() => selection.observeSettled(params.geoid));
 
 let displayName = $derived(
   selection.nameOverride !== undefined
@@ -125,10 +127,7 @@ let dataRanges = $derived(selectedMapPresentation ? createLegendRows(selectedMap
 // ----------------------------------------------------------------
 // ----------------------Metric Section----------------------
 // ----------------------------------------------------------------
-let sideResult = $derived(data.results.side);
-let selectedSideMetricData = $derived(
-  !isNationalGeoid(geoid) && sideResult?.ok ? sideResult.data : undefined
-);
+let selectedSideMetricData = $derived(!isNationalGeoid(geoid) ? data.side.value : undefined);
 
 let statistics = $derived(
   createSideMetricData(selectedSideMetricData, socialDeterminantMetricConfigs)
@@ -138,25 +137,22 @@ let demographicStatistics = $derived(
   createSideMetricData(selectedSideMetricData, demographicMetricConfigs)
 );
 
-let errors = $derived(
-  [
-    mapState.error,
-    lineState.error,
-    stackedState.error,
-    sideResult && !sideResult.ok ? sideResult : undefined,
-  ].filter(Boolean)
+let failedParts = $derived(
+  [data.map, data.line, data.stacked, data.side].filter((part) => part.value === undefined)
 );
-let dismissedErrorResults = $state.raw<PageData["results"] | null>(null);
-let hasLoadingError = $derived(errors.length > 0 && dismissedErrorResults !== data.results);
-let hasLoadingTimeout = $derived(errors.some((error) => error?.kind === "timeout"));
+let dismissedResults = $state.raw<PageData | null>(null);
+let hasLoadingError = $derived(failedParts.length > 0 && dismissedResults !== data);
+let hasLoadingTimeout = $derived(failedParts.some((part) => part.timedOut));
 
+// ponytail: a rejected prerendered payload stays rejected until the page
+// reloads (kit memoizes remote resources per-args with no refresh for
+// prerender), so a reload IS the retry. Upgrade if kit adds refresh.
 function retryDataFetch() {
-  dismissedErrorResults = null;
-  void invalidate("app:dashboard");
+  window.location.reload();
 }
 
 function dismissLoadingError() {
-  dismissedErrorResults = data.results;
+  dismissedResults = data;
 }
 </script>
 
