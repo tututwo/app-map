@@ -25,3 +25,8 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 src/data/allMetricsByCounty_06042025.geojson
+
+# AI agent context (local only, not for the shared repo)
+.agents/
+.cursor/
+LLM/
