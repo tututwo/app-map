@@ -156,6 +156,10 @@ function dismissLoadingError() {
 }
 </script>
 
+<svelte:head>
+  <title>Legacy dashboard</title>
+</svelte:head>
+
 <div class="flex h-screen">
   <!-- Use the Sidebar component -->
   <Sidebar from={yearRange[0]} to={yearRange[1]} {geoid}>

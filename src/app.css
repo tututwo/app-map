@@ -1,5 +1,5 @@
-/* Fallback to Barlow for now until YaleDisplay is available */
-@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap");
+/* Site type: Libre Caslon Text (headlines) + Libre Franklin (UI) — design handoff, theme "bulldog" */
+@import url("https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Libre+Franklin:ital,wght@0,300..800;1,300..800&display=swap");
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -169,9 +169,29 @@
   --color-yale-purple: #7634a6;
   --color-yale-red: #f65568;
 
+  /* Site tokens — docs/design_handoff_worship_closures/README.md, theme "bulldog" */
+  --color-ink: #121212;
+  --color-body: #3a3a3a;
+  --color-muted: #6b6b6b;
+  --color-faint: #7a7a7a;
+  --color-rule: #e3e3e3;
+  --color-field-border: #d2d2d2;
+  --color-hero-text: #d6e2f2;
+  --color-kicker: #9cc5ff;
+  --color-footer: #f4f4f2;
+  --color-map: #f2f3f5;
+  --color-nodata: #e8e9ec;
+  --color-hatch: #cfd2d8;
+  --color-seg: #eeeff1;
+  --color-scale-1: #dce5f1;
+  --color-scale-2: #a6bedf;
+  --color-scale-3: #6c93c7;
+  --color-scale-4: #3565a8;
+  --color-scale-5: #00356b;
+
   /* Typography */
-  --font-sans: "YaleNew", "Barlow", Calibri, system-ui, ui-sans-serif, sans-serif;
-  --font-serif: "Times New Roman", Times, Georgia, ui-serif, serif;
+  --font-sans: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Libre Caslon Text", Georgia, serif;
   --font-display:
     "Barlow", "YaleNew", system-ui, ui-sans-serif, sans-serif; /* Using Barlow as placeholder for YaleDisplay */
 }
@@ -244,5 +264,35 @@
   .yale-body-small {
     font-family: var(--font-sans);
     @apply text-sm;
+  }
+}
+
+/* Site utilities (design handoff) */
+@utility label-caps {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-nodata) 0 6px,
+    var(--color-hatch) 6px 8px
+  );
+}
+@utility hatch-sm {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-nodata) 0 5px,
+    var(--color-hatch) 5px 7px
+  );
+}
+@layer base {
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 }

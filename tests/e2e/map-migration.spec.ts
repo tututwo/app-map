@@ -163,7 +163,7 @@ async function delayBrowserGeolocation(page: Page) {
 }
 
 test("map canvas keeps the WebGL attributes required for PDF capture", async ({ page }) => {
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   const canvas = page.getByRole("region", { name: "Map" }).locator("canvas.maplibregl-canvas");
   await expect(canvas).toBeVisible();
@@ -193,7 +193,7 @@ test("initial camera, Deck ordering, and county-click fly-to survive the upstrea
   page,
 }) => {
   await useDeterministicMapStyle(page);
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   const map = page.getByRole("region", { name: "Map" }).locator("figure");
   await expect(map).toHaveAttribute("data-map-capture-state", "ready", { timeout: 30_000 });
@@ -243,7 +243,7 @@ test("a selected GEOID without a county camera resets to the US camera", async (
   await page.route("https://nominatim.openstreetmap.org/search?*", (route) =>
     fulfillJson(route, capitolPlanningRegionSearchResponse)
   );
-  await page.goto("/?from=2003&to=2011&geoid=01001");
+  await page.goto("/legacy?from=2003&to=2011&geoid=01001");
 
   const map = page.getByRole("region", { name: "Map" }).locator("figure");
   await expect(map).toHaveAttribute("data-map-capture-state", "ready", { timeout: 30_000 });
@@ -274,7 +274,7 @@ test("a fatal initial style failure publishes a map capture error", async ({ pag
   await page.route("https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json", (route) =>
     route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
   );
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   const map = page.getByRole("region", { name: "Map" }).locator("figure");
   await expect(map).toHaveAttribute("data-map-capture-state", "error", { timeout: 30_000 });
@@ -336,7 +336,7 @@ test("PDF map failures are surfaced with a reload path", async ({ page }) => {
 test("resetting a deep-linked county converges the URL and heading on all locations", async ({
   page,
 }) => {
-  await page.goto("/?from=2004&to=2012&geoid=01001");
+  await page.goto("/legacy?from=2004&to=2012&geoid=01001");
 
   const heading = page.getByRole("region", { name: "Line chart" }).locator("h1");
   await expect(heading).toContainText("Autauga County, AL");
@@ -360,7 +360,7 @@ test("browser geolocation resolves to Autauga County through Nominatim", async (
   await page.route("https://nominatim.openstreetmap.org/reverse?*", (route) =>
     fulfillJson(route, autaugaReverseResponse)
   );
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   await clickGeolocate(page);
 
@@ -389,7 +389,7 @@ test("a county search cancels geolocation before the browser emits a position", 
       },
     ])
   );
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   await clickGeolocate(page);
   await browserGeolocation.requested();

@@ -32,7 +32,7 @@ async function dragFromYear(page: Page, years: number, currentFrom = 2003, curre
 }
 
 test("dashboard and report data are present in server-rendered HTML", async ({ request }) => {
-  const dashboard = await request.get("/?from=2004&to=2012&geoid=01001");
+  const dashboard = await request.get("/legacy?from=2004&to=2012&geoid=01001");
   expect(dashboard.ok()).toBe(true);
   const dashboardHtml = await dashboard.text();
   expect(dashboardHtml).toContain("Autauga County, AL");
@@ -96,7 +96,7 @@ test("concurrent brush and county changes converge on one complete URL", async (
     });
   });
 
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
   await expect(page.getByText("From 2003 to 2011", { exact: true })).toBeVisible();
 
   delayMapRequests = true;
@@ -124,7 +124,7 @@ test("a failed navigation keeps last-good data and retry recovers", async ({ pag
     await route.continue();
   });
 
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
   await expect(page.getByText("From 2003 to 2011", { exact: true })).toBeVisible();
 
   failNextMapRequest = true;
@@ -149,7 +149,7 @@ test("a dismissed load error is shown again after recovery", async ({ page }) =>
     await route.continue();
   });
 
-  await page.goto("/?from=2003&to=2011&geoid=00000");
+  await page.goto("/legacy?from=2003&to=2011&geoid=00000");
 
   failNextMapRequest = true;
   await dragFromYear(page, 1);

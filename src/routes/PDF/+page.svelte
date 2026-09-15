@@ -254,7 +254,7 @@ let demographicStatistics = $derived(
           </form>
         </div>
         <Button.Root
-          href={`${resolve("/")}?${dashboardSearch({ from: yearRange[0], to: yearRange[1], geoid })}`}
+          href={`${resolve("/legacy")}?${dashboardSearch({ from: yearRange[0], to: yearRange[1], geoid })}`}
           class="cursor-pointer text-gray-500 hover:text-gray-700"
         >
           <X class="h-5 w-5" />

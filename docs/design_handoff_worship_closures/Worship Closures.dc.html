@@ -1,0 +1,2325 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300..800;1,8..60,300..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Cormorant+Garamond:ital,wght@0,400..700;1,400..700&family=Libre+Franklin:ital,wght@0,300..800;1,300..800&family=Source+Sans+3:ital,wght@0,300..800;1,300..800&family=Public+Sans:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Work+Sans:ital,wght@0,300..800;1,300..800&family=Karla:ital,wght@0,300..800;1,300..800&display=swap"
+          rel="stylesheet"
+        />
+        <script src="./image-slot.js"></script>
+        <style>
+          body {
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+          }
+          *,
+          *::before,
+          *::after {
+            box-sizing: border-box;
+          }
+          a {
+            color: var(--accent, #286dc0);
+          }
+          a:hover {
+            color: var(--ink, #121212);
+          }
+          input,
+          select,
+          button {
+            font: inherit;
+            color: inherit;
+            background: none;
+            border: 0;
+            margin: 0;
+          }
+          button {
+            cursor: pointer;
+          }
+          ::placeholder {
+            color: var(--faint, #7a7a7a);
+            opacity: 1;
+          }
+          @keyframes wc-fade {
+            from {
+              opacity: 0;
+              transform: translate(-50%, 4px);
+            }
+            to {
+              opacity: 1;
+              transform: translate(-50%, 0);
+            }
+          }
+        </style>
+      </helmet>
+      <div
+        ref="{{ root }}"
+        style="
+          min-height: 100vh;
+          background: var(--paper, #f4f2ed);
+          color: var(--text, #3a3a3a);
+          font-family: var(
+            --sans,
+            &quot;Libre Franklin&quot;,
+            &quot;Helvetica Neue&quot;,
+            Arial,
+            sans-serif
+          );
+          font-size: 15px;
+          line-height: 1.5;
+        "
+      >
+        <header
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            height: 64px;
+            padding: 0 60px;
+            background: var(--navBg, #f4f2ed);
+            border-bottom: 1px solid var(--rule, #e2ded5);
+            position: relative;
+            z-index: 5;
+          "
+        >
+          <a
+            href="#"
+            onClick="{{ goHome }}"
+            style="
+              font-weight: 700;
+              font-size: 16px;
+              letter-spacing: -0.01em;
+              color: var(--navBrand, #00356b);
+              text-decoration: none;
+              white-space: nowrap;
+            "
+            >[Project name]</a
+          >
+          <nav style="display: flex; align-items: stretch; gap: 30px; height: 100%">
+            <a
+              href="#"
+              onClick="{{ goExplore }}"
+              style="display:flex;align-items:center;font-size:14px;font-weight:500;color:var(--navInk,#121212);text-decoration:none;border-bottom:2px solid {{ exploreLine }};margin-bottom:-1px;white-space:nowrap"
+              >Explore</a
+            >
+            <a
+              href="#"
+              onClick="{{ goStories }}"
+              style="
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--navInk, #121212);
+                text-decoration: none;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -1px;
+                white-space: nowrap;
+              "
+              >Stories</a
+            >
+            <a
+              href="#"
+              onClick="{{ noop }}"
+              style="
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--navInk, #121212);
+                text-decoration: none;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -1px;
+                white-space: nowrap;
+              "
+              >Health Impacts</a
+            >
+            <a
+              href="#"
+              onClick="{{ noop }}"
+              style="
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--navInk, #121212);
+                text-decoration: none;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -1px;
+                white-space: nowrap;
+              "
+              >Download Data</a
+            >
+            <a
+              href="#"
+              onClick="{{ noop }}"
+              style="
+                display: flex;
+                align-items: center;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--navInk, #121212);
+                text-decoration: none;
+                border-bottom: 2px solid transparent;
+                margin-bottom: -1px;
+                white-space: nowrap;
+              "
+              >About</a
+            >
+          </nav>
+        </header>
+
+        <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+          <main data-screen-label="Landing">
+            <section style="background: var(--heroBg, transparent)">
+              <div
+                style="
+                  max-width: 1400px;
+                  margin: 0 auto;
+                  padding: 40px 60px 64px;
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+                  gap: 56px;
+                  align-items: end;
+                "
+              >
+                <div style="padding-bottom: 10px">
+                  <div
+                    style="
+                      font-size: 10.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--kicker, #00356b);
+                      margin-bottom: 28px;
+                    "
+                  >
+                    Yale School of Public Health · Research project
+                  </div>
+                  <h1
+                    style="
+                      font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                      font-weight: var(--h1w, 400);
+                      font-size: var(--h1s, 46px);
+                      line-height: 1.12;
+                      letter-spacing: -0.012em;
+                      color: var(--heroInk, #121212);
+                      margin: 0 0 26px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    Where are places of worship closing?
+                  </h1>
+                  <p
+                    style="
+                      font-size: 16px;
+                      line-height: 1.6;
+                      color: var(--heroText, #444444);
+                      margin: 0;
+                      max-width: 520px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    A research project from the Yale School of Public Health tracking where places
+                    of worship have closed across the U.S. — and what that means for the health of
+                    the neighborhoods around them.
+                  </p>
+                </div>
+                <div
+                  style="
+                    position: relative;
+                    aspect-ratio: 2.15;
+                    min-height: 240px;
+                    background: var(--surface, #ffffff);
+                    border: 1px solid var(--rule, #e2ded5);
+                    border-radius: var(--radius, 6px);
+                    overflow: hidden;
+                  "
+                >
+                  <image-slot
+                    id="wc-hero"
+                    shape="rect"
+                    placeholder="Hero image — a place of worship, then and now"
+                  ></image-slot>
+                </div>
+              </div>
+            </section>
+
+            <section
+              style="
+                max-width: 1400px;
+                margin: -36px auto 0;
+                padding: 0 60px;
+                position: relative;
+                z-index: 2;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  background: var(--surface, #ffffff);
+                  border: 1px solid var(--rule, #e2ded5);
+                  border-radius: var(--radius, 6px);
+                  box-shadow:
+                    0 1px 2px rgba(0, 0, 0, 0.05),
+                    0 14px 34px -18px rgba(0, 0, 0, 0.22);
+                "
+              >
+                <label
+                  style="
+                    flex: 1 1 320px;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    padding: 14px 20px 13px;
+                    border-right: 1px solid var(--rule, #e2ded5);
+                  "
+                >
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                    >Where</span
+                  >
+                  <input
+                    value="{{ where }}"
+                    onChange="{{ onWhere }}"
+                    onKeyDown="{{ onWhereKey }}"
+                    placeholder="ZIP, city, county or state — or leave empty for the whole U.S."
+                    style="
+                      width: 100%;
+                      font-size: 14px;
+                      color: var(--ink, #121212);
+                      padding: 0;
+                      outline: none;
+                    "
+                  />
+                </label>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 14px 20px 13px;
+                    border-right: 1px solid var(--rule, #e2ded5);
+                  "
+                >
+                  <div style="display: flex; flex-direction: column; gap: 6px">
+                    <span
+                      style="
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                      >From</span
+                    >
+                    <div
+                      style="
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        color: var(--ink, #121212);
+                      "
+                    >
+                      <select
+                        ref="{{ fromRef }}"
+                        onChange="{{ onFrom }}"
+                        style="
+                          appearance: none;
+                          -webkit-appearance: none;
+                          font-size: 14px;
+                          font-weight: 600;
+                          padding: 0 20px 0 0;
+                          outline: none;
+                          cursor: pointer;
+                        "
+                      >
+                        <sc-for list="{{ fromYears }}" as="o" hint-placeholder-count="1"
+                          ><option value="{{ o.y }}" selected="{{ o.sel }}">
+                            {{ o.y }}
+                          </option></sc-for
+                        >
+                      </select>
+                      <svg
+                        width="10"
+                        height="6"
+                        fill="none"
+                        stroke="currentColor"
+                        style="
+                          position: absolute;
+                          right: 2px;
+                          pointer-events: none;
+                          stroke-width: 1.5;
+                          color: var(--muted, #6b6b6b);
+                        "
+                      >
+                        <path d="M1 1l4 4 4-4"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <span style="color: var(--faint, #7a7a7a); margin-top: 18px">—</span>
+                  <div style="display: flex; flex-direction: column; gap: 6px">
+                    <span
+                      style="
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                        white-space: nowrap;
+                      "
+                      >To · 5+ years later</span
+                    >
+                    <div
+                      style="
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        color: var(--ink, #121212);
+                      "
+                    >
+                      <select
+                        ref="{{ toRef }}"
+                        onChange="{{ onTo }}"
+                        style="
+                          appearance: none;
+                          -webkit-appearance: none;
+                          font-size: 14px;
+                          font-weight: 600;
+                          padding: 0 20px 0 0;
+                          outline: none;
+                          cursor: pointer;
+                        "
+                      >
+                        <sc-for list="{{ toYears }}" as="o" hint-placeholder-count="1"
+                          ><option value="{{ o.y }}" selected="{{ o.sel }}">
+                            {{ o.y }}
+                          </option></sc-for
+                        >
+                      </select>
+                      <svg
+                        width="10"
+                        height="6"
+                        fill="none"
+                        stroke="currentColor"
+                        style="
+                          position: absolute;
+                          right: 2px;
+                          pointer-events: none;
+                          stroke-width: 1.5;
+                          color: var(--muted, #6b6b6b);
+                        "
+                      >
+                        <path d="M1 1l4 4 4-4"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    flex: 1 1 220px;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    padding: 14px 20px 13px;
+                  "
+                >
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                    >Type</span
+                  >
+                  <div
+                    style="
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                      color: var(--ink, #121212);
+                    "
+                  >
+                    <select
+                      ref="{{ typeRef }}"
+                      onChange="{{ onType }}"
+                      style="
+                        appearance: none;
+                        -webkit-appearance: none;
+                        width: 100%;
+                        font-size: 14px;
+                        font-weight: 600;
+                        padding: 0 20px 0 0;
+                        outline: none;
+                        cursor: pointer;
+                      "
+                    >
+                      <sc-for list="{{ types }}" as="t" hint-placeholder-count="1"
+                        ><option value="{{ t.k }}" selected="{{ t.sel }}">
+                          {{ t.label }}
+                        </option></sc-for
+                      >
+                    </select>
+                    <svg
+                      width="10"
+                      height="6"
+                      fill="none"
+                      stroke="currentColor"
+                      style="
+                        position: absolute;
+                        right: 2px;
+                        pointer-events: none;
+                        stroke-width: 1.5;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: stretch; padding: 8px">
+                  <button
+                    onClick="{{ explore }}"
+                    style="
+                      min-height: 48px;
+                      padding: 0 24px;
+                      background: var(--btn, #00356b);
+                      color: var(--btnInk, #ffffff);
+                      border-radius: var(--radiusSm, 4px);
+                      font-size: 14px;
+                      font-weight: 600;
+                      white-space: nowrap;
+                    "
+                    style-hover="filter:brightness(.92)"
+                  >
+                    Explore →
+                  </button>
+                </div>
+              </div>
+              <div style="font-size: 11.5px; color: var(--faint, #7a7a7a); padding: 10px 18px 0">
+                Rates are calculated over the whole period · minimum 5 years.
+              </div>
+            </section>
+
+            <section style="max-width: 1400px; margin: 0 auto; padding: 96px 60px 0">
+              <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 30px">
+                <h2
+                  style="
+                    font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                    font-weight: var(--h2w, 400);
+                    font-size: var(--h2s, 30px);
+                    line-height: 1.15;
+                    color: var(--ink, #121212);
+                    margin: 0;
+                  "
+                >
+                  Then and now
+                </h2>
+                <p
+                  style="
+                    max-width: 640px;
+                    font-size: 15px;
+                    line-height: 1.55;
+                    color: var(--muted, #6b6b6b);
+                    margin: 0;
+                    text-wrap: pretty;
+                  "
+                >
+                  Each pair is the same address a few years apart — a congregation in use, then the
+                  building after it closed. [Paragraph placeholder; the research team supplies final
+                  wording.]
+                </p>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                  gap: 40px;
+                "
+              >
+                <sc-for list="{{ pairs }}" as="p" hint-placeholder-count="3">
+                  <figure style="margin: 0">
+                    <div
+                      style="
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 2px;
+                        aspect-ratio: 2.68;
+                        border-radius: var(--radiusSm, 4px);
+                        overflow: hidden;
+                      "
+                    >
+                      <div style="position: relative; background: var(--nodata, #e4e0d7)">
+                        <image-slot
+                          id="wc-then-{{ p.slug }}"
+                          shape="rect"
+                          placeholder="photo — open {{ p.thenYear }}"
+                        ></image-slot>
+                        <span
+                          style="
+                            position: absolute;
+                            top: 10px;
+                            left: 10px;
+                            pointer-events: none;
+                            background: var(--surface, #ffffff);
+                            color: var(--ink, #121212);
+                            font-size: 8.5px;
+                            font-weight: 700;
+                            letter-spacing: 0.12em;
+                            text-transform: uppercase;
+                            padding: 4px 7px;
+                            border-radius: 2px;
+                          "
+                          >Then · {{ p.thenYear }}</span
+                        >
+                      </div>
+                      <div style="position: relative; background: var(--nodata, #e4e0d7)">
+                        <image-slot
+                          id="wc-now-{{ p.slug }}"
+                          shape="rect"
+                          placeholder="photo — closed {{ p.nowYear }}"
+                        ></image-slot>
+                        <span
+                          style="
+                            position: absolute;
+                            top: 10px;
+                            right: 10px;
+                            pointer-events: none;
+                            background: var(--surface, #ffffff);
+                            color: var(--ink, #121212);
+                            font-size: 8.5px;
+                            font-weight: 700;
+                            letter-spacing: 0.12em;
+                            text-transform: uppercase;
+                            padding: 4px 7px;
+                            border-radius: 2px;
+                          "
+                          >Now · {{ p.nowYear }}</span
+                        >
+                      </div>
+                    </div>
+                    <figcaption
+                      style="
+                        margin-top: 12px;
+                        font-size: 12.5px;
+                        line-height: 1.5;
+                        color: var(--text, #3a3a3a);
+                      "
+                    >
+                      <strong style="color: var(--ink, #121212)">{{ p.name }}</strong> · open {{
+                      p.thenYear }} → closed {{ p.nowYear }} · {{ p.place }}
+                    </figcaption>
+                  </figure>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="max-width: 1400px; margin: 0 auto; padding: 104px 60px 0">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: baseline;
+                  gap: 24px;
+                  margin-bottom: 28px;
+                "
+              >
+                <h2
+                  style="
+                    font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                    font-weight: var(--h2w, 400);
+                    font-size: var(--h2s, 30px);
+                    line-height: 1.15;
+                    color: var(--ink, #121212);
+                    margin: 0;
+                  "
+                >
+                  From our research
+                </h2>
+                <a
+                  href="#"
+                  onClick="{{ noop }}"
+                  style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--accent, #286dc0);
+                    text-decoration: none;
+                    white-space: nowrap;
+                  "
+                  style-hover="text-decoration:underline"
+                  >See all research →</a
+                >
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                  gap: 24px;
+                "
+              >
+                <sc-for list="{{ papers }}" as="r" hint-placeholder-count="3">
+                  <article
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 10px;
+                      padding: 22px 22px 20px;
+                      background: var(--surface, #ffffff);
+                      border: 1px solid var(--rule, #e2ded5);
+                      border-radius: var(--radius, 6px);
+                    "
+                  >
+                    <span
+                      style="
+                        align-self: flex-start;
+                        font-size: 9px;
+                        font-weight: 700;
+                        letter-spacing: 0.12em;
+                        text-transform: uppercase;
+                        color: var(--btn, #00356b);
+                        background: var(--m1, #dde4ef);
+                        padding: 4px 8px;
+                        border-radius: 2px;
+                      "
+                      >{{ r.tag }}</span
+                    >
+                    <h3
+                      style="
+                        font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                        font-weight: 400;
+                        font-size: 20px;
+                        line-height: 1.3;
+                        color: var(--ink, #121212);
+                        margin: 2px 0 0;
+                        text-wrap: pretty;
+                      "
+                    >
+                      {{ r.title }}
+                    </h3>
+                    <div style="font-size: 12.5px; color: var(--muted, #6b6b6b); margin-top: -4px">
+                      {{ r.journal }} · {{ r.year }}
+                    </div>
+                    <div
+                      style="
+                        position: relative;
+                        aspect-ratio: 1.9;
+                        margin-top: 6px;
+                        border-radius: var(--radiusSm, 4px);
+                        overflow: hidden;
+                        background: var(--nodata, #e4e0d7);
+                      "
+                    >
+                      <image-slot
+                        id="wc-paper-{{ r.slug }}"
+                        shape="rect"
+                        placeholder="{{ r.imageHint }}"
+                      ></image-slot>
+                    </div>
+                    <a
+                      href="#"
+                      onClick="{{ noop }}"
+                      style="
+                        margin-top: auto;
+                        padding-top: 8px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--accent, #286dc0);
+                        text-decoration: none;
+                      "
+                      style-hover="text-decoration:underline"
+                      >Read the paper →</a
+                    >
+                  </article>
+                </sc-for>
+              </div>
+            </section>
+
+            <section
+              ref="{{ storiesRef }}"
+              style="max-width: 1400px; margin: 0 auto; padding: 96px 60px 0"
+            >
+              <h2
+                style="
+                  font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                  font-weight: var(--h2w, 400);
+                  font-size: var(--h2s, 30px);
+                  line-height: 1.15;
+                  color: var(--ink, #121212);
+                  margin: 0 0 28px;
+                "
+              >
+                Stories
+              </h2>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                  gap: 24px;
+                  align-items: start;
+                "
+              >
+                <sc-for list="{{ stories }}" as="s" hint-placeholder-count="2">
+                  <article
+                    style="
+                      border-top: 1px solid var(--ruleStrong, #121212);
+                      padding-top: 22px;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 12px;
+                    "
+                  >
+                    <blockquote
+                      style="
+                        font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                        font-size: 23px;
+                        line-height: 1.3;
+                        color: var(--ink, #121212);
+                        margin: 0;
+                        text-wrap: pretty;
+                      "
+                    >
+                      “{{ s.quote }}”
+                    </blockquote>
+                    <div style="font-size: 12px; color: var(--muted, #6b6b6b)">{{ s.who }}</div>
+                    <a
+                      href="#"
+                      onClick="{{ noop }}"
+                      style="
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--accent, #286dc0);
+                        text-decoration: none;
+                      "
+                      style-hover="text-decoration:underline"
+                      >Read the story →</a
+                    >
+                  </article>
+                </sc-for>
+                <aside
+                  style="
+                    background: var(--surface, #ffffff);
+                    border: 1px solid var(--rule, #e2ded5);
+                    border-radius: var(--radius, 6px);
+                    padding: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 18px;
+                  "
+                >
+                  <p
+                    style="
+                      font-size: 15px;
+                      line-height: 1.5;
+                      color: var(--ink, #121212);
+                      margin: 0;
+                      text-wrap: pretty;
+                    "
+                  >
+                    Did a place of worship near you close? Tell us what changed.
+                  </p>
+                  <button
+                    onClick="{{ noop }}"
+                    style="
+                      height: 42px;
+                      border: 1.5px solid var(--btn, #00356b);
+                      color: var(--btn, #00356b);
+                      border-radius: 999px;
+                      font-size: 13.5px;
+                      font-weight: 600;
+                      background: transparent;
+                    "
+                    style-hover="background:var(--btn,#00356B);color:var(--btnInk,#FFFFFF)"
+                  >
+                    Share your story
+                  </button>
+                </aside>
+              </div>
+            </section>
+
+            <footer
+              style="
+                margin-top: 96px;
+                background: var(--footerBg, #eceae3);
+                border-top: 1px solid var(--rule, #e2ded5);
+              "
+            >
+              <div style="max-width: 1400px; margin: 0 auto; padding: 52px 60px 40px">
+                <div
+                  style="
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                    gap: 40px 60px;
+                    align-items: flex-start;
+                  "
+                >
+                  <nav
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 12px;
+                      font-size: 13px;
+                      font-weight: 600;
+                      color: var(--ink, #121212);
+                    "
+                  >
+                    <a
+                      href="#"
+                      onClick="{{ noop }}"
+                      style="color: inherit; text-decoration: none"
+                      style-hover="text-decoration:underline"
+                      >Methodology</a
+                    >
+                    <a
+                      href="#"
+                      onClick="{{ noop }}"
+                      style="color: inherit; text-decoration: none"
+                      style-hover="text-decoration:underline"
+                      >Get the data</a
+                    >
+                    <a
+                      href="#"
+                      onClick="{{ noop }}"
+                      style="color: inherit; text-decoration: none"
+                      style-hover="text-decoration:underline"
+                      >Contact</a
+                    >
+                  </nav>
+                  <div style="display: flex; flex-direction: column; gap: 12px">
+                    <span
+                      style="
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                      >Share</span
+                    >
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px">
+                      <sc-for list="{{ shares }}" as="c" hint-placeholder-count="5">
+                        <button
+                          onClick="{{ c.go }}"
+                          style="
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                            height: 30px;
+                            padding: 0 14px 0 12px;
+                            background: var(--surface, #ffffff);
+                            border: 1px solid var(--rule, #e2ded5);
+                            border-radius: 999px;
+                            font-size: 11.5px;
+                            font-weight: 600;
+                            color: var(--ink, #121212);
+                            white-space: nowrap;
+                          "
+                          style-hover="border-color:var(--ink,#121212)"
+                        >
+                          <span
+                            style="
+                              width: 9px;
+                              height: 9px;
+                              border-radius: 50%;
+                              background: var(--btn, #00356b);
+                            "
+                          ></span
+                          >{{ c.label }}
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 16px; flex-wrap: wrap">
+                    <sc-for list="{{ logos }}" as="l" hint-placeholder-count="3">
+                      <div
+                        style="
+                          width: 112px;
+                          height: 40px;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                          border: 1px solid var(--rule, #e2ded5);
+                          border-radius: 2px;
+                          background: repeating-linear-gradient(
+                            135deg,
+                            var(--nodata, #e4e0d7) 0 6px,
+                            var(--hatch, #cfcac0) 6px 8px
+                          );
+                          font-family: ui-monospace, Menlo, monospace;
+                          font-size: 10px;
+                          color: var(--muted, #6b6b6b);
+                        "
+                      >
+                        <span style="background: var(--footerBg, #eceae3); padding: 2px 5px"
+                          >{{ l }}</span
+                        >
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <p
+                  style="
+                    margin: 44px 0 0;
+                    font-size: 11.5px;
+                    line-height: 1.5;
+                    color: var(--faint, #7a7a7a);
+                    text-wrap: pretty;
+                  "
+                >
+                  Data and estimates are for research purposes and may contain errors; they do not
+                  constitute medical, legal or financial advice. © Yale School of Public Health.
+                </p>
+              </div>
+            </footer>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
+          <main
+            data-screen-label="Explore"
+            style="display: flex; flex-direction: column; height: max(720px, calc(100vh - 65px))"
+          >
+            <div
+              style="
+                display: flex;
+                align-items: stretch;
+                flex-wrap: wrap;
+                background: var(--surface, #ffffff);
+                border-bottom: 1px solid var(--rule, #e2ded5);
+                position: relative;
+                z-index: 4;
+              "
+            >
+              <div
+                style="
+                  position: relative;
+                  flex: 0 1 320px;
+                  min-width: 240px;
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  padding: 0 20px;
+                  height: 56px;
+                  border-right: 1px solid var(--rule, #e2ded5);
+                "
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  fill="none"
+                  stroke="currentColor"
+                  style="flex: none; stroke-width: 1.8; color: var(--muted, #6b6b6b)"
+                >
+                  <circle cx="8" cy="8" r="5.5"></circle>
+                  <path d="M12 12l4.5 4.5"></path>
+                </svg>
+                <label
+                  style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0"
+                >
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                    >Find a place</span
+                  >
+                  <input
+                    value="{{ find }}"
+                    onChange="{{ onFind }}"
+                    onFocus="{{ onFindFocus }}"
+                    onBlur="{{ onFindBlur }}"
+                    onKeyDown="{{ onFindKey }}"
+                    placeholder="State, county or ZIP"
+                    style="
+                      font-size: 16px;
+                      color: var(--ink, #121212);
+                      outline: none;
+                      width: 100%;
+                      padding: 0;
+                    "
+                  />
+                </label>
+                <button
+                  onClick="{{ locate }}"
+                  title="Use my location"
+                  style="display: flex; padding: 4px; color: var(--ink, #121212)"
+                  style-hover="color:var(--accent,#286DC0)"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    style="stroke-width: 1.6"
+                  >
+                    <circle cx="9" cy="9" r="5"></circle>
+                    <circle cx="9" cy="9" r="1.2" fill="currentColor"></circle>
+                    <path d="M9 1v3M9 14v3M1 9h3M14 9h3"></path>
+                  </svg>
+                </button>
+                <sc-if value="{{ hasMatches }}" hint-placeholder-val="{{ false }}">
+                  <div
+                    style="
+                      position: absolute;
+                      top: 100%;
+                      left: -1px;
+                      right: -1px;
+                      background: var(--surface, #ffffff);
+                      border: 1px solid var(--rule, #e2ded5);
+                      border-top: 0;
+                      box-shadow: 0 16px 28px -14px rgba(0, 0, 0, 0.3);
+                      z-index: 20;
+                      padding: 6px 0;
+                    "
+                  >
+                    <sc-for list="{{ matches }}" as="m" hint-placeholder-count="0">
+                      <button
+                        onMouseDown="{{ m.pick }}"
+                        style="
+                          display: flex;
+                          justify-content: space-between;
+                          gap: 12px;
+                          width: 100%;
+                          text-align: left;
+                          padding: 9px 24px;
+                          font-size: 14px;
+                          color: var(--ink, #121212);
+                        "
+                        style-hover="background:var(--paper,#F4F2ED)"
+                      >
+                        <span>{{ m.name }}</span
+                        ><span
+                          style="font-size: 12px; color: var(--muted, #6b6b6b); white-space: nowrap"
+                          >{{ m.meta }}</span
+                        >
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 14px;
+                  padding: 0 20px;
+                  height: 56px;
+                  border-right: 1px solid var(--rule, #e2ded5);
+                "
+              >
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                    >From</span
+                  >
+                  <div
+                    style="
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                      color: var(--ink, #121212);
+                    "
+                  >
+                    <select
+                      ref="{{ fromRef }}"
+                      onChange="{{ onFrom }}"
+                      style="
+                        appearance: none;
+                        -webkit-appearance: none;
+                        font-size: 16px;
+                        font-weight: 500;
+                        padding: 0 22px 0 0;
+                        outline: none;
+                        cursor: pointer;
+                      "
+                    >
+                      <sc-for list="{{ fromYears }}" as="o" hint-placeholder-count="1"
+                        ><option value="{{ o.y }}" selected="{{ o.sel }}">{{ o.y }}</option></sc-for
+                      >
+                    </select>
+                    <svg
+                      width="10"
+                      height="6"
+                      fill="none"
+                      stroke="currentColor"
+                      style="
+                        position: absolute;
+                        right: 4px;
+                        pointer-events: none;
+                        stroke-width: 1.5;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </div>
+                </div>
+                <span style="color: var(--faint, #7a7a7a); margin-top: 14px">—</span>
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                      white-space: nowrap;
+                    "
+                    >To · 5+ years later</span
+                  >
+                  <div
+                    style="
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                      color: var(--ink, #121212);
+                    "
+                  >
+                    <select
+                      ref="{{ toRef }}"
+                      onChange="{{ onTo }}"
+                      style="
+                        appearance: none;
+                        -webkit-appearance: none;
+                        font-size: 16px;
+                        font-weight: 500;
+                        padding: 0 22px 0 0;
+                        outline: none;
+                        cursor: pointer;
+                      "
+                    >
+                      <sc-for list="{{ toYears }}" as="o" hint-placeholder-count="1"
+                        ><option value="{{ o.y }}" selected="{{ o.sel }}">{{ o.y }}</option></sc-for
+                      >
+                    </select>
+                    <svg
+                      width="10"
+                      height="6"
+                      fill="none"
+                      stroke="currentColor"
+                      style="
+                        position: absolute;
+                        right: 4px;
+                        pointer-events: none;
+                        stroke-width: 1.5;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  padding: 0 20px;
+                  height: 56px;
+                  border-right: 1px solid var(--rule, #e2ded5);
+                "
+              >
+                <div style="display: flex; flex-direction: column; gap: 4px">
+                  <span
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                    >Type</span
+                  >
+                  <div
+                    style="
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                      color: var(--ink, #121212);
+                    "
+                  >
+                    <select
+                      ref="{{ typeRef }}"
+                      onChange="{{ onType }}"
+                      style="
+                        appearance: none;
+                        -webkit-appearance: none;
+                        font-size: 16px;
+                        font-weight: 500;
+                        padding: 0 22px 0 0;
+                        outline: none;
+                        cursor: pointer;
+                      "
+                    >
+                      <sc-for list="{{ types }}" as="t" hint-placeholder-count="1"
+                        ><option value="{{ t.k }}" selected="{{ t.sel }}">
+                          {{ t.label }}
+                        </option></sc-for
+                      >
+                    </select>
+                    <svg
+                      width="10"
+                      height="6"
+                      fill="none"
+                      stroke="currentColor"
+                      style="
+                        position: absolute;
+                        right: 4px;
+                        pointer-events: none;
+                        stroke-width: 1.5;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  flex: 1 1 auto;
+                  display: flex;
+                  align-items: center;
+                  justify-content: flex-end;
+                  gap: 12px;
+                  padding: 0 20px;
+                  height: 56px;
+                "
+              >
+                <span style="font-size: 12.5px; color: var(--muted, #6b6b6b); white-space: nowrap"
+                  >View by</span
+                >
+                <div
+                  style="
+                    display: inline-flex;
+                    gap: 2px;
+                    padding: 3px;
+                    background: var(--segBg, #eceae3);
+                    border-radius: calc(var(--radiusSm, 4px) + 2px);
+                  "
+                >
+                  <sc-for list="{{ views }}" as="v" hint-placeholder-count="4">
+                    <button
+                      onClick="{{ v.pick }}"
+                      style="padding:6px 11px;border-radius:var(--radiusSm,4px);font-size:13px;font-weight:500;color:var(--ink,#121212);background:{{ v.bg }};box-shadow:{{ v.shadow }}"
+                    >
+                      {{ v.label }}
+                    </button>
+                  </sc-for>
+                </div>
+                <button
+                  onClick="{{ reset }}"
+                  style="
+                    height: 34px;
+                    padding: 0 14px;
+                    border: 1px solid var(--fieldBorder, #d9d5cc);
+                    border-radius: var(--radiusSm, 4px);
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    color: var(--ink, #121212);
+                    background: var(--surface, #ffffff);
+                  "
+                  style-hover="border-color:var(--ink,#121212)"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div style="flex: 1; display: flex; min-height: 0">
+              <div
+                style="
+                  flex: 1 1 auto;
+                  min-width: 0;
+                  min-height: 0;
+                  position: relative;
+                  overflow: hidden;
+                  background-color: var(--mapBg, #eeece6);
+                  background-image:
+                    linear-gradient(var(--mapLine, rgba(0, 0, 0, 0.05)) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--mapLine, rgba(0, 0, 0, 0.05)) 1px, transparent 1px);
+                  background-size: 36px 36px;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 50px 100px 130px 60px;
+                  "
+                >
+                  <div
+                    style="width:min(100%,900px,max(620px,calc(150vh - 470px)));display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:5px;transform:scale({{ zoom }});transform-origin:center;transition:transform .25s ease,opacity .2s;opacity:{{ mapOpacity }}"
+                  >
+                    <sc-for list="{{ tiles }}" as="s" hint-placeholder-count="0">
+                      <div
+                        onMouseEnter="{{ s.enter }}"
+                        onMouseLeave="{{ s.leave }}"
+                        onClick="{{ s.pick }}"
+                        style="grid-column:{{ s.gc }};grid-row:{{ s.gr }};position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:3px;cursor:pointer;background:{{ s.fill }};color:{{ s.ink }};outline:{{ s.outline }};outline-offset:2px;z-index:{{ s.z }}"
+                      >
+                        <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em"
+                          >{{ s.id }}</span
+                        >
+                        <sc-if value="{{ s.hovered }}" hint-placeholder-val="{{ false }}">
+                          <div
+                            style="
+                              position: absolute;
+                              bottom: calc(100% + 12px);
+                              left: 50%;
+                              transform: translateX(-50%);
+                              white-space: nowrap;
+                              background: var(--tipBg, #1b1b1b);
+                              color: var(--tipInk, #ffffff);
+                              font-size: 12.5px;
+                              font-weight: 500;
+                              line-height: 1;
+                              padding: 11px 14px;
+                              border-radius: 5px;
+                              box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.45);
+                              pointer-events: none;
+                              animation: wc-fade 0.15s ease;
+                            "
+                          >
+                            {{ s.tip }}<span
+                              style="
+                                position: absolute;
+                                top: 100%;
+                                left: 50%;
+                                margin-left: -6px;
+                                border: 6px solid transparent;
+                                border-top-color: var(--tipBg, #1b1b1b);
+                              "
+                            ></span>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div
+                  style="
+                    position: absolute;
+                    top: 20px;
+                    right: 22px;
+                    display: flex;
+                    flex-direction: column;
+                    background: var(--surface, #ffffff);
+                    border: 1px solid var(--rule, #e2ded5);
+                    border-radius: var(--radiusSm, 4px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+                    overflow: hidden;
+                  "
+                >
+                  <button
+                    onClick="{{ zoomIn }}"
+                    style="
+                      width: 42px;
+                      height: 42px;
+                      font-size: 18px;
+                      color: var(--ink, #121212);
+                      border-bottom: 1px solid var(--rule, #e2ded5);
+                    "
+                    style-hover="background:var(--paper,#F4F2ED)"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick="{{ zoomOut }}"
+                    style="width: 42px; height: 42px; font-size: 18px; color: var(--ink, #121212)"
+                    style-hover="background:var(--paper,#F4F2ED)"
+                  >
+                    −
+                  </button>
+                </div>
+                <div
+                  style="
+                    position: absolute;
+                    left: 24px;
+                    bottom: 24px;
+                    width: min(470px, calc(100% - 48px));
+                    background: var(--surface, #ffffff);
+                    border: 1px solid var(--rule, #e2ded5);
+                    border-radius: var(--radius, 6px);
+                    padding: 18px 22px 16px;
+                    box-shadow: 0 6px 20px -10px rgba(0, 0, 0, 0.18);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: baseline;
+                      gap: 16px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <span style="font-size: 15px; font-weight: 600; color: var(--ink, #121212)"
+                      >Closure rate over {{ years }} years</span
+                    >
+                    <button
+                      onClick="{{ toggleLegend }}"
+                      style="font-size: 13px; color: var(--accent, #286dc0); padding: 0"
+                      style-hover="text-decoration:underline"
+                    >
+                      How are colors chosen?
+                    </button>
+                  </div>
+                  <div style="display: flex; align-items: flex-start; gap: 22px">
+                    <div style="flex: 1; display: flex">
+                      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="5">
+                        <div
+                          style="
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 8px;
+                            min-width: 0;
+                          "
+                        >
+                          <div style="height:10px;background:{{ l.color }}"></div>
+                          <span
+                            style="
+                              font-size: 11.5px;
+                              color: var(--text, #3a3a3a);
+                              white-space: nowrap;
+                            "
+                            >{{ l.label }}</span
+                          >
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="flex: 0 0 68px; display: flex; flex-direction: column; gap: 8px">
+                      <div
+                        style="
+                          height: 10px;
+                          background: repeating-linear-gradient(
+                            135deg,
+                            var(--nodata, #e4e0d7) 0 5px,
+                            var(--hatch, #cfcac0) 5px 7px
+                          );
+                        "
+                      ></div>
+                      <span style="font-size: 11.5px; color: var(--text, #3a3a3a)">No data</span>
+                    </div>
+                  </div>
+                  <sc-if value="{{ legendInfo }}" hint-placeholder-val="{{ false }}">
+                    <p
+                      style="
+                        margin: 2px 0 0;
+                        font-size: 12.5px;
+                        line-height: 1.5;
+                        color: var(--muted, #6b6b6b);
+                        border-top: 1px solid var(--rule, #e2ded5);
+                        padding-top: 12px;
+                        text-wrap: pretty;
+                      "
+                    >
+                      Fixed breaks at 2, 4, 6 and 9 percent, so the same shade means the same
+                      closure rate in every view and time window. Areas with fewer than 15 places of
+                      worship in the baseline year are hatched rather than colored.
+                    </p>
+                  </sc-if>
+                </div>
+                <div
+                  style="
+                    position: absolute;
+                    right: 22px;
+                    bottom: 20px;
+                    font-size: 11px;
+                    color: var(--faint, #7a7a7a);
+                  "
+                >
+                  Data: [project] · U.S. Census Bureau
+                </div>
+                <sc-if value="{{ viewNotice }}" hint-placeholder-val="{{ false }}">
+                  <div
+                    style="
+                      position: absolute;
+                      left: 50%;
+                      top: 44%;
+                      transform: translate(-50%, -50%);
+                      background: var(--surface, #ffffff);
+                      border: 1px solid var(--rule, #e2ded5);
+                      border-radius: var(--radius, 6px);
+                      padding: 16px 22px;
+                      box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.3);
+                      text-align: center;
+                      max-width: 320px;
+                    "
+                  >
+                    <div style="font-size: 14px; font-weight: 600; color: var(--ink, #121212)">
+                      {{ view }} view — in build
+                    </div>
+                    <div
+                      style="
+                        font-size: 12.5px;
+                        line-height: 1.5;
+                        color: var(--muted, #6b6b6b);
+                        margin-top: 4px;
+                      "
+                    >
+                      Finer geographies arrive with the full dataset. The state view is live.
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <aside
+                style="
+                  flex: 0 0 440px;
+                  max-width: 100%;
+                  min-height: 0;
+                  max-height: 100%;
+                  background: var(--surface, #ffffff);
+                  border-left: 1px solid var(--rule, #e2ded5);
+                  overflow: auto;
+                  padding: 30px 34px 34px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 18px;
+                "
+              >
+                <div>
+                  <div
+                    style="
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: var(--muted, #6b6b6b);
+                    "
+                  >
+                    Showing
+                  </div>
+                  <h2
+                    style="
+                      font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                      font-weight: var(--h2w, 400);
+                      font-size: 40px;
+                      line-height: 1.08;
+                      color: var(--ink, #121212);
+                      margin: 6px 0 8px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ selName }}
+                  </h2>
+                  <div style="font-size: 13.5px; color: var(--muted, #6b6b6b)">
+                    {{ windowText }}
+                  </div>
+                </div>
+                <div style="border-top: 1px solid var(--rule, #e2ded5)"></div>
+                <div
+                  style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap"
+                >
+                  <div>
+                    <div
+                      style="
+                        font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                        font-size: 34px;
+                        line-height: 1;
+                        color: var(--btn, #00356b);
+                      "
+                    >
+                      {{ selRate }}
+                    </div>
+                    <div
+                      style="
+                        margin-top: 8px;
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      Closure rate
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      style="
+                        font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                        font-size: 34px;
+                        line-height: 1;
+                        color: var(--ink, #121212);
+                      "
+                    >
+                      {{ selClosed }}
+                    </div>
+                    <div
+                      style="
+                        margin-top: 8px;
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      Closed
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      style="
+                        font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                        font-size: 34px;
+                        line-height: 1;
+                        color: var(--ink, #121212);
+                      "
+                    >
+                      {{ selOpen }}
+                    </div>
+                    <div
+                      style="
+                        margin-top: 8px;
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      Open in {{ from }}
+                    </div>
+                  </div>
+                </div>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 15px;
+                    line-height: 1.55;
+                    color: var(--text, #3a3a3a);
+                    text-wrap: pretty;
+                  "
+                >
+                  {{ selSentence }}
+                </p>
+                <sc-if value="{{ hasCompare }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; flex-direction: column; gap: 10px">
+                    <div
+                      style="
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      Compared with
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px">
+                      <span
+                        style="
+                          flex: 0 0 118px;
+                          font-size: 14px;
+                          font-weight: 600;
+                          color: var(--ink, #121212);
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          white-space: nowrap;
+                        "
+                        >{{ selName }}</span
+                      >
+                      <div style="flex: 1; height: 8px; background: var(--m1, #dde4ef)">
+                        <div
+                          style="height:100%;width:{{ selBar }};background:var(--m5,#00356B);transition:width .3s"
+                        ></div>
+                      </div>
+                      <span
+                        style="
+                          flex: 0 0 44px;
+                          text-align: right;
+                          font-size: 13.5px;
+                          font-weight: 600;
+                          color: var(--ink, #121212);
+                        "
+                        >{{ selRate }}</span
+                      >
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px">
+                      <span style="flex: 0 0 118px; font-size: 14px; color: var(--text, #3a3a3a)"
+                        >United States</span
+                      >
+                      <div style="flex: 1; height: 8px; background: var(--m1, #dde4ef)">
+                        <div
+                          style="height:100%;width:{{ usBar }};background:var(--m3,#7291C0);transition:width .3s"
+                        ></div>
+                      </div>
+                      <span
+                        style="
+                          flex: 0 0 44px;
+                          text-align: right;
+                          font-size: 13.5px;
+                          color: var(--text, #3a3a3a);
+                        "
+                        >{{ usRate }}</span
+                      >
+                    </div>
+                    <div style="font-size: 13.5px; color: var(--muted, #6b6b6b)">
+                      {{ diffText }}
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ isUS }}" hint-placeholder-val="{{ false }}">
+                  <div
+                    style="
+                      font-size: 13.5px;
+                      line-height: 1.5;
+                      color: var(--muted, #6b6b6b);
+                      border-left: 2px solid var(--rule, #e2ded5);
+                      padding-left: 12px;
+                    "
+                  >
+                    Click a state on the map to compare it with the national rate.
+                  </div>
+                </sc-if>
+                <div style="border-top: 1px solid var(--rule, #e2ded5)"></div>
+                <div style="display: flex; gap: 18px; align-items: flex-start">
+                  <div
+                    style="
+                      flex: 0 0 110px;
+                      height: 142px;
+                      border: 1px solid var(--rule, #e2ded5);
+                      background: var(--surface, #ffffff);
+                      padding: 12px 10px;
+                      display: flex;
+                      flex-direction: column;
+                      gap: 6px;
+                      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                    "
+                  >
+                    <div style="height: 6px; width: 70%; background: var(--m4, #3d64a2)"></div>
+                    <div style="height: 4px; width: 50%; background: var(--rule, #e2ded5)"></div>
+                    <div
+                      style="
+                        flex: 1;
+                        margin-top: 4px;
+                        background: repeating-linear-gradient(
+                          135deg,
+                          var(--m1, #dde4ef) 0 5px,
+                          var(--m2, #abbdda) 5px 7px
+                        );
+                      "
+                    ></div>
+                    <div style="height: 4px; width: 90%; background: var(--rule, #e2ded5)"></div>
+                    <div style="height: 4px; width: 60%; background: var(--rule, #e2ded5)"></div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 8px; min-width: 0">
+                    <div
+                      style="
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: var(--muted, #6b6b6b);
+                      "
+                    >
+                      One-page summary
+                    </div>
+                    <p
+                      style="
+                        margin: 0;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        color: var(--text, #3a3a3a);
+                        text-wrap: pretty;
+                      "
+                    >
+                      A printable page for this selection: the map, closure counts and neighborhood
+                      indicators — poverty, education, income.
+                    </p>
+                    <div
+                      style="
+                        font-family: ui-monospace, Menlo, monospace;
+                        font-size: 11px;
+                        color: var(--faint, #7a7a7a);
+                      "
+                    >
+                      preview placeholder · layout designed later
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 10px">
+                  <button
+                    onClick="{{ openSummary }}"
+                    style="
+                      flex: 1;
+                      height: 46px;
+                      background: var(--btn, #00356b);
+                      color: var(--btnInk, #ffffff);
+                      border-radius: var(--radiusSm, 4px);
+                      font-size: 14px;
+                      font-weight: 600;
+                    "
+                    style-hover="filter:brightness(.92)"
+                  >
+                    View one-page summary →
+                  </button>
+                  <button
+                    onClick="{{ share }}"
+                    style="
+                      flex: 0 0 84px;
+                      height: 46px;
+                      border: 1px solid var(--fieldBorder, #d9d5cc);
+                      color: var(--ink, #121212);
+                      border-radius: var(--radiusSm, 4px);
+                      font-size: 14px;
+                      font-weight: 600;
+                      background: var(--surface, #ffffff);
+                    "
+                    style-hover="border-color:var(--ink,#121212)"
+                  >
+                    {{ shareLabel }}
+                  </button>
+                </div>
+                <div style="font-size: 14px; color: var(--text, #3a3a3a)">
+                  Local context, community indicators and sources.
+                </div>
+                <div>
+                  <a
+                    href="#"
+                    onClick="{{ noop }}"
+                    style="
+                      font-size: 14px;
+                      font-weight: 600;
+                      color: var(--accent, #286dc0);
+                      text-decoration: none;
+                    "
+                    style-hover="text-decoration:underline"
+                    >Request this data →</a
+                  >
+                  <div
+                    style="
+                      margin-top: 8px;
+                      font-size: 13.5px;
+                      line-height: 1.5;
+                      color: var(--muted, #6b6b6b);
+                    "
+                  >
+                    {{ requestText }}
+                  </div>
+                </div>
+                <div style="border-top: 1px solid var(--rule, #e2ded5)"></div>
+                <button
+                  onClick="{{ noop }}"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    text-align: left;
+                    padding: 0;
+                  "
+                >
+                  <div
+                    style="
+                      flex: 0 0 90px;
+                      height: 52px;
+                      border-radius: var(--radiusSm, 4px);
+                      background: repeating-linear-gradient(
+                        135deg,
+                        var(--nodata, #e4e0d7) 0 6px,
+                        var(--hatch, #cfcac0) 6px 8px
+                      );
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                    "
+                  >
+                    <div
+                      style="
+                        width: 26px;
+                        height: 26px;
+                        border-radius: 50%;
+                        background: var(--surface, #ffffff);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+                      "
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        fill="currentColor"
+                        style="color: var(--ink, #121212); margin-left: 2px"
+                      >
+                        <path d="M1 0l9 5-9 5z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--ink, #121212)">
+                      How to use this map
+                    </div>
+                    <div style="font-size: 12px; color: var(--muted, #6b6b6b); margin-top: 2px">
+                      Video · 1 min · opens in a dialog
+                    </div>
+                  </div>
+                </button>
+              </aside>
+            </div>
+          </main>
+        </sc-if>
+
+        <sc-if value="{{ summaryOpen }}" hint-placeholder-val="{{ false }}">
+          <div
+            onClick="{{ closeSummary }}"
+            style="
+              position: fixed;
+              inset: 0;
+              background: rgba(10, 14, 22, 0.55);
+              z-index: 50;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 32px;
+            "
+          >
+            <div
+              onClick="{{ stop }}"
+              style="
+                width: min(680px, 100%);
+                max-height: 100%;
+                overflow: auto;
+                background: #ffffff;
+                color: #1a1a1a;
+                padding: 44px 56px 52px;
+                box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: baseline;
+                  gap: 16px;
+                  border-bottom: 2px solid #1a1a1a;
+                  padding-bottom: 12px;
+                "
+              >
+                <div
+                  style="
+                    font-size: 10px;
+                    font-weight: 700;
+                    letter-spacing: 0.14em;
+                    text-transform: uppercase;
+                  "
+                >
+                  Yale School of Public Health · One-page summary
+                </div>
+                <button
+                  onClick="{{ closeSummary }}"
+                  style="font-size: 13px; font-weight: 600; color: #1a1a1a"
+                >
+                  Close ✕
+                </button>
+              </div>
+              <h2
+                style="
+                  font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                  font-weight: 400;
+                  font-size: 36px;
+                  line-height: 1.1;
+                  margin: 22px 0 6px;
+                "
+              >
+                {{ selName }}
+              </h2>
+              <div style="font-size: 13px; color: #666666">{{ windowText }}</div>
+              <div style="display: flex; gap: 40px; margin-top: 26px">
+                <div>
+                  <div
+                    style="
+                      font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                      font-size: 30px;
+                      line-height: 1;
+                    "
+                  >
+                    {{ selRate }}
+                  </div>
+                  <div
+                    style="
+                      margin-top: 6px;
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: #666666;
+                    "
+                  >
+                    Closure rate
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                      font-size: 30px;
+                      line-height: 1;
+                    "
+                  >
+                    {{ selClosed }}
+                  </div>
+                  <div
+                    style="
+                      margin-top: 6px;
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: #666666;
+                    "
+                  >
+                    Closed
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      font-family: var(--serif, &quot;Newsreader&quot;, Georgia, serif);
+                      font-size: 30px;
+                      line-height: 1;
+                    "
+                  >
+                    {{ selOpen }}
+                  </div>
+                  <div
+                    style="
+                      margin-top: 6px;
+                      font-size: 9.5px;
+                      font-weight: 700;
+                      letter-spacing: 0.14em;
+                      text-transform: uppercase;
+                      color: #666666;
+                    "
+                  >
+                    Open in {{ from }}
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  margin-top: 26px;
+                  height: 220px;
+                  background: repeating-linear-gradient(135deg, #efefef 0 6px, #dedede 6px 8px);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  text-align: center;
+                  padding: 20px;
+                  font-family: ui-monospace, Menlo, monospace;
+                  font-size: 11px;
+                  color: #777777;
+                "
+              >
+                map · closure counts · neighborhood indicators — layout designed later
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"theme":{"editor":"enum","default":"bulldog","options":["bulldog","elm","broadsheet","campus","sterling","journal","source","ivory","dusk","archive"],"tsType":"string","section":"Version"},"page":{"editor":"enum","default":"landing","options":["landing","explore"],"tsType":"string","section":"Screen"},"initialState":{"editor":"text","default":"IN","tsType":"string","section":"Screen"}}'
+    >
+      const STATES = [
+      ['AK','Alaska',0,0,1.6,1100,'Anchorage Municipality'],['ME','Maine',11,0,3.1,1500,'Cumberland County'],
+      ['WI','Wisconsin',5,1,7.9,6300,'Milwaukee County'],['VT','Vermont',9,1,10.1,900,'Chittenden County'],['NH','New Hampshire',10,1,6.1,1200,'Hillsborough County'],
+      ['WA','Washington',0,2,8.7,5600,'King County'],['ID','Idaho',1,2,1.4,1700,'Ada County'],['MT','Montana',2,2,3.6,1400,'Yellowstone County'],['ND','North Dakota',3,2,4.6,1300,'Cass County'],['MN','Minnesota',4,2,5.2,6200,'Hennepin County'],['IL','Illinois',5,2,5.8,14200,'Cook County'],['MI','Michigan',6,2,6.8,11100,'Wayne County'],['NY','New York',8,2,6.4,16400,'Kings County'],['MA','Massachusetts',9,2,9.8,4900,'Middlesex County'],
+      ['OR','Oregon',0,3,7.8,3700,'Multnomah County'],['NV','Nevada',1,3,11.2,1800,'Clark County'],['WY','Wyoming',2,3,2.8,700,'Laramie County'],['SD','South Dakota',3,3,1.9,1400,'Minnehaha County'],['IA','Iowa',4,3,3.9,4600,'Polk County'],['IN','Indiana',5,3,6.327,9800,'Marion County'],['OH','Ohio',6,3,9.3,14800,'Franklin County'],['PA','Pennsylvania',7,3,3.4,15900,'Philadelphia County'],['NJ','New Jersey',8,3,4.7,6900,'Bergen County'],['CT','Connecticut',9,3,3.7,3600,'New Haven County'],['RI','Rhode Island',10,3,7.5,1000,'Providence County'],
+      ['CA','California',0,4,10.4,27500,'Los Angeles County'],['UT','Utah',1,4,5.1,4800,'Salt Lake County'],['CO','Colorado',2,4,1.8,4900,'Denver County'],['NE','Nebraska',3,4,7.2,2600,'Douglas County'],['MO','Missouri',4,4,4.4,8700,'St. Louis County'],['KY','Kentucky',5,4,6.9,7900,'Jefferson County'],['WV','West Virginia',6,4,6.1,3400,'Kanawha County'],['VA','Virginia',7,4,7.4,9300,'Fairfax County'],['MD','Maryland',8,4,6.6,5600,'Montgomery County'],['DE','Delaware',9,4,6.8,1000,'New Castle County'],
+      ['AZ','Arizona',1,5,1.7,6200,'Maricopa County'],['NM','New Mexico',2,5,5.6,2300,'Bernalillo County'],['KS','Kansas',3,5,9.6,4100,'Johnson County'],['AR','Arkansas',4,5,3.3,6400,'Pulaski County'],['TN','Tennessee',5,5,6.7,10900,'Shelby County'],['NC','North Carolina',6,5,7.1,13900,'Mecklenburg County'],['SC','South Carolina',7,5,6.2,7400,'Greenville County'],['DC','District of Columbia',8,5,6.0,800,'District of Columbia'],
+      ['OK','Oklahoma',3,6,6.9,6100,'Oklahoma County'],['LA','Louisiana',4,6,4.9,6800,'East Baton Rouge Parish'],['MS','Mississippi',5,6,7.0,6500,'Hinds County'],['AL','Alabama',6,6,7.3,9600,'Jefferson County'],['GA','Georgia',7,6,6.5,12900,'Fulton County'],
+      ['HI','Hawaii',0,7,6.2,1200,'Honolulu County'],['TX','Texas',3,7,4.8,27300,'Harris County'],['FL','Florida',8,7,6.4,17800,'Miami-Dade County']
+      ].map(([id,name,c,r,rate,open,county]) => ({id,name,c,r,rate,open,county}));
+
+      const TYPES = {
+        all:{label:'All places of worship', noun:'places of worship', share:1, rf:1},
+        christian:{label:'Christian congregations', noun:'Christian congregations', share:.87, rf:.97},
+        synagogues:{label:'Synagogues', noun:'synagogues', share:.011, rf:.8},
+        mosques:{label:'Mosques', noun:'mosques', share:.008, rf:.55},
+        temples:{label:'Temples & other', noun:'temples and other places of worship', share:.024, rf:.9}
+      };
+
+      const VARS = ['paper','surface','ink','text','muted','faint','rule','ruleStrong','accent','btn','btnInk','navBg','navInk','navBrand','navLine','heroBg','heroInk','heroText','kicker','footerBg','mapBg','mapLine','nodata','hatch','tipBg','tipInk','sel','field','fieldBorder','segBg','radius','radiusSm','serif','sans','h1w','h1s','h2w','h2s'];
+
+      const LIGHT_INK = ['#2B4A78','#2B4A78','#FFFFFF','#FFFFFF','#FFFFFF'];
+      const THEMES = {
+        elm:{ name:'Elm Street', paper:'#F4F2ED', surface:'#FFFFFF', ink:'#121212', text:'#3A3A3A', muted:'#6B6B6B', faint:'#7A7A7A', rule:'#E2DED5', ruleStrong:'#121212', accent:'#286DC0', btn:'#00356B', btnInk:'#FFFFFF', navBg:'#F4F2ED', navInk:'#121212', navBrand:'#00356B', navLine:'#286DC0', heroBg:'transparent', heroInk:'#121212', heroText:'#444444', kicker:'#00356B', footerBg:'#ECEAE3', mapBg:'#EEECE6', mapLine:'rgba(0,0,0,.05)', nodata:'#E4E0D7', hatch:'#CFCAC0', tipBg:'#1B1B1B', tipInk:'#FFFFFF', sel:'#121212', field:'#FFFFFF', fieldBorder:'#D9D5CC', segBg:'#ECEAE3', radius:'6px', radiusSm:'4px', serif:"'Newsreader', Georgia, 'Times New Roman', serif", sans:"'Libre Franklin', 'Helvetica Neue', Arial, sans-serif", h1w:'400', h1s:'46px', h2w:'400', h2s:'30px', m:['#DDE4EF','#ABBDDA','#7291C0','#3D64A2','#00356B'], tileInk:LIGHT_INK },
+        broadsheet:{ name:'Broadsheet', paper:'#FFFFFF', surface:'#FFFFFF', ink:'#121212', text:'#363636', muted:'#727272', faint:'#7A7A7A', rule:'#DFDFDF', ruleStrong:'#121212', accent:'#326891', btn:'#121212', btnInk:'#FFFFFF', navBg:'#FFFFFF', navInk:'#121212', navBrand:'#121212', navLine:'#121212', heroBg:'transparent', heroInk:'#121212', heroText:'#363636', kicker:'#326891', footerBg:'#F7F7F7', mapBg:'#F7F7F5', mapLine:'rgba(0,0,0,.05)', nodata:'#EDEDED', hatch:'#D3D3D3', tipBg:'#121212', tipInk:'#FFFFFF', sel:'#121212', field:'#FFFFFF', fieldBorder:'#CFCFCF', segBg:'#F0F0F0', radius:'2px', radiusSm:'2px', serif:"'Libre Caslon Text', Georgia, serif", sans:"'Libre Franklin', Arial, sans-serif", h1w:'400', h1s:'46px', h2w:'400', h2s:'30px', m:['#E4E8EE','#B4BFD0','#7D8FAB','#41597E','#132A4A'], tileInk:['#1F2F47','#1F2F47','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        campus:{ name:'Old Campus', paper:'#F1ECE2', surface:'#FBF8F1', ink:'#1F1A14', text:'#443C33', muted:'#6E655A', faint:'#7F7767', rule:'#DDD5C6', ruleStrong:'#1F1A14', accent:'#A8471A', btn:'#BD5319', btnInk:'#FFFFFF', navBg:'#F1ECE2', navInk:'#1F1A14', navBrand:'#00356B', navLine:'#BD5319', heroBg:'transparent', heroInk:'#1F1A14', heroText:'#4A423A', kicker:'#00356B', footerBg:'#E8E1D3', mapBg:'#EBE5D9', mapLine:'rgba(60,40,20,.06)', nodata:'#E1DACB', hatch:'#CBC2B0', tipBg:'#1F1A14', tipInk:'#FBF8F1', sel:'#1F1A14', field:'#FBF8F1', fieldBorder:'#D2C9B8', segBg:'#E8E1D3', radius:'4px', radiusSm:'3px', serif:"'EB Garamond', Georgia, serif", sans:"'Source Sans 3', 'Helvetica Neue', sans-serif", h1w:'500', h1s:'50px', h2w:'500', h2s:'33px', m:['#F1E2D6','#E0B69B','#CC8961','#B25C2F','#7A3915'], tileInk:['#6B3A1F','#6B3A1F','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        sterling:{ name:'Sterling', paper:'#F7F6F2', surface:'#FFFFFF', ink:'#14213A', text:'#3B4252', muted:'#6B7280', faint:'#767C88', rule:'#E1DFD8', ruleStrong:'#00356B', accent:'#286DC0', btn:'#00356B', btnInk:'#FFFFFF', navBg:'#00356B', navInk:'#FFFFFF', navBrand:'#FFFFFF', navLine:'#9CC5FF', heroBg:'transparent', heroInk:'#14213A', heroText:'#3B4252', kicker:'#00356B', footerBg:'#EDEBE4', mapBg:'#EFEDE7', mapLine:'rgba(0,30,70,.05)', nodata:'#E4E1D9', hatch:'#CDC9BF', tipBg:'#00356B', tipInk:'#FFFFFF', sel:'#14213A', field:'#FFFFFF', fieldBorder:'#D5D2C9', segBg:'#ECEAE3', radius:'4px', radiusSm:'3px', serif:"'Libre Baskerville', Georgia, serif", sans:"'Public Sans', 'Helvetica Neue', sans-serif", h1w:'400', h1s:'44px', h2w:'400', h2s:'30px', m:['#DCE5F1','#A6BEDF','#6C93C7','#3565A8','#00356B'], tileInk:['#1F3D6B','#1F3D6B','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        journal:{ name:'Journal', paper:'#FFFFFF', surface:'#FFFFFF', ink:'#1A1A1A', text:'#3D3D3D', muted:'#6F6F6F', faint:'#7A7A7A', rule:'#E4E4E0', ruleStrong:'#1A1A1A', accent:'#286DC0', btn:'#5F712D', btnInk:'#FFFFFF', navBg:'#FFFFFF', navInk:'#1A1A1A', navBrand:'#5F712D', navLine:'#5F712D', heroBg:'transparent', heroInk:'#1A1A1A', heroText:'#3D3D3D', kicker:'#5F712D', footerBg:'#F5F5F2', mapBg:'#F4F5F1', mapLine:'rgba(0,0,0,.05)', nodata:'#EBEBE6', hatch:'#D0D0C8', tipBg:'#1A1A1A', tipInk:'#FFFFFF', sel:'#1A1A1A', field:'#FFFFFF', fieldBorder:'#D2D2CC', segBg:'#EFEFEA', radius:'3px', radiusSm:'3px', serif:"'Spectral', Georgia, serif", sans:"'IBM Plex Sans', 'Helvetica Neue', sans-serif", h1w:'500', h1s:'44px', h2w:'500', h2s:'30px', m:['#E7EBDA','#C3CEA0','#98AA69','#6A803C','#3E4F1D'], tileInk:['#3E4F1D','#3E4F1D','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        source:{ name:'Source', paper:'#F4F3EF', surface:'#FFFFFF', ink:'#1B1B1B', text:'#4A4A4A', muted:'#707070', faint:'#777777', rule:'#E5E3DD', ruleStrong:'#1B1B1B', accent:'#1F6FD1', btn:'#0B3D7A', btnInk:'#FFFFFF', navBg:'#F4F3EF', navInk:'#1B1B1B', navBrand:'#0B3D7A', navLine:'#1F6FD1', heroBg:'transparent', heroInk:'#1B1B1B', heroText:'#4A4A4A', kicker:'#0B3D7A', footerBg:'#ECEBE6', mapBg:'#EFEEEA', mapLine:'rgba(0,0,0,.05)', nodata:'#E6E4DE', hatch:'#CFCDC6', tipBg:'#1B1B1B', tipInk:'#FFFFFF', sel:'#1B1B1B', field:'#FFFFFF', fieldBorder:'#DAD8D1', segBg:'#ECEBE6', radius:'8px', radiusSm:'6px', serif:"'Source Serif 4', Georgia, serif", sans:"'Source Sans 3', 'Helvetica Neue', sans-serif", h1w:'400', h1s:'46px', h2w:'400', h2s:'30px', m:['#DDE7F5','#A8C4EA','#6D9BD9','#2F6AB8','#0B3D7A'], tileInk:['#1E4B86','#1E4B86','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        ivory:{ name:'Ivory & Ink', paper:'#FBFAF7', surface:'#FFFFFF', ink:'#000000', text:'#2E2E2E', muted:'#666666', faint:'#767676', rule:'#E6E4DE', ruleStrong:'#000000', accent:'#00356B', btn:'#111111', btnInk:'#FFFFFF', navBg:'#FBFAF7', navInk:'#000000', navBrand:'#000000', navLine:'#000000', heroBg:'transparent', heroInk:'#000000', heroText:'#2E2E2E', kicker:'#000000', footerBg:'#F2F0EA', mapBg:'#F3F1EC', mapLine:'rgba(0,0,0,.05)', nodata:'#E9E7E1', hatch:'#CFCDC7', tipBg:'#000000', tipInk:'#FFFFFF', sel:'#00356B', field:'#FFFFFF', fieldBorder:'#CFCDC7', segBg:'#EEECE6', radius:'0px', radiusSm:'0px', serif:"'Playfair Display', Georgia, serif", sans:"'Work Sans', 'Helvetica Neue', sans-serif", h1w:'400', h1s:'44px', h2w:'400', h2s:'30px', m:['#E9E9E9','#C4C4C4','#8F8F8F','#4E4E4E','#111111'], tileInk:['#222222','#222222','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        dusk:{ name:'Dusk', paper:'#0E1A2B', surface:'#152438', ink:'#F5F2EA', text:'#D5D9E0', muted:'#A3AEBF', faint:'#8A97AD', rule:'#263850', ruleStrong:'#F5F2EA', accent:'#8FC1FF', btn:'#63AAFF', btnInk:'#0B1B2E', navBg:'#0B1626', navInk:'#F5F2EA', navBrand:'#8FC1FF', navLine:'#8FC1FF', heroBg:'transparent', heroInk:'#F5F2EA', heroText:'#C7CEDA', kicker:'#8FC1FF', footerBg:'#0B1626', mapBg:'#0B1626', mapLine:'rgba(255,255,255,.05)', nodata:'#1A2A40', hatch:'#2A3E5C', tipBg:'#F5F2EA', tipInk:'#0E1A2B', sel:'#FFFFFF', field:'#0F1E33', fieldBorder:'#2E4360', segBg:'#0F1E33', radius:'6px', radiusSm:'4px', serif:"'Newsreader', Georgia, serif", sans:"'Libre Franklin', 'Helvetica Neue', sans-serif", h1w:'400', h1s:'46px', h2w:'400', h2s:'30px', m:['#1E3352','#2C5283','#3F79B8','#63AAFF','#B9DAFF'], tileInk:['#B9D3F5','#DCE9FA','#FFFFFF','#0B1B2E','#0B1B2E'] },
+        archive:{ name:'Archive', paper:'#EEE8DB', surface:'#F8F4EB', ink:'#2A2218', text:'#4A4034', muted:'#75685A', faint:'#857966', rule:'#DBD2C0', ruleStrong:'#2A2218', accent:'#8A6A2F', btn:'#5A4320', btnInk:'#FFFFFF', navBg:'#EEE8DB', navInk:'#2A2218', navBrand:'#5A4320', navLine:'#8A6A2F', heroBg:'transparent', heroInk:'#2A2218', heroText:'#4A4034', kicker:'#8A6A2F', footerBg:'#E5DECD', mapBg:'#E8E1D2', mapLine:'rgba(60,40,10,.06)', nodata:'#DFD6C4', hatch:'#C7BCA5', tipBg:'#2A2218', tipInk:'#F8F4EB', sel:'#2A2218', field:'#F8F4EB', fieldBorder:'#CFC4AE', segBg:'#E5DECD', radius:'2px', radiusSm:'2px', serif:"'Cormorant Garamond', Georgia, serif", sans:"'Karla', 'Helvetica Neue', sans-serif", h1w:'600', h1s:'54px', h2w:'600', h2s:'36px', m:['#EDE2CC','#D8C298','#BC9B62','#906F3B','#5A4320'], tileInk:['#5A4320','#5A4320','#FFFFFF','#FFFFFF','#FFFFFF'] },
+        bulldog:{ name:'Bulldog', paper:'#FFFFFF', surface:'#FFFFFF', ink:'#121212', text:'#3A3A3A', muted:'#6B6B6B', faint:'#7A7A7A', rule:'#E3E3E3', ruleStrong:'#00356B', accent:'#286DC0', btn:'#00356B', btnInk:'#FFFFFF', navBg:'#FFFFFF', navInk:'#121212', navBrand:'#00356B', navLine:'#00356B', heroBg:'#00356B', heroInk:'#FFFFFF', heroText:'#D6E2F2', kicker:'#9CC5FF', footerBg:'#F4F4F2', mapBg:'#F2F3F5', mapLine:'rgba(0,30,70,.06)', nodata:'#E8E9EC', hatch:'#CFD2D8', tipBg:'#00356B', tipInk:'#FFFFFF', sel:'#121212', field:'#FFFFFF', fieldBorder:'#D2D2D2', segBg:'#EEEFF1', radius:'4px', radiusSm:'3px', serif:"'Libre Caslon Text', Georgia, serif", sans:"'Libre Franklin', 'Helvetica Neue', sans-serif", h1w:'400', h1s:'46px', h2w:'400', h2s:'30px', m:['#DCE5F1','#A6BEDF','#6C93C7','#3565A8','#00356B'], tileInk:['#1F3D6B','#1F3D6B','#FFFFFF','#FFFFFF','#FFFFFF'] }
+      };
+
+      const PAIRS = [
+        {slug:'gates', name:'1485 Gates Ave', thenYear:2012, nowYear:2023, place:'Brooklyn, NY'},
+        {slug:'casimir', name:'St. Casimir', thenYear:2004, nowYear:2019, place:'Gary, IN'},
+        {slug:'zion', name:'Mt. Zion AME', thenYear:2006, nowYear:2018, place:'Milwaukee, WI'}
+      ];
+      const PAPERS = [
+        {slug:'mortality', tag:'Neighborhood health', title:'Closures of places of worship and neighborhood mortality, 2000–2020', journal:'American Journal of Public Health', year:2024, imageHint:'Photo — a church behind bare trees'},
+        {slug:'dataset', tag:'Data & methods', title:'Mapping places of worship at the census-tract level: a national dataset', journal:'Health & Place', year:2023, imageHint:'Figure — national dot map of places of worship'},
+        {slug:'cohesion', tag:'Social cohesion', title:'Loss of religious infrastructure and social cohesion in U.S. counties', journal:'Social Science & Medicine', year:2025, imageHint:'Photo — inscription on a stone facade'}
+      ];
+      const STORIES = [
+        {quote:'The building is a dollar store now. The food pantry moved twice, then stopped.', who:'A former member · Gary, IN · placeholder'},
+        {quote:'We still meet — in a living room, eleven of us.', who:'A congregant · Brooklyn, NY · placeholder'}
+      ];
+
+      const fmt = n => Math.round(n).toLocaleString('en-US');
+      const pct = r => r.toFixed(1) + '%';
+      const cls = r => r < 2 ? 0 : r < 4 ? 1 : r < 6 ? 2 : r < 9 ? 3 : 4;
+
+      class Component extends DCLogic {
+        state = { page:null, from:2010, to:2015, type:'all', where:'', sel:undefined, hover:null, view:'State', zoom:1, find:null, findOpen:false, legendInfo:false, copied:false, summary:false };
+        root = React.createRef();
+        storiesRef = React.createRef();
+        componentDidMount(){ this.applyTheme(); }
+        componentDidUpdate(){ this.applyTheme(); }
+        theme(){ return THEMES[this.props.theme] || THEMES.bulldog; }
+        applyTheme(){
+          const el = this.root.current; if (!el) return;
+          const T = this.theme(); if (el.dataset.wcTheme === T.name) return;
+          el.dataset.wcTheme = T.name;
+          VARS.forEach(k => el.style.setProperty('--' + k, T[k]));
+          T.m.forEach((c, i) => el.style.setProperty('--m' + (i + 1), c));
+        }
+        compute(s, from, to, type){
+          const t = TYPES[type]; const open = Math.round(s.open * t.share);
+          const rate = Math.min(60, s.rate * t.rf * Math.pow((to - from) / 5, .85));
+          return { open, rate, closed: Math.round(open * rate / 100), nodata: open < 15 };
+        }
+        selId(){ return this.state.sel === undefined ? (this.props.initialState ?? 'IN') : this.state.sel; }
+        pickState(id){ const s = STATES.find(x => x.id === id); this.setState({ sel:id, find: s ? s.name : '', findOpen:false, view:'State' }); }
+        go(page){ this.setState({ page }); window.scrollTo({ top:0 }); }
+        copy(){ try { navigator.clipboard.writeText(location.href); } catch (e) {} this.setState({ copied:true }); setTimeout(() => this.setState({ copied:false }), 1600); }
+        renderVals(){
+          const st = this.state, T = this.theme();
+          const page = st.page ?? (this.props.page ?? 'landing');
+          const { from, to, type } = st; const yrs = to - from; const typeInfo = TYPES[type];
+          const stats = STATES.map(s => ({ s, ...this.compute(s, from, to, type) }));
+          const totOpen = stats.reduce((a, x) => a + x.open, 0), totClosed = stats.reduce((a, x) => a + x.closed, 0);
+          const usRate = totOpen ? totClosed / totOpen * 100 : 0;
+          const selId = this.selId(); const selStat = stats.find(x => x.s.id === selId) || null;
+          const isUS = !selStat;
+          const S = selStat || { open: totOpen, closed: totClosed, rate: usRate, nodata: false };
+          const selName = selStat ? selStat.s.name : 'United States';
+          const range = `${from}–${to}`;
+          const windowText = `${range} · ${yrs}-year window · ${typeInfo.label.toLowerCase()}`;
+          const tiles = stats.map(x => {
+            const { s } = x; const hovered = st.hover === s.id; const selected = selId === s.id; const c = cls(x.rate);
+            return {
+              id: s.id, gc: s.c + 1, gr: s.r + 1,
+              fill: x.nodata ? `repeating-linear-gradient(135deg,${T.nodata} 0 5px,${T.hatch} 5px 7px)` : T.m[c],
+              ink: x.nodata ? T.muted : T.tileInk[c],
+              outline: selected ? `2px solid ${T.sel}` : (hovered ? `1px solid ${T.sel}` : 'none'),
+              z: hovered ? 10 : (selected ? 2 : 1), hovered,
+              tip: x.nodata ? `${s.name} · ${range} · too few places to report` : `${s.name} · ${range} · ${fmt(x.closed)} of ${fmt(x.open)} closed · ${pct(x.rate)}`,
+              enter: () => this.setState({ hover: s.id }),
+              leave: () => this.setState(p => p.hover === s.id ? { hover:null } : null),
+              pick: () => this.pickState(s.id)
+            };
+          });
+          const find = st.find ?? (selStat ? selStat.s.name : '');
+          const q = find.trim().toLowerCase();
+          const matches = (st.findOpen && q) ? STATES.filter(s => s.name.toLowerCase().includes(q) || s.id.toLowerCase() === q).slice(0, 6).map(s => {
+            const x = stats.find(y => y.s.id === s.id);
+            return { name: s.name, meta: x.nodata ? 'no data' : `${pct(x.rate)} · ${fmt(x.closed)} closed`, pick: (e) => { e.preventDefault(); this.pickState(s.id); } };
+          }) : [];
+          const findState = (text) => { const t = (text || '').trim().toLowerCase(); if (!t) return null; return STATES.find(s => s.name.toLowerCase() === t || s.id.toLowerCase() === t) || STATES.find(s => s.name.toLowerCase().startsWith(t)) || null; };
+          const explore = () => { const s = findState(st.where); this.setState({ sel: s ? s.id : null, find: s ? s.name : '', page:'explore', findOpen:false }); window.scrollTo({ top:0 }); };
+          const views = ['State','County','ZIP','Tract'].map(v => ({ label:v, bg: st.view === v ? T.surface : 'transparent', shadow: st.view === v ? '0 1px 2px rgba(0,0,0,.14)' : 'none', pick: () => this.setState({ view:v }) }));
+          const legend = [['Under 2%',0],['2–3.9%',1],['4–5.9%',2],['6–8.9%',3],['9%+',4]].map(([label, i]) => ({ label, color: T.m[i] }));
+          const diff = S.rate - usRate;
+          const diffText = Math.abs(diff) < .05 ? `About the same as the U.S. rate (${pct(usRate)}).` : `${Math.abs(diff).toFixed(1)} percentage points ${diff < 0 ? 'below' : 'above'} the U.S. rate (${pct(usRate)}).`;
+          const fromYears = Array.from({ length:19 }, (_, i) => 2000 + i).map(y => ({ y, sel: y === from }));
+          const toYears = Array.from({ length:24 }, (_, i) => 2000 + i).filter(y => y >= from + 5).map(y => ({ y, sel: y === to }));
+          return {
+            root: this.root, storiesRef: this.storiesRef,
+            isLanding: page === 'landing', isExplore: page === 'explore',
+            exploreLine: page === 'explore' ? `var(--navLine, ${T.accent})` : 'transparent',
+            goHome: (e) => { e.preventDefault(); this.go('landing'); },
+            goExplore: (e) => { e.preventDefault(); this.go('explore'); },
+            goStories: (e) => { e.preventDefault(); this.setState({ page:'landing' }, () => { const el = this.storiesRef.current; if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 24, behavior:'smooth' }); }); },
+            noop: (e) => { if (e && e.preventDefault) e.preventDefault(); },
+            stop: (e) => e.stopPropagation(),
+            where: st.where, onWhere: (e) => this.setState({ where: e.target.value }), onWhereKey: (e) => { if (e.key === 'Enter') explore(); }, explore,
+            from, to, type, fromYears, toYears,
+            fromRef: (el) => { if (el) el.value = String(from); }, toRef: (el) => { if (el) el.value = String(to); }, typeRef: (el) => { if (el) el.value = type; }, types: Object.entries(TYPES).map(([k, v]) => ({ k, label: v.label, sel: k === type })),
+            onFrom: (e) => { const f = +e.target.value; this.setState({ from: f, to: Math.max(st.to, f + 5) }); },
+            onTo: (e) => this.setState({ to: +e.target.value }),
+            onType: (e) => this.setState({ type: e.target.value }),
+            find, onFind: (e) => this.setState({ find: e.target.value, findOpen:true }), onFindFocus: () => this.setState({ findOpen:true }),
+            onFindBlur: () => setTimeout(() => this.setState({ findOpen:false }), 120),
+            onFindKey: (e) => { if (e.key === 'Enter') { const s = findState(find); if (s) this.pickState(s.id); } if (e.key === 'Escape') this.setState({ findOpen:false }); },
+            hasMatches: matches.length > 0, matches,
+            locate: () => this.pickState('CT'),
+            views, view: st.view, viewNotice: st.view !== 'State', mapOpacity: st.view === 'State' ? 1 : .35,
+            reset: () => this.setState({ from:2010, to:2015, type:'all', sel:null, find:'', view:'State', zoom:1, legendInfo:false }),
+            zoom: st.zoom, zoomIn: () => this.setState({ zoom: Math.min(2, +(st.zoom + .25).toFixed(2)) }), zoomOut: () => this.setState({ zoom: Math.max(.6, +(st.zoom - .25).toFixed(2)) }),
+            tiles, legend, years: yrs, legendInfo: st.legendInfo, toggleLegend: () => this.setState({ legendInfo: !st.legendInfo }),
+            selName, windowText,
+            selRate: S.nodata ? '—' : pct(S.rate), selClosed: S.nodata ? '—' : fmt(S.closed), selOpen: fmt(S.open),
+            selSentence: S.nodata ? `Fewer than 15 ${typeInfo.noun} were open in ${selName} in ${from}, so no closure rate is reported.` : `${fmt(S.closed)} of the ${fmt(S.open)} ${typeInfo.noun} open in ${from} closed during ${range}.`,
+            hasCompare: !isUS && !S.nodata, isUS,
+            selBar: Math.min(100, S.rate / 14 * 100) + '%', usBar: Math.min(100, usRate / 14 * 100) + '%', usRate: pct(usRate), diffText,
+            requestText: selStat ? `Short form, prefilled with ${selStat.s.county}, ${selStat.s.id}, ${range}.` : `Short form, prefilled with the United States, ${range}.`,
+            shareLabel: st.copied ? 'Copied' : 'Share', share: () => this.copy(),
+            summaryOpen: st.summary, openSummary: () => this.setState({ summary:true }), closeSummary: () => this.setState({ summary:false }),
+            pairs: PAIRS, papers: PAPERS, stories: STORIES,
+            shares: ['LinkedIn','Facebook','Email','Copy link','Substack'].map(l => ({ label: (l === 'Copy link' && st.copied) ? 'Copied' : l, go: () => { if (l === 'Copy link') this.copy(); } })),
+            logos: ['YSPH logo','YCGS logo','YDS logo']
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

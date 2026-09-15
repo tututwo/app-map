@@ -17,7 +17,7 @@ async function selectionBox(page: Page) {
 }
 
 test("dragging the selection rect moves the year window", async ({ page }) => {
-  await page.goto("/?from=2003&to=2011");
+  await page.goto("/legacy?from=2003&to=2011");
   const box = await selectionBox(page);
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
@@ -31,7 +31,7 @@ test("dragging the selection rect moves the year window", async ({ page }) => {
 });
 
 test("dragging the east handle resizes the year window", async ({ page }) => {
-  await page.goto("/?from=2003&to=2011");
+  await page.goto("/legacy?from=2003&to=2011");
   const handle = page.locator(".brush-group .handle--e");
   const box = await handle.boundingBox();
   if (!box) throw new Error("East handle was not measurable");

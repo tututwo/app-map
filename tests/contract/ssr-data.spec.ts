@@ -7,8 +7,8 @@ function domOf(html: string): string {
   return html.replace(/<script[\s\S]*?<\/script>/g, "");
 }
 
-test("/ server-renders the dashboard with county data in the DOM", async ({ request }) => {
-  const response = await request.get("/?from=2003&to=2011&geoid=01001");
+test("/legacy server-renders the dashboard with county data in the DOM", async ({ request }) => {
+  const response = await request.get("/legacy?from=2003&to=2011&geoid=01001");
 
   expect(response.status()).toBe(200);
   const dom = domOf(await response.text());
