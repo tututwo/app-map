@@ -1,0 +1,361 @@
+{
+  "version": 8,
+  "name": "Yale Light",
+  "metadata": {
+    "description": "Light 2D cartography with a subtle Yale accent: neutral gray water, white land, legible streets and restrained blue-gray type. Designed for US choropleths at zooms 2–8.",
+    "overlay-anchor": "Insert thematic fills before waterway so water, boundaries and labels remain legible."
+  },
+  "center": [-98.5795, 39.8283],
+  "zoom": 3.5,
+  "sources": {
+    "carto": {
+      "type": "vector",
+      "url": "https://tiles.basemaps.cartocdn.com/vector/carto.streets/v1/tiles.json"
+    }
+  },
+  "glyphs": "https://tiles.basemaps.cartocdn.com/fonts/{fontstack}/{range}.pbf",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#fdfdfc"
+      }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landcover",
+      "filter": ["in", "class", "wood", "grass"],
+      "paint": {
+        "fill-color": "#eef0ed",
+        "fill-opacity": 0.7
+      }
+    },
+    {
+      "id": "urban",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "landuse",
+      "minzoom": 6,
+      "filter": ["in", "class", "residential", "commercial", "industrial"],
+      "paint": {
+        "fill-color": "#e9ebeb",
+        "fill-opacity": 0.6
+      }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "park",
+      "minzoom": 6,
+      "paint": {
+        "fill-color": "#e8ece7",
+        "fill-opacity": 0.6
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "waterway",
+      "paint": {
+        "line-color": "#d2d9df",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.5, 8, 1, 14, 2]
+      }
+    },
+    {
+      "id": "boundary-state",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "boundary",
+      "minzoom": 2,
+      "filter": ["all", ["==", "admin_level", 4], ["==", "maritime", 0]],
+      "paint": {
+        "line-color": "#8596a4",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.3, 6, 0.4, 8, 0.55],
+        "line-opacity": 0.65
+      }
+    },
+    {
+      "id": "boundary-country",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "boundary",
+      "filter": ["all", ["==", "admin_level", 2], ["==", "maritime", 0]],
+      "paint": {
+        "line-color": "#768995",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.4, 8, 0.65],
+        "line-opacity": 0.65
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "carto",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#e7e9eb"
+      }
+    },
+    {
+      "id": "road-local",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "minzoom": 8,
+      "filter": ["in", "class", "minor", "service"],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#dce0e2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.55, 14, 1.5],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "road-tertiary",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": ["==", "class", "tertiary"],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#dce0e2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 8, 0.65, 14, 1.7],
+        "line-opacity": 0.85
+      }
+    },
+    {
+      "id": "road-regional",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": ["in", "class", "primary", "secondary"],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#d3d9dd",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 8, 0.85, 14, 2.2],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "road-major-casing",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "minzoom": 5,
+      "filter": ["in", "class", "motorway", "trunk"],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#c7d0d7",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.75, 8, 1.8, 14, 4.2],
+        "line-opacity": 0.85
+      }
+    },
+    {
+      "id": "road-major",
+      "type": "line",
+      "source": "carto",
+      "source-layer": "transportation",
+      "minzoom": 5,
+      "filter": ["in", "class", "motorway", "trunk"],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.2, 8, 0.8, 14, 2.8],
+        "line-opacity": 0.9
+      }
+    },
+    {
+      "id": "road-shield",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "transportation_name",
+      "minzoom": 7,
+      "filter": [
+        "all",
+        ["in", "class", "motorway", "trunk"],
+        ["has", "ref"],
+        ["<=", "ref_length", 4]
+      ],
+      "layout": {
+        "symbol-placement": "line",
+        "symbol-spacing": 350,
+        "icon-image": ["concat", "road_", ["to-string", ["get", "ref_length"]]],
+        "icon-size": 0.9,
+        "icon-rotation-alignment": "viewport",
+        "text-field": ["get", "ref"],
+        "text-font": ["Open Sans Regular"],
+        "text-size": 9,
+        "text-rotation-alignment": "viewport",
+        "text-padding": 3
+      },
+      "paint": {
+        "text-color": "#707e8b",
+        "icon-opacity": 0.85
+      }
+    },
+    {
+      "id": "water-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "water_name",
+      "minzoom": 3,
+      "filter": ["==", "$type", "Point"],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Open Sans Italic"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 10, 8, 12],
+        "text-letter-spacing": 0.08,
+        "text-max-width": 8,
+        "text-padding": 12
+      },
+      "paint": {
+        "text-color": "#87939e",
+        "text-halo-color": "#e7e9eb",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "country-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "maxzoom": 5,
+      "filter": ["==", "class", "country"],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Montserrat Medium"],
+        "text-transform": "uppercase",
+        "text-size": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 13],
+        "text-letter-spacing": 0.12,
+        "text-max-width": 12,
+        "text-padding": 20,
+        "symbol-sort-key": ["get", "rank"]
+      },
+      "paint": {
+        "text-color": "#7d8994",
+        "text-halo-color": "rgba(253,253,252,0.9)",
+        "text-halo-width": 1,
+        "text-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.9, 5, 0.65]
+      }
+    },
+    {
+      "id": "state-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "minzoom": 2,
+      "maxzoom": 9,
+      "filter": ["==", "class", "state"],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Montserrat Medium"],
+        "text-transform": "uppercase",
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 9, 5, 11, 8, 13],
+        "text-letter-spacing": 0.1,
+        "text-max-width": 10,
+        "text-padding": 12,
+        "symbol-sort-key": ["get", "rank"]
+      },
+      "paint": {
+        "text-color": "#667b8f",
+        "text-halo-color": "rgba(253,253,252,0.85)",
+        "text-halo-width": 1,
+        "text-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.95, 6, 0.9, 9, 0.65]
+      }
+    },
+    {
+      "id": "town-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "minzoom": 7,
+      "filter": ["in", "class", "town", "village"],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 7, 10.5, 12, 12],
+        "text-padding": 5,
+        "symbol-sort-key": ["get", "rank"]
+      },
+      "paint": {
+        "text-color": "#767e86",
+        "text-halo-color": "rgba(253,253,252,0.9)",
+        "text-halo-width": 1.1
+      }
+    },
+    {
+      "id": "city-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "minzoom": 5,
+      "filter": ["all", ["==", "class", "city"], [">", "rank", 3]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 5, 11, 8, 13, 12, 15],
+        "text-padding": 8,
+        "text-max-width": 10,
+        "symbol-sort-key": ["get", "rank"],
+        "icon-image": "circle_11",
+        "icon-size": 0.32,
+        "text-anchor": "top",
+        "text-offset": [0, 0.55]
+      },
+      "paint": {
+        "text-color": "#5c6b79",
+        "text-halo-color": "rgba(253,253,252,0.95)",
+        "text-halo-width": 1.1,
+        "icon-opacity": 0.65
+      }
+    },
+    {
+      "id": "city-major-label",
+      "type": "symbol",
+      "source": "carto",
+      "source-layer": "place",
+      "minzoom": 2,
+      "filter": ["all", ["==", "class", "city"], ["<=", "rank", 3]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name_en"], ["get", "name"]],
+        "text-font": ["Open Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 5, 13, 8, 15, 12, 17],
+        "text-padding": 10,
+        "text-max-width": 10,
+        "symbol-sort-key": ["get", "rank"],
+        "icon-image": "circle_11",
+        "icon-size": 0.4,
+        "text-anchor": "top",
+        "text-offset": [0, 0.55]
+      },
+      "paint": {
+        "text-color": "#415d76",
+        "text-halo-color": "rgba(253,253,252,0.95)",
+        "text-halo-width": 1.1,
+        "icon-opacity": 0.8
+      }
+    }
+  ],
+  "sprite": "https://openmaptiles.github.io/osm-bright-gl-style/sprite"
+}

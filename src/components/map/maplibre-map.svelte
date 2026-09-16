@@ -508,7 +508,7 @@ async function handleGeolocate(event: GeolocationPosition) {
 >
   <MapLibre
     class="h-full min-h-[200px] w-full"
-    style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+    style="/maps/yale-light.json"
     autoloadGlobalCss={false}
     canvasContextAttributes={{
       preserveDrawingBuffer: true,

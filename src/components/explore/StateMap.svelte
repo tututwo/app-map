@@ -35,7 +35,6 @@ const NATIONAL_BOUNDS: [[number, number], [number, number]] = [
   [-125, 24],
   [-66, 50],
 ];
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 const fillColor: ExpressionSpecification = [
   "case",
   ["==", ["get", "closed"], null],
@@ -152,7 +151,7 @@ $effect(() => {
   <svelte:boundary>
     <MapLibre
       class="h-full min-h-[300px] w-full"
-      style={MAP_STYLE}
+      style="/maps/yale-light.json"
       autoloadGlobalCss={false}
       center={[-98.5795, 39.8283]}
       zoom={3.5}

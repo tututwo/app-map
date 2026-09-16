@@ -59,9 +59,7 @@ async function fulfillJson(route: Route, body: unknown) {
 }
 
 async function useDeterministicMapStyle(page: Page) {
-  await page.route("https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json", (route) =>
-    fulfillJson(route, deterministicMapStyle)
-  );
+  await page.route("**/maps/yale-light.json", (route) => fulfillJson(route, deterministicMapStyle));
 }
 
 async function countCountyPalettePixels(canvas: Locator, palette: readonly string[]) {
@@ -271,7 +269,7 @@ test("a selected GEOID without a county camera resets to the US camera", async (
 });
 
 test("a fatal initial style failure publishes a map capture error", async ({ page }) => {
-  await page.route("https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json", (route) =>
+  await page.route("**/maps/yale-light.json", (route) =>
     route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
   );
   await page.goto("/legacy?from=2003&to=2011&geoid=00000");
