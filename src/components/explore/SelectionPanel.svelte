@@ -1,31 +1,25 @@
 <script lang="ts">
 import { Play } from "lucide-svelte";
 import { CopyLink } from "$lib/copy-link.svelte";
-import { fmt, pct, type Selection } from "$lib/explore/model";
+import { fmt, per10k, type Selection } from "$lib/explore/model";
 
-let { selection, from, onsummary }: { selection: Selection; from: number; onsummary: () => void } =
-  $props();
+let { selection, onsummary }: { selection: Selection; onsummary: () => void } = $props();
 
 const share = new CopyLink();
 
 let s = $derived(selection.stat);
 let stats = $derived([
-  { value: s.nodata ? "—" : pct(s.rate), label: "Closure rate", color: "text-yale-blue" },
-  { value: s.nodata ? "—" : fmt(s.closed), label: "Closed", color: "text-ink" },
-  { value: fmt(s.open), label: `Open in ${from}`, color: "text-ink" },
+  { value: fmt(s.closed), label: "Reported closures", color: "text-yale-blue" },
+  { value: per10k(s.per10k), label: "Per 10,000 residents", color: "text-ink" },
+  { value: fmt(s.nOpen), label: "Active during window", color: "text-ink" },
 ]);
 let sentence = $derived(
-  s.nodata
-    ? `Fewer than 15 ${selection.noun} were open in ${selection.name} in ${from}, so no closure rate is reported.`
-    : `${fmt(s.closed)} of the ${fmt(s.open)} ${selection.noun} open in ${from} closed during ${selection.range}.`
+  !selection.selected
+    ? "Select a state to see reported closure counts. A national total is not available in this release."
+    : s.closed === null
+      ? `Closure counts are not available for ${selection.name} in this window.`
+      : `${fmt(s.closed)} closures are reported in ${selection.name} during ${selection.range}. Moves are excluded.`
 );
-let diff = $derived(s.rate - selection.us.rate);
-let diffText = $derived(
-  Math.abs(diff) < 0.05
-    ? `About the same as the U.S. rate (${pct(selection.us.rate)}).`
-    : `${Math.abs(diff).toFixed(1)} percentage points ${diff < 0 ? "below" : "above"} the U.S. rate (${pct(selection.us.rate)}).`
-);
-const bar = (rate: number) => `${Math.min(100, (rate / 14) * 100)}%`;
 </script>
 
 <aside
@@ -48,42 +42,10 @@ const bar = (rate: number) => `${Math.min(100, (rate / 14) * 100)}%`;
     {/each}
   </div>
   <p class="text-body text-[15px] leading-[1.55] text-pretty">{sentence}</p>
-  {#if selection.selected && !s.nodata}
-    <div class="flex flex-col gap-2.5">
-      <div class="label-caps">Compared with</div>
-      <div class="flex items-center gap-3.5">
-        <span class="text-ink flex-[0_0_118px] truncate text-[14px] font-semibold">
-          {selection.name}
-        </span>
-        <div class="bg-scale-1 h-2 flex-1">
-          <div
-            class="bg-yale-blue h-full transition-[width] duration-300"
-            style:width={bar(s.rate)}
-          ></div>
-        </div>
-        <span class="text-ink flex-[0_0_44px] text-right text-[13.5px] font-semibold">
-          {pct(s.rate)}
-        </span>
-      </div>
-      <div class="flex items-center gap-3.5">
-        <span class="text-body flex-[0_0_118px] text-[14px]">United States</span>
-        <div class="bg-scale-1 h-2 flex-1">
-          <div
-            class="bg-scale-3 h-full transition-[width] duration-300"
-            style:width={bar(selection.us.rate)}
-          ></div>
-        </div>
-        <span class="text-body flex-[0_0_44px] text-right text-[13.5px]">
-          {pct(selection.us.rate)}
-        </span>
-      </div>
-      <div class="text-muted text-[13.5px]">{diffText}</div>
-    </div>
-  {:else if !selection.selected}
-    <div class="border-rule text-muted border-l-2 pl-3 text-[13.5px] leading-normal">
-      Click a state on the map to compare it with the national rate.
-    </div>
-  {/if}
+  <div class="border-rule text-muted border-l-2 pl-3 text-[13.5px] leading-normal">
+    Preliminary source counts. Population rates and active-place totals are withheld while source
+    aggregation is reviewed.
+  </div>
   <hr class="border-rule" />
   <div class="flex items-start gap-[18px]">
     <div
@@ -101,8 +63,7 @@ const bar = (rate: number) => `${Math.min(100, (rate / 14) * 100)}%`;
     <div class="flex min-w-0 flex-col gap-2">
       <div class="label-caps">One-page summary</div>
       <p class="text-body text-[14px] leading-normal text-pretty">
-        A printable page for this selection: the map, closure counts and neighborhood indicators —
-        poverty, education, income.
+        A preview of this selection’s reported closure counts.
       </p>
       <div class="text-faint font-mono text-[11px]">
         preview placeholder · layout designed later
@@ -125,7 +86,9 @@ const bar = (rate: number) => `${Math.min(100, (rate / 14) * 100)}%`;
       {share.copied ? "Copied" : "Share"}
     </button>
   </div>
-  <div class="text-body text-[14px]">Local context, community indicators and sources.</div>
+  <div class="text-body text-[14px]">
+    Counts cover the selected window, including both endpoint years.
+  </div>
   <div>
     <a href="/request-data" class="text-medium-blue text-[14px] font-semibold hover:underline"
       >Request this data →</a

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createMapAssetsLoader } from "$lib/map/static-assets";
+import { featureBounds, topologyToFeatureCollection } from "$lib/map/topology";
+import topology from "$data/counties-10m.json";
 
 const urls = {
   countiesTopology: "/counties.json",
@@ -8,6 +10,31 @@ const urls = {
 };
 
 describe("map static asset loader", () => {
+  it("selects the named state geometry and fits Alaska across the dateline", () => {
+    const states = topologyToFeatureCollection(topology, "states");
+    expect(states.features).toHaveLength(56);
+    expect(states.features.every((feature) => /^\d{2}$/.test(String(feature.id)))).toBe(true);
+    expect(topologyToFeatureCollection(topology).features.length).toBeGreaterThan(3000);
+    expect(() => topologyToFeatureCollection(topology, "missing")).toThrow(
+      "missing object not found"
+    );
+
+    const alaska = states.features.find((feature) => feature.id === "02")!;
+    const [[west, south], [east, north]] = featureBounds(alaska);
+    expect(west).toBeLessThan(-180);
+    expect(east - west).toBeGreaterThan(50);
+    expect(east - west).toBeLessThan(65);
+    expect(north).toBeGreaterThan(south);
+    for (const geoid of ["15", "60", "66", "69", "72", "78"]) {
+      const [[left, bottom], [right, top]] = featureBounds(
+        states.features.find((feature) => feature.id === geoid)!
+      );
+      expect(right).toBeGreaterThan(left);
+      expect(right - left).toBeLessThan(10);
+      expect(top).toBeGreaterThan(bottom);
+    }
+  });
+
   it("shares one fetch and parse promise across concurrent map instances", async () => {
     const payloads = {
       [urls.countiesTopology]: { type: "Topology", arcs: [] },

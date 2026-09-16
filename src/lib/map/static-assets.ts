@@ -75,3 +75,8 @@ export const loadMapAssets = createMapAssetsLoader((assetUrl) => fetch(assetUrl)
   countiesTopology: countiesTopologyUrl,
   countyCameras: countyCameraUrl,
 });
+
+const loadJsonAsset = createJsonAssetLoader((assetUrl) => fetch(assetUrl));
+
+/** State maps share the topology without requesting county-only camera data. */
+export const loadTopology = () => loadJsonAsset<unknown>(countiesTopologyUrl);

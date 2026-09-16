@@ -1,9 +1,8 @@
 <script lang="ts">
 import { ChevronDown } from "lucide-svelte";
-import { FROM_YEARS, GAP, TO_MAX, TYPES, type TypeKey } from "$lib/explore/model";
+import { FROM_YEARS, WINDOWS, TYPES, type TypeKey } from "$lib/explore/model";
 
-// FROM — TO · 5+ YEARS LATER and TYPE: the same pair on the landing bar (small)
-// and the Explore toolbar (large).
+// Both entry points expose only published windows.
 let {
   from = $bindable(),
   to = $bindable(),
@@ -11,13 +10,13 @@ let {
   large = false,
 }: { from: number; to: number; type: TypeKey; large?: boolean } = $props();
 
-let toYears = $derived(Array.from({ length: TO_MAX - from - GAP + 1 }, (_, i) => from + GAP + i));
+let toYears = $derived(WINDOWS.filter((window) => window.from === from).map((window) => window.to));
 
-// Changing From bumps To to at least From + 5. To is written first so a
-// URL-backed parent folds both writes into one navigation.
+// Keep the selected pair inside the published window list.
 function changeFrom(event: Event & { currentTarget: HTMLSelectElement }) {
   const next = Number(event.currentTarget.value);
-  if (to < next + GAP) to = next + GAP;
+  const windows = WINDOWS.filter((window) => window.from === next);
+  to = windows.find((window) => window.to === to)?.to ?? windows[0].to;
   from = next;
 }
 
@@ -48,7 +47,7 @@ let caret = $derived(`pointer-events-none absolute text-muted ${large ? "right-1
   </label>
   <span class="text-faint {large ? 'mt-3.5' : 'mt-[18px]'}">—</span>
   <label class={field}>
-    <span class="label-caps whitespace-nowrap">To · 5+ years later</span>
+    <span class="label-caps whitespace-nowrap">To · inclusive</span>
     <span class="text-ink relative flex items-center">
       <select name="to" bind:value={to} class={select}>
         {#each toYears as year (year)}

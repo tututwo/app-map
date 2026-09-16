@@ -1,31 +1,53 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
-import { page } from "$app/state";
+import { navigating, page } from "$app/state";
+import { onMount } from "svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import SummaryDialog from "$components/explore/SummaryDialog.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import {
+  BREAKS,
   CLASSES,
   DEFAULT_QUERY,
+  NO_DATA_COLOR,
   STATES,
-  parseExploreQuery,
+  manifest,
   selectionFor,
   type ExploreQuery,
 } from "$lib/explore/model";
+import type { PageData } from "./$types";
 
+let { data }: { data: PageData } = $props();
 const VIEWS = ["State", "County", "ZIP", "Tract"] as const;
-
-// The URL is the applied query: controls write to it, everything derives from it.
-let query = $derived(parseExploreQuery(page.url.searchParams));
-let selection = $derived(selectionFor(query));
-
-let view = $state<(typeof VIEWS)[number]>("State");
+let query = $derived(data.query);
+let selection = $derived(selectionFor(query, data.rows));
 let legendInfo = $state(false);
 let summaryOpen = $state(false);
+let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
+let mapControls = $state<{ zoomIn: () => void; zoomOut: () => void; reset: () => void }>();
+let mapError = $state<string | null>(null);
+let mounted = false;
 
-// Consecutive writes (From then To) fold into one pending target so neither
-// navigation overwrites the other.
+async function loadMap() {
+  mapError = null;
+  try {
+    const module = await import("$components/explore/StateMap.svelte");
+    if (mounted) MapComponent = module.default;
+  } catch {
+    if (mounted) mapError = "The map could not be loaded.";
+  }
+}
+
+onMount(() => {
+  mounted = true;
+  void loadMap();
+  return () => {
+    mounted = false;
+  };
+});
+
+// Consecutive From/To writes preserve the whole pending URL.
 let pending: URL | null = null;
 function update(patch: Partial<ExploreQuery>) {
   const url = new URL(pending ?? page.url);
@@ -40,13 +62,12 @@ function update(patch: Partial<ExploreQuery>) {
 }
 
 function pickState(id: string) {
-  update({ where: STATES.find((s) => s.id === id)?.name ?? "" });
-  view = "State";
+  update({ where: STATES.find((state) => state.id === id)?.name ?? "" });
 }
 
 function reset() {
   update(DEFAULT_QUERY);
-  view = "State";
+  mapControls?.reset();
   legendInfo = false;
 }
 </script>
@@ -55,14 +76,9 @@ function reset() {
   <title>Explore · Where are places of worship closing?</title>
 </svelte:head>
 
-<main class="flex h-[max(720px,calc(100vh_-_65px))] flex-col">
+<main class="flex h-[max(720px,calc(100vh_-_65px))] flex-col" aria-busy={!!navigating.to}>
   <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
-    <FindPlace
-      value={selection.selected?.name ?? ""}
-      byId={selection.byId}
-      onpick={pickState}
-      onlocate={() => pickState("CT")}
-    />
+    <FindPlace value={selection.selected?.name ?? ""} byId={selection.byId} onpick={pickState} />
     <QueryFields
       large
       bind:from={() => query.from, (from) => update({ from })}
@@ -75,8 +91,13 @@ function reset() {
         {#each VIEWS as option (option)}
           <button
             type="button"
-            onclick={() => (view = option)}
-            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium {view === option
+            disabled={option !== "State"}
+            aria-pressed={option === "State"}
+            title={option === "State"
+              ? "State view"
+              : `${option} data is not available in this release`}
+            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {option ===
+            'State'
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
               : ''}"
           >
@@ -94,19 +115,45 @@ function reset() {
     </div>
   </div>
 
-  <div class="flex min-h-0 flex-1">
+  {#if data.error}
     <div
-      class="bg-map relative min-h-0 min-w-0 flex-auto overflow-hidden [background-image:linear-gradient(rgba(0,30,70,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,30,70,.06)_1px,transparent_1px)] [background-size:36px_36px]"
+      role="alert"
+      class="flex items-center justify-between gap-4 bg-red-50 px-6 py-3 text-sm text-red-800"
     >
-      <!-- Map slot: MapLibre lands here next. The prototype's tile grid is intentionally not built. -->
-      <div
-        class="absolute inset-0 flex items-center justify-center pt-[50px] pr-[100px] pb-[130px] pl-[60px] transition-opacity duration-200 {view ===
-        'State'
-          ? ''
-          : 'opacity-35'}"
+      <span>{data.error}</span>
+      <button type="button" onclick={() => window.location.reload()} class="font-semibold underline"
+        >Retry data</button
       >
-        <p class="text-faint font-mono text-[11px]">map · MapLibre — next step</p>
-      </div>
+    </div>
+  {:else if navigating.to}
+    <div role="status" class="bg-white px-6 py-2 text-sm text-muted">Updating selection…</div>
+  {/if}
+
+  <div class="flex min-h-0 flex-1">
+    <div class="bg-map relative min-h-0 min-w-0 flex-auto overflow-hidden">
+      {#if MapComponent}
+        <MapComponent
+          bind:this={mapControls}
+          rows={data.rows}
+          selected={selection.selected?.id ?? null}
+          onselect={pickState}
+        />
+      {:else if mapError}
+        <div
+          role="alert"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm"
+        >
+          <p>{mapError}</p>
+          <button type="button" onclick={loadMap} class="font-semibold underline">Retry map</button>
+        </div>
+      {:else}
+        <div
+          role="status"
+          class="text-muted absolute inset-0 flex items-center justify-center text-sm"
+        >
+          Loading map…
+        </div>
+      {/if}
 
       <div
         class="border-rule absolute top-5 right-[22px] flex flex-col overflow-hidden rounded-[3px] border bg-white shadow-[0_2px_6px_rgba(0,0,0,.06)]"
@@ -114,41 +161,41 @@ function reset() {
         <button
           type="button"
           aria-label="Zoom in"
-          class="border-rule text-ink hover:bg-footer size-[42px] border-b text-[18px]">+</button
+          disabled={!mapControls}
+          onclick={() => mapControls?.zoomIn()}
+          class="border-rule text-ink hover:bg-footer size-[42px] border-b text-[18px] disabled:opacity-40"
+          >+</button
         >
         <button
           type="button"
           aria-label="Zoom out"
-          class="text-ink hover:bg-footer size-[42px] text-[18px]">−</button
+          disabled={!mapControls}
+          onclick={() => mapControls?.zoomOut()}
+          class="text-ink hover:bg-footer size-[42px] text-[18px] disabled:opacity-40">−</button
         >
       </div>
 
       <div
-        class="border-rule absolute bottom-6 left-6 flex w-[min(470px,calc(100%_-_48px))] flex-col gap-3 rounded border bg-white px-[22px] pt-[18px] pb-4 shadow-[0_6px_20px_-10px_rgba(0,0,0,.18)]"
+        class="border-rule absolute bottom-8 left-6 flex w-[min(470px,calc(100%_-_48px))] flex-col gap-3 rounded border bg-white px-[22px] pt-[18px] pb-4 shadow-[0_6px_20px_-10px_rgba(0,0,0,.18)]"
       >
         <div class="flex flex-wrap items-baseline justify-between gap-4">
-          <span class="text-ink text-[15px] font-semibold">
-            Closure rate over {query.to - query.from} years
-          </span>
+          <span class="text-ink text-[15px] font-semibold">Reported closures</span>
           <button
             type="button"
             onclick={() => (legendInfo = !legendInfo)}
-            class="text-medium-blue text-[13px] hover:underline"
+            class="text-medium-blue text-[13px] hover:underline">How are colors chosen?</button
           >
-            How are colors chosen?
-          </button>
         </div>
-        <div class="flex items-start gap-[22px]">
-          <div class="flex flex-1">
-            {#each CLASSES as cls (cls.label)}
-              <div class="flex min-w-0 flex-1 flex-col gap-2">
-                <div class="h-2.5" style:background={cls.color}></div>
-                <span class="text-body text-[11.5px] whitespace-nowrap">{cls.label}</span>
-              </div>
-            {/each}
-          </div>
-          <div class="flex flex-[0_0_68px] flex-col gap-2">
-            <div class="hatch-sm h-2.5"></div>
+        <p class="text-muted text-[12px]">Preliminary source counts · {selection.range}</p>
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-x-2 gap-y-3">
+          {#each CLASSES as cls (cls.label)}
+            <div class="flex min-w-0 flex-col gap-2">
+              <div class="h-2.5" style:background={cls.color}></div>
+              <span class="text-body text-[11.5px] whitespace-nowrap">{cls.label}</span>
+            </div>
+          {/each}
+          <div class="flex min-w-0 flex-col gap-2">
+            <div class="h-2.5" style:background={NO_DATA_COLOR}></div>
             <span class="text-body text-[11.5px]">No data</span>
           </div>
         </div>
@@ -156,31 +203,17 @@ function reset() {
           <p
             class="border-rule text-muted mt-0.5 border-t pt-3 text-[12.5px] leading-normal text-pretty"
           >
-            Fixed breaks at 2, 4, 6 and 9 percent, so the same shade means the same closure rate in
-            every view and time window. Areas with fewer than 15 places of worship in the baseline
-            year are hatched rather than colored.
+            Fixed breaks at {BREAKS.map((value) => value.toLocaleString("en-US")).join(", ")} reported
+            closures apply across all published windows. Gray means the count is unavailable; zero remains
+            in the lightest class. Moves are excluded. Counts cover the full window, so longer windows
+            can contain more closures. Census data vintage: {manifest.boundaryYear}; generalized map
+            boundaries: {manifest.geometry.boundaryYear}. These vintages differ.
           </p>
         {/if}
       </div>
-
-      <div class="text-faint absolute right-[22px] bottom-5 text-[11px]">
-        Data: [project] · U.S. Census Bureau
-      </div>
-
-      {#if view !== "State"}
-        <div
-          class="border-rule absolute top-[44%] left-1/2 max-w-80 -translate-x-1/2 -translate-y-1/2 rounded border bg-white px-[22px] py-4 text-center shadow-[0_12px_30px_-14px_rgba(0,0,0,.3)]"
-        >
-          <div class="text-ink text-[14px] font-semibold">{view} view — in build</div>
-          <div class="text-muted mt-1 text-[12.5px] leading-normal">
-            Finer geographies arrive with the full dataset. The state view is live.
-          </div>
-        </div>
-      {/if}
     </div>
-
-    <SelectionPanel {selection} from={query.from} onsummary={() => (summaryOpen = true)} />
+    <SelectionPanel {selection} onsummary={() => (summaryOpen = true)} />
   </div>
 </main>
 
-<SummaryDialog bind:open={summaryOpen} {selection} from={query.from} />
+<SummaryDialog bind:open={summaryOpen} {selection} />

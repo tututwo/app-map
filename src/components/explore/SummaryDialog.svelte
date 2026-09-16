@@ -1,17 +1,13 @@
 <script lang="ts">
-import { fmt, pct, type Selection } from "$lib/explore/model";
+import { fmt, per10k, type Selection } from "$lib/explore/model";
 
-let {
-  selection,
-  from,
-  open = $bindable(false),
-}: { selection: Selection; from: number; open?: boolean } = $props();
+let { selection, open = $bindable(false) }: { selection: Selection; open?: boolean } = $props();
 
 let s = $derived(selection.stat);
 let stats = $derived([
-  [s.nodata ? "—" : pct(s.rate), "Closure rate"],
-  [s.nodata ? "—" : fmt(s.closed), "Closed"],
-  [fmt(s.open), `Open in ${from}`],
+  [fmt(s.closed), "Reported closures"],
+  [per10k(s.per10k), "Per 10,000 residents"],
+  [fmt(s.nOpen), "Active during window"],
 ]);
 
 // `toggle` (not `close`) mirrors the native state back: Chrome stops firing
@@ -51,6 +47,10 @@ function onclick(event: MouseEvent & { currentTarget: HTMLDialogElement }) {
         </div>
       {/each}
     </div>
+    <p class="mt-5 text-[12px] text-[#666]">
+      Preliminary source counts. Population rates and active-place totals are withheld while source
+      aggregation is reviewed.
+    </p>
     <div
       class="mt-[26px] flex h-[220px] items-center justify-center p-5 text-center font-mono text-[11px] text-[#777]"
       style="background: repeating-linear-gradient(135deg, #efefef 0 6px, #dedede 6px 8px)"

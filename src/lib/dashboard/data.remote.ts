@@ -1,6 +1,6 @@
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { error } from "@sveltejs/kit";
 import { prerender } from "$app/server";
+import { schema } from "$lib/server/schema";
 import { NATIONAL_GEOID, isNationalGeoid } from "$lib/domain/countyGeoid";
 import { legalYearWindows, yearWindowViolation, type YearWindow } from "$lib/domain/yearWindow";
 import { readLineSeries, readSideMetric, readStackedSeries } from "$lib/server/data/by-geoid";
@@ -14,13 +14,6 @@ import type { LineDatum, MapDatum, SideMetricDatum, StackedDatum } from "./data"
  * while `dynamic: true` keeps a server fallback for anything else — server
  * `load` calls during SSR included.
  */
-
-/** Minimal Standard Schema (https://standardschema.dev) over the domain validators. */
-function schema<T>(
-  validate: (value: unknown) => StandardSchemaV1.Result<T>
-): StandardSchemaV1<T, T> {
-  return { "~standard": { version: 1, vendor: "app-map", validate } };
-}
 
 const yearWindowSchema = schema<YearWindow>((value) => {
   const { from, to } = (value ?? {}) as Record<string, unknown>;

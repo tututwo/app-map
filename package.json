@@ -7,7 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "generate:data": "node scripts/prebuild-data.mjs",
+    "generate:data": "node scripts/prebuild-data.mjs && node scripts/prebuild-state.mjs",
     "predev": "npm run generate:data",
     "dev": "vite dev",
     "prebuild": "npm run generate:data",

@@ -108,7 +108,7 @@ const tag =
         <input
           name="where"
           type="text"
-          placeholder="ZIP, city, county or state — or leave empty for the whole U.S."
+          placeholder="State or territory — or leave empty to browse the map"
           class="text-ink placeholder:text-faint focus-visible:outline-yale-blue w-full text-[14px] focus-visible:outline-2 focus-visible:outline-offset-4"
         />
       </label>
@@ -123,7 +123,7 @@ const tag =
       </div>
     </form>
     <div class="text-faint px-[18px] pt-2.5 text-[11.5px]">
-      Rates are calculated over the whole period · minimum 5 years.
+      Preliminary reported closure counts · published windows include both endpoint years.
     </div>
   </section>
 

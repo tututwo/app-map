@@ -1,4 +1,5 @@
 import { feature } from "topojson-client";
+import { geoBounds } from "d3-geo";
 import type { Feature, FeatureCollection, Geometry, GeoJsonProperties } from "geojson";
 import type { Topology } from "topojson-specification";
 
@@ -22,10 +23,13 @@ function asTopology(value: unknown): Topology {
   return value as Topology;
 }
 
-export function topologyToFeatureCollection(value: unknown): CountyFeatureCollection {
+export function topologyToFeatureCollection(
+  value: unknown,
+  objectName?: string
+): CountyFeatureCollection {
   const topology = asTopology(value);
-  const object = Object.values(topology.objects)[0];
-  if (!object) throw new Error("Invalid TopoJSON: no geometry objects found");
+  const object = objectName ? topology.objects[objectName] : Object.values(topology.objects)[0];
+  if (!object) throw new Error(`Invalid TopoJSON: ${objectName ?? "geometry"} object not found`);
 
   const converted = feature(topology, object) as
     | Feature<Geometry, GeoJsonProperties>
@@ -36,4 +40,13 @@ export function topologyToFeatureCollection(value: unknown): CountyFeatureCollec
       : ({ type: "FeatureCollection", features: [converted] } as const);
 
   return collection as CountyFeatureCollection;
+}
+
+/** MapLibre needs an increasing longitude interval, including Alaska across the dateline. */
+export function featureBounds(value: Feature<Geometry>): [[number, number], [number, number]] {
+  const [[west, south], [east, north]] = geoBounds(value);
+  return [
+    [west > east ? west - 360 : west, south],
+    [east, north],
+  ];
 }

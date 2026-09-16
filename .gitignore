@@ -8,6 +8,7 @@ node_modules
 /.svelte-kit
 /build
 /src/lib/server/data/generated/
+/src/lib/server/data/generated-state/
 /playwright-report/
 /test-results/
 
