@@ -57,6 +57,22 @@ at every zoom. Tract, ZIP and block group are **Fine levels**, drawn only when
 the viewport is past the level's **Reveal zoom** (tract and ZIP: 7, block
 group: 8); below it the map keeps the state level on screen and asks the user to
 zoom in.
-Fine-level metrics are delivered per **Shard**: tracts and block groups by state
-(GEOID prefix 2), ZIPs by state via the Census ZCTA relationship. The product glossary is
+Metrics are delivered per **Shard**: tracts and block groups by state (GEOID
+prefix 2), ZIPs by their first two digits; state and county are one national
+Shard each. The product glossary is
 `docs/UBIQUITOUS_LANGUAGE.md`; the delivery decision is ADR-0002.
+
+## Metric cube
+
+Explore's counts: reported closures (`closures_no_moves_any`, 2010 census
+reference) for every Level, every published Year Window (253: each span of at
+least five inclusive years in 2000-2025) and every Type (the lab's ten religion
+classifiers, which are not exclusive, so Types can add up to more than "All
+places of worship"). A Year Window is a lookup key into the cube, never a
+computation: the lab evaluates closures inside each window, so yearly values
+cannot be summed. `scripts/build-metrics.py` builds it from the lab's chunk files
+and asserts that the window list has no gaps, that chunks never disagree, that
+every Level summed by state equals the state Level, and that every place with
+counts has a boundary on the map (2010 geography throughout: Census cartographic
+files for county, ZIP and tract, the lab's GeoPackages for block groups). `src/lib/explore/metrics.ts` is the only
+reader; a Shard file holds all windows, so changing the window makes no request.

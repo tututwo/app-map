@@ -1,5 +1,4 @@
 import { readdirSync } from "node:fs";
-import { stringify } from "devalue";
 import { expect, test } from "@playwright/test";
 
 // Assertions run against the rendered DOM only — data serialized for
@@ -47,7 +46,6 @@ test("the build emits the prerendered remote payloads", () => {
   const payloadsOf = (fn: string) => readdirSync(`${remoteDir}/${remoteHashFor(fn)}/${fn}`).length;
 
   expect(payloadsOf("getMapData")).toBe(136);
-  expect(payloadsOf("getStateMetrics")).toBe(3);
   expect(payloadsOf("getLineSeries")).toBeGreaterThan(3000);
   expect(payloadsOf("getStackedSeries")).toBeGreaterThan(3000);
   expect(payloadsOf("getSideMetric")).toBeGreaterThan(3000);
@@ -74,7 +72,8 @@ test("remote endpoints validate their arguments", async ({ request }) => {
   expect(await malformedGeoid.json()).toMatchObject({ type: "error", status: 400 });
 });
 
-test("/explore server-renders source counts and state endpoints reject unknown slices", async ({
+// Explore counts come from the Metric cube (scripts/build-metrics.py), read during SSR like any client.
+test("/explore server-renders source counts for a state, a window and every type", async ({
   request,
 }) => {
   const response = await request.get("/explore?where=CT&from=2010&to=2015&type=all");
@@ -82,12 +81,6 @@ test("/explore server-renders source counts and state endpoints reject unknown s
   const dom = domOf(await response.text());
   expect(dom).toContain("Connecticut");
   expect(dom).toContain("476");
-  expect(dom).toContain("Reported closures");
+  expect(dom).toContain("Reported closures by type");
   expect(dom).toContain("withheld");
-  const hash = remoteHashFor("getStateMetrics");
-  const payload = Buffer.from(
-    stringify({ window: "2010_2015", religion: "all_religions" })
-  ).toString("base64url");
-  const invalid = await request.get(`/_app/remote/${hash}/getStateMetrics/${payload}`);
-  expect(await invalid.json()).toMatchObject({ type: "error", status: 400 });
 });

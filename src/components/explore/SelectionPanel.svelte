@@ -15,10 +15,10 @@ let stats = $derived([
 ]);
 let sentence = $derived(
   !selection.selected
-    ? "Select a state to see reported closure counts. A national total is not available in this release."
+    ? "Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release."
     : s.closed === null
-      ? `Closure counts are not available for ${selection.name} in this window.`
-      : `${fmt(s.closed)} closures are reported in ${selection.name} during ${selection.range}. Moves are excluded.`
+      ? `No ${selection.noun} were active in ${selection.name} during ${selection.range}, so there is no closure count.`
+      : `${fmt(s.closed)} closures of ${selection.noun} are reported in ${selection.name} during ${selection.range}. Moves are excluded.`
 );
 </script>
 
@@ -42,6 +42,23 @@ let sentence = $derived(
     {/each}
   </div>
   <p class="text-body text-[15px] leading-[1.55] text-pretty">{sentence}</p>
+  {#if selection.selected}
+    <div>
+      <div class="label-caps">Reported closures by type</div>
+      <ul class="mt-2.5 flex flex-col gap-1.5">
+        {#each selection.types as type (type.key)}
+          <li class="flex items-baseline justify-between gap-4 text-[14px]">
+            <span class="text-body">{type.label}</span>
+            <span class="text-ink font-semibold tabular-nums">{fmt(type.closed)}</span>
+          </li>
+        {/each}
+      </ul>
+      <p class="text-muted mt-2.5 text-[12.5px] leading-normal text-pretty">
+        A place of worship can carry more than one type, so types can add up to more than the total.
+        A dash means no place of that type was active here in this window.
+      </p>
+    </div>
+  {/if}
   <div class="border-rule text-muted border-l-2 pl-3 text-[13.5px] leading-normal">
     Preliminary source counts. Population rates and active-place totals are withheld while source
     aggregation is reviewed.

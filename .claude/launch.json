@@ -9,6 +9,24 @@
         "export PATH=\"$HOME/.nvm/versions/node/v22.18.0/bin:$PATH\" && npx vite dev --port 5173 --strictPort"
       ],
       "port": 5173
+    },
+    {
+      "name": "dev-local-tiles",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=\"$HOME/.nvm/versions/node/v22.18.0/bin:$PATH\" && PUBLIC_TILES_URL=/tiles npx vite dev --port 5183 --strictPort"
+      ],
+      "port": 5183
+    },
+    {
+      "name": "dev-r2",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=\"$HOME/.nvm/versions/node/v22.18.0/bin:$PATH\" && npx vite dev --port 5184 --strictPort"
+      ],
+      "port": 5184
     }
   ]
 }

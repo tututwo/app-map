@@ -1,18 +1,78 @@
-import blockGroupManifest from "$lib/generated/blockgroup-manifest.json";
-import manifest from "$lib/generated/state-manifest.json";
+import countyNames from "$lib/generated/county-names.json";
+import manifest from "$lib/generated/metrics-manifest.json";
+import type { Level as DataLevel } from "./metrics";
 
-export { blockGroupManifest, manifest };
-export const LEVELS = ["state", "blockgroup"] as const;
+export { manifest };
+export const LEVELS = [
+  "state",
+  "county",
+  "zcta",
+  "tract",
+  "blockgroup",
+] as const satisfies readonly DataLevel[];
 export type Level = (typeof LEVELS)[number];
-export const WINDOWS = manifest.windows;
-export const FROM_YEARS = [...new Set(WINDOWS.map((window) => window.from))].sort((a, b) => a - b);
-export const TYPES = Object.fromEntries(
-  manifest.religions.map((religion) => [
-    religion,
-    { label: "All places of worship", noun: "places of worship" },
-  ])
-);
-export type TypeKey = Extract<keyof typeof TYPES, string>;
+/**
+ * Tile geometry per Level (ADR-0002), all on 2010 boundaries: counties, ZIPs (ZCTAs) and tracts from the
+ * Census cartographic files (scripts/build-census-tiles.sh), block groups from the lab's GeoPackages
+ * (scripts/build-tiles.sh). Below its Reveal zoom a Level leaves the states on screen; outlines fade
+ * in from `outlineZoom`.
+ */
+export const TILES = {
+  county: {
+    archive: "county-2010.pmtiles",
+    sourceLayer: "counties",
+    revealZoom: 0,
+    outlineZoom: 3,
+    maxZoom: 10,
+  },
+  zcta: {
+    archive: "zcta-2010.pmtiles",
+    sourceLayer: "zctas",
+    revealZoom: 7,
+    outlineZoom: 8,
+    maxZoom: 13,
+  },
+  tract: {
+    archive: "tract-2010.pmtiles",
+    sourceLayer: "tracts",
+    revealZoom: 7,
+    outlineZoom: 8,
+    maxZoom: 13,
+  },
+  blockgroup: {
+    archive: "bg-2010.pmtiles",
+    sourceLayer: "blockgroups",
+    revealZoom: 8,
+    outlineZoom: 9,
+    maxZoom: 15,
+  },
+};
+export const LEVEL_NOUNS: Record<Level, { one: string; many: string }> = {
+  state: { one: "state", many: "states" },
+  county: { one: "county", many: "counties" },
+  zcta: { one: "ZIP code", many: "ZIP codes" },
+  tract: { one: "tract", many: "tracts" },
+  blockgroup: { one: "block group", many: "block groups" },
+};
+/** The state outlines are generalized 2017 display boundaries; the counts use `manifest.boundaryYear`. */
+export const STATE_GEOMETRY_YEAR = 2017;
+export const WINDOWS = manifest.windows.map(([from, to]) => ({ from, to, key: `${from}_${to}` }));
+export const FROM_YEARS = [...new Set(WINDOWS.map((window) => window.from))];
+// Upstream classifiers, in the order the Type menu lists them. They are not exclusive: a place of worship
+// can carry more than one, so Types may add up to more than "All places of worship".
+export const TYPES = {
+  all_religions: { label: "All places of worship", noun: "places of worship" },
+  christian_church: { label: "Christian congregations", noun: "Christian congregations" },
+  jewish_synagogue: { label: "Synagogues", noun: "synagogues" },
+  muslim_mosque: { label: "Mosques", noun: "mosques" },
+  buddhist_temple: { label: "Buddhist temples", noun: "Buddhist temples" },
+  hindu_mandir: { label: "Hindu temples", noun: "Hindu temples" },
+  sikh_gurdwara: { label: "Sikh gurdwaras", noun: "Sikh gurdwaras" },
+  other_religion: { label: "Other religions", noun: "places of worship of other religions" },
+  interfaith: { label: "Interfaith", noun: "interfaith places of worship" },
+  unspecified: { label: "Unspecified type", noun: "places of worship of unspecified type" },
+} satisfies Record<(typeof manifest.religions)[number], { label: string; noun: string }>;
+export type TypeKey = keyof typeof TYPES;
 
 export interface StateRow {
   id: string;
@@ -90,8 +150,11 @@ export interface Stat {
   per10k: number | null;
   nOpen: number | null;
 }
-export interface StateMetric extends Stat {
-  geoid: string;
+/** Whatever the panel is showing: a state, or a place of any other Level picked on the map. */
+export interface Place {
+  level: Level;
+  id: string;
+  name: string;
 }
 
 /** Exact name, abbreviation or GEOID first, then a name prefix. */
@@ -109,45 +172,59 @@ export const fmt = (value: number | null) =>
   value === null ? "—" : Math.round(value).toLocaleString("en-US");
 export const per10k = (value: number | null) => (value === null ? "—" : value.toFixed(2));
 
-export const BREAKS = manifest.breaks;
 export const NO_DATA_COLOR = "#d9dde2";
-const COLORS = ["#dce5f1", "#a6bedf", "#6c93c7", "#3565a8", "#00356b"];
-const thresholdLabel = (value: number) =>
-  value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
-/** `exact` names whole counts ("0", "2–3") where the breaks are small enough to read that way. */
-const classesFor = (breaks: number[], exact = false) =>
-  COLORS.map((color, index) => {
-    const low = breaks[index - 1] ?? 0;
-    const high = breaks[index];
-    const label = exact
-      ? high === undefined
-        ? `${low}+`
-        : high - 1 === low
-          ? `${low}`
-          : `${low}–${high - 1}`
-      : index === 0
-        ? `<${thresholdLabel(high)}`
-        : high === undefined
-          ? `${thresholdLabel(low)}+`
-          : `${thresholdLabel(low)}–<${thresholdLabel(high)}`;
-    return { color, label };
-  });
-export const CLASSES = classesFor(BREAKS);
-export const LEGENDS = {
-  state: { breaks: BREAKS, classes: CLASSES },
-  blockgroup: {
-    breaks: blockGroupManifest.breaks,
-    classes: classesFor(blockGroupManifest.breaks, true),
-  },
-};
+export const COLORS = ["#dce5f1", "#a6bedf", "#6c93c7", "#3565a8", "#00356b"];
+const whole = (value: number) => value.toLocaleString("en-US");
 
-/** "Tract 101.01 · Block group 1" from a 12-digit block-group GEOID. */
-export function blockGroupLabel(geoid: string) {
-  const suffix = geoid.slice(9, 11);
-  return `Tract ${Number(geoid.slice(5, 9))}${suffix === "00" ? "" : `.${suffix}`} · Block group ${geoid[11]}`;
+/**
+ * Quintile breaks of the positive counts, rounded to two significant digits. A five-year window and a
+ * 26-year one differ twentyfold, as do Types, so no fixed break list can serve every selection.
+ */
+export function breaksFor(values: (number | null)[]): number[] {
+  const sorted = values.filter((value): value is number => !!value).sort((a, b) => a - b);
+  const nice = (value: number) => {
+    const unit = 10 ** Math.max(0, Math.floor(Math.log10(value)) - 1);
+    return Math.round(value / unit) * unit;
+  };
+  return [
+    ...new Set([0.2, 0.4, 0.6, 0.8].map((q) => nice(sorted[Math.floor(q * sorted.length)] ?? 0))),
+  ].filter((value) => value > 0);
 }
-export const classOf = (value: number | null) =>
-  value === null ? -1 : BREAKS.filter((threshold) => value >= threshold).length;
+
+/** Index into COLORS, spread over however many classes the breaks make; -1 is No data. */
+export function colorIndexOf(value: number | null, breaks: number[]) {
+  if (value === null) return -1;
+  let cls = 0;
+  while (cls < breaks.length && value >= breaks[cls]) cls++;
+  return Math.round((cls * (COLORS.length - 1)) / Math.max(1, breaks.length));
+}
+
+export const legendFor = (breaks: number[]) => ({
+  breaks,
+  classes: [0, ...breaks].map((low, index) => {
+    const high = breaks[index];
+    return {
+      color: COLORS[colorIndexOf(low, breaks)],
+      label:
+        high === undefined
+          ? `${whole(low)}+`
+          : high - 1 === low
+            ? whole(low)
+            : `${whole(low)}–${whole(high - 1)}`,
+    };
+  }),
+});
+/**
+ * Fine levels arrive one Shard at a time, so their classes cannot follow "the data"; their counts are
+ * small whole numbers in every window (99th percentile over 2000-2025: ZIP 131, tract 33, block group 17).
+ */
+export const FIXED_BREAKS = { zcta: [1, 3, 8, 20], tract: [1, 3, 6, 12], blockgroup: [1, 2, 4, 8] };
+
+/** "Tract 101.01" from a tract or block-group GEOID. */
+function tractLabel(geoid: string) {
+  const suffix = geoid.slice(9, 11);
+  return `Tract ${Number(geoid.slice(5, 9))}${suffix === "00" ? "" : `.${suffix}`}`;
+}
 
 export interface ExploreQuery {
   where: string;
@@ -162,7 +239,7 @@ export const DEFAULT_QUERY: ExploreQuery = {
   where: "",
   from: defaultWindow.from,
   to: defaultWindow.to,
-  type: manifest.religions[0],
+  type: "all_religions",
   level: "state",
 };
 
@@ -189,31 +266,58 @@ export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
     where: params.get("where") ?? "",
     from: window.from,
     to: window.to,
-    type: type && Object.hasOwn(TYPES, type) ? type : DEFAULT_QUERY.type,
-    level: params.get("level") === "blockgroup" ? "blockgroup" : "state",
+    type: type && Object.hasOwn(TYPES, type) ? (type as TypeKey) : DEFAULT_QUERY.type,
+    level: LEVELS.find((level) => level === params.get("level")) ?? "state",
   };
 }
 
-export function selectionFor(query: ExploreQuery, rows: StateMetric[]) {
-  const selected = findState(query.where);
-  const byId = new Map(rows.map((row) => [row.geoid, row]));
-  const stat: Stat = (selected && byId.get(selected.id)) || {
-    closed: null,
-    per10k: null,
-    nOpen: null,
-  };
+/**
+ * `where` is a state (name, abbreviation or GEOID) or the id of a place picked on the map: county (5
+ * digits), ZIP (5 digits, read as a ZIP in the ZIP view or when no county has that GEOID), tract (11)
+ * or block group (12).
+ */
+export function placeFor(where: string, level: Level = "state"): Place | undefined {
+  const counties = countyNames as Record<string, string>;
+  const state = STATES.find(({ id }) => id === where.slice(0, 2))?.abbreviation ?? "";
+  if (/^\d{12}$/.test(where))
+    return {
+      level: "blockgroup",
+      id: where,
+      name: `${tractLabel(where)} · Block group ${where[11]}, ${state}`,
+    };
+  if (/^\d{11}$/.test(where))
+    return {
+      level: "tract",
+      id: where,
+      name: `${tractLabel(where)}, ${counties[where.slice(0, 5)] ?? state}`,
+    };
+  if (/^\d{5}$/.test(where))
+    return level !== "zcta" && counties[where]
+      ? { level: "county", id: where, name: counties[where] }
+      : { level: "zcta", id: where, name: `ZIP ${where}` };
+  const found = findState(where);
+  return found && { level: "state", id: found.id, name: found.name };
+}
+
+/** `breakdown` is the selected place's reported closures in this window, per Type. */
+export function selectionFor(query: ExploreQuery, breakdown: Record<string, number | null> | null) {
+  const selected = placeFor(query.where, query.level);
   const range = `${query.from}–${query.to}`;
   const type = TYPES[query.type];
   return {
     selected,
-    byId,
-    stat,
+    stat: { closed: breakdown?.[query.type] ?? null, per10k: null, nOpen: null } as Stat,
+    // Every Type but the total, largest first; a Type that was never active here sorts last.
+    types: (Object.keys(TYPES) as TypeKey[])
+      .filter((key) => key !== "all_religions")
+      .map((key) => ({ key, label: TYPES[key].label, closed: breakdown?.[key] ?? null }))
+      .sort((a, b) => (b.closed ?? -1) - (a.closed ?? -1)),
     range,
     name: selected?.name ?? "United States",
     windowText: `${range} · ${query.to - query.from + 1} inclusive years · ${type.label.toLowerCase()}`,
     noun: type.noun,
     requestText: selected
-      ? `State data for ${selected.name}, ${range}.`
+      ? `Data for ${selected.name} (${LEVEL_NOUNS[selected.level].one}), ${range}.`
       : `State-level data for ${range}.`,
   };
 }

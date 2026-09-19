@@ -101,3 +101,56 @@ Its largest z9 tile, New York with New Jersey, is 180 KB gzipped. The bucket
 answers on its `r2.dev` address, which Cloudflare rate-limits and does not
 cache; production traffic needs a custom domain on the bucket.
 `scripts/publish-tiles.sh` uploads a rebuilt archive.
+
+## Amendment 2026-09-18 (night): a Shard holds every Year Window
+
+The Decision above keeps metrics as JSON slices per (window, religion, shard). With the lab's full
+output in hand (33 chunks per level, 253 windows, 10 religions) that shape does not hold: a window is
+a lookup key, not a computation, because closures are evaluated inside each window and yearly values
+cannot be added up, so every window has to ship; and measured on the block-group file, about 90% of a
+JSON slice is repeated GEOID keys (California, one window: 36 KB gzipped as JSON, 4 KB as bytes).
+Extending the slice design would have meant 12,903 files and about 107 MB per religion.
+
+What stands: the Metric cube. `scripts/build-metrics.py` writes, per Level and Shard, one
+`geoids.json.gz` (row order) and one `<religion>.bin.gz` per Type, a row-major rows x windows matrix
+of u8 or u16 counts with the dtype's maximum as "no observation". Window order, religions, dtype and
+the Shard list live in `src/lib/generated/metrics-manifest.json`; paths carry a content hash per
+Level, so files are immutable. The whole cube, five Levels x 253 windows x 10 Types, is 27 MB gzipped
+(California block groups, every window: 347 KB). Files sit under `metrics/` next to the tile archive
+and are inflated in the browser with `DecompressionStream`, so any static host works.
+
+Consequences: changing the Year Window never makes a request, the stale-response guard is only needed
+for a Type change, and feature-state carries the colour class rather than the count, so one paint
+expression serves every Level and the state legend can follow the data (quintiles per window and
+Type; block groups keep fixed breaks). The prerendered remote functions for Explore, their prebuild
+scripts and the per-window payloads are gone. Considered and rejected: a database or API (a round
+trip per window for read-only, fully precomputed data), Parquet range reads in the browser (a new
+dependency for the same result), and storing yearly counts to sum on the client (wrong, see above).
+State, county and ZIP are one national Shard each; ZIP (2.3 MB for all places of worship) should be
+split once its tiles exist and a viewport can name the Shards.
+
+## Amendment 2026-09-18 (night): county, tract and ZIP boundaries; ZIP Shards
+
+The lab's OneDrive holds block-group GeoPackages and `core_areas.gpkg` (CBSA, CSA, ZCTA) only, so
+the other Levels draw the Census Bureau's 2010 cartographic boundary files (`GENZ2010`, 1:500k):
+3,143 counties, 72,891 tracts and 32,989 ZCTAs without Puerto Rico. `scripts/build-census-tiles.sh`
+builds `county-2010.pmtiles` (z2 to z9, 4 MB, five seconds), `tract-2010.pmtiles` (z7 to z11, 37 MB,
+one minute) and `zcta-2010.pmtiles` (z7 to z11, 68 MB, six minutes), the two Fine levels with the
+block-group recipe, plus `county-names.json`, the ZIP Shard boxes and one id list per Level that
+`scripts/build-metrics.py` checks the counts against: every county, tract and ZIP with counts has a
+boundary. One archive per Level, as the first amendment explains.
+
+Later boundaries do not fit the counts. The 2017 county outlines already in the repo lack Wade
+Hampton AK (02270), Shannon SD (46113) and Bedford city VA (51515), and anything from 2022 on replaces
+Connecticut's eight counties, which the lab keeps under all three census references, with planning
+regions, changing every tract and block-group GEOID in the state. The legacy dashboard's county
+tables are of that later kind, which is where its Connecticut trouble came from.
+
+County is a Coarse level: one national Shard, drawn from the map's minimum zoom, quintile breaks
+like the state level. Tract and ZIP are Fine levels with Reveal zoom 7 and fixed breaks. ZIPs shard
+by their first two digits, 98 compact regions whose bounding boxes
+(`src/lib/generated/zcta-shard-bounds.json`) name the Shards a viewport needs; this replaces both
+the national ZIP Shard of the previous amendment (a first click fetched 5.6 MB of Type files, now
+about 60 KB) and the ZCTA-to-state relationship of the original Decision, since a prefix needs no
+lookup table. Five digits in a link are a county unless the ZIP view is on or no county has that
+GEOID.

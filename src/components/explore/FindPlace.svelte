@@ -1,5 +1,5 @@
 <script lang="ts">
-import { STATES, findState, fmt, type Stat } from "$lib/explore/model";
+import { STATES, findState, fmt } from "$lib/explore/model";
 
 let {
   value,
@@ -8,7 +8,8 @@ let {
 }: {
   /** Name of the selected state, or "" for the U.S. */
   value: string;
-  byId: Map<string, Stat>;
+  /** Reported closures by state GEOID for the current window and type. */
+  byId: Map<string, number | null>;
   onpick: (id: string) => void;
 } = $props();
 
@@ -39,8 +40,8 @@ function onkeydown(event: KeyboardEvent) {
 }
 
 function meta(id: string) {
-  const s = byId.get(id);
-  return !s || s.closed === null ? "No data" : `${fmt(s.closed)} reported closures`;
+  const closed = byId.get(id) ?? null;
+  return closed === null ? "No data" : `${fmt(closed)} reported closures`;
 }
 </script>
 

@@ -6,15 +6,19 @@ import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import SummaryDialog from "$components/explore/SummaryDialog.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
+import { valueAt, windowIndexOf } from "$lib/explore/metrics";
 import {
   DEFAULT_QUERY,
-  LEGENDS,
+  FIXED_BREAKS,
+  LEVEL_NOUNS,
   NO_DATA_COLOR,
   STATES,
-  blockGroupManifest,
+  STATE_GEOMETRY_YEAR,
+  TILES,
+  breaksFor,
+  legendFor,
   manifest,
   selectionFor,
-  windowFor,
   type ExploreQuery,
   type Level,
 } from "$lib/explore/model";
@@ -24,21 +28,32 @@ let { data }: { data: PageData } = $props();
 // A view without a level has no published data yet.
 const VIEWS: { label: string; level?: Level }[] = [
   { label: "State", level: "state" },
-  { label: "County" },
-  { label: "ZIP" },
-  { label: "Tract" },
+  { label: "County", level: "county" },
+  { label: "ZIP", level: "zcta" },
+  { label: "Tract", level: "tract" },
   { label: "Block group", level: "blockgroup" },
 ];
 let query = $derived(data.query);
 let mapZoom = $state(3.5);
-// Below its Reveal zoom the block-group view still draws states, and the legend follows the map.
+// Below its Reveal zoom a tiled Level still draws states, and the legend follows the map.
 let drawnLevel = $derived<Level>(
-  query.level === "blockgroup" && mapZoom < blockGroupManifest.geometry.revealZoom
-    ? "state"
-    : query.level
+  query.level !== "state" && mapZoom < TILES[query.level].revealZoom ? "state" : query.level
 );
-let legend = $derived(LEGENDS[drawnLevel]);
-let selection = $derived(selectionFor(query, data.rows));
+// Every Year Window is already in memory, so a new window is a lookup into the same arrays.
+let yearWindow = $derived(windowIndexOf(query.from, query.to));
+const countsIn = (national: typeof data.states) =>
+  national?.shard.geoids.map((_, row) => valueAt(national.counts, row, yearWindow)) ?? [];
+let stateCounts = $derived(countsIn(data.states));
+let breaks = $derived({
+  state: breaksFor(stateCounts),
+  county: breaksFor(countsIn(data.counties)),
+  ...FIXED_BREAKS,
+});
+let closedByState = $derived(
+  new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
+);
+let legend = $derived(legendFor(breaks[drawnLevel]));
+let selection = $derived(selectionFor(query, data.breakdown));
 let legendInfo = $state(false);
 let summaryOpen = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
@@ -78,8 +93,9 @@ function update(patch: Partial<ExploreQuery>) {
   });
 }
 
-function pickState(id: string) {
-  update({ where: STATES.find((state) => state.id === id)?.name ?? "" });
+/** A state GEOID from the map or Find a place, or the id of any other place from the map. */
+function pick(id: string) {
+  update({ where: STATES.find((state) => state.id === id)?.name ?? id });
 }
 
 function reset() {
@@ -95,7 +111,7 @@ function reset() {
 
 <main class="flex h-[max(720px,calc(100vh_-_65px))] flex-col" aria-busy={!!navigating.to}>
   <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
-    <FindPlace value={selection.selected?.name ?? ""} byId={selection.byId} onpick={pickState} />
+    <FindPlace value={selection.selected?.name ?? ""} byId={closedByState} onpick={pick} />
     <QueryFields
       large
       bind:from={() => query.from, (from) => update({ from })}
@@ -110,7 +126,9 @@ function reset() {
             type="button"
             disabled={!level}
             aria-pressed={level === query.level}
-            title={level ? `${label} view` : `${label} data is not available in this release`}
+            title={level
+              ? `${label} view`
+              : `${label} boundaries are not available in this release`}
             onclick={() => level && update({ level })}
             class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
@@ -141,8 +159,6 @@ function reset() {
         >Retry data</button
       >
     </div>
-  {:else if navigating.to}
-    <div role="status" class="bg-white px-6 py-2 text-sm text-muted">Updating selection…</div>
   {/if}
 
   <div class="flex min-h-0 flex-1">
@@ -151,11 +167,11 @@ function reset() {
         <MapComponent
           bind:this={mapControls}
           bind:zoom={mapZoom}
-          rows={data.rows}
           selected={selection.selected?.id ?? null}
-          onselect={pickState}
+          onselect={pick}
           level={query.level}
-          windowKey={windowFor(query).key}
+          {yearWindow}
+          {breaks}
           religion={query.type}
         />
       {:else if mapError}
@@ -211,7 +227,7 @@ function reset() {
           {#each legend.classes as cls (cls.label)}
             <div class="flex min-w-0 flex-col gap-2">
               <div class="h-2.5" style:background={cls.color}></div>
-              <span class="text-body text-[11.5px] whitespace-nowrap">{cls.label}</span>
+              <span class="text-body text-[11.5px]">{cls.label}</span>
             </div>
           {/each}
           <div class="flex min-w-0 flex-col gap-2">
@@ -223,16 +239,25 @@ function reset() {
           <p
             class="border-rule text-muted mt-0.5 border-t pt-3 text-[12.5px] leading-normal text-pretty"
           >
-            Fixed breaks at {legend.breaks.map((value) => value.toLocaleString("en-US")).join(", ")}
-            reported closures apply across all published windows. Gray means the count is unavailable;
-            zero remains in the lightest class. Moves are excluded. Counts cover the full window, so
-            longer windows can contain more closures.
-            {#if drawnLevel === "blockgroup"}
-              Block groups use {blockGroupManifest.boundaryYear} census boundaries.
+            {#if drawnLevel !== "state" && drawnLevel !== "county"}
+              Fixed breaks at {FIXED_BREAKS[drawnLevel].join(", ")} reported closures apply to every
+              window and type. {LEVEL_NOUNS[drawnLevel].many.replace(/^./, (first) =>
+                first.toUpperCase()
+              )} use
+              {manifest.boundaryYear} census boundaries.
             {:else}
-              Census data vintage: {manifest.boundaryYear}; generalized map boundaries: {manifest
-                .geometry.boundaryYear}. These vintages differ.
+              Classes are quintiles of the {drawnLevel === "county" ? "counties'" : "states'"} counts
+              for this window and type, so a color does not mean the same count in another window.
+              {#if drawnLevel === "county"}
+                Counties use {manifest.boundaryYear} census boundaries.
+              {:else}
+                Census data vintage: {manifest.boundaryYear}; generalized map boundaries:
+                {STATE_GEOMETRY_YEAR}. These vintages differ.
+              {/if}
             {/if}
+            Gray means no place of worship of this type was active there in the window; zero stays in
+            the lightest class. Moves are excluded. Counts cover the full window, so longer windows can
+            contain more closures.
           </p>
         {/if}
       </div>
