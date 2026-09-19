@@ -7,20 +7,37 @@ import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import SummaryDialog from "$components/explore/SummaryDialog.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import {
-  BREAKS,
-  CLASSES,
   DEFAULT_QUERY,
+  LEGENDS,
   NO_DATA_COLOR,
   STATES,
+  blockGroupManifest,
   manifest,
   selectionFor,
+  windowFor,
   type ExploreQuery,
+  type Level,
 } from "$lib/explore/model";
 import type { PageData } from "./$types";
 
 let { data }: { data: PageData } = $props();
-const VIEWS = ["State", "County", "ZIP", "Tract"] as const;
+// A view without a level has no published data yet.
+const VIEWS: { label: string; level?: Level }[] = [
+  { label: "State", level: "state" },
+  { label: "County" },
+  { label: "ZIP" },
+  { label: "Tract" },
+  { label: "Block group", level: "blockgroup" },
+];
 let query = $derived(data.query);
+let mapZoom = $state(3.5);
+// Below its Reveal zoom the block-group view still draws states, and the legend follows the map.
+let drawnLevel = $derived<Level>(
+  query.level === "blockgroup" && mapZoom < blockGroupManifest.geometry.revealZoom
+    ? "state"
+    : query.level
+);
+let legend = $derived(LEGENDS[drawnLevel]);
 let selection = $derived(selectionFor(query, data.rows));
 let legendInfo = $state(false);
 let summaryOpen = $state(false);
@@ -88,20 +105,19 @@ function reset() {
     <div class="flex h-14 flex-auto items-center justify-end gap-3 px-5">
       <span class="text-muted text-[12.5px] whitespace-nowrap">View by</span>
       <div class="bg-seg inline-flex gap-0.5 rounded-[5px] p-[3px]">
-        {#each VIEWS as option (option)}
+        {#each VIEWS as { label, level } (label)}
           <button
             type="button"
-            disabled={option !== "State"}
-            aria-pressed={option === "State"}
-            title={option === "State"
-              ? "State view"
-              : `${option} data is not available in this release`}
-            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {option ===
-            'State'
+            disabled={!level}
+            aria-pressed={level === query.level}
+            title={level ? `${label} view` : `${label} data is not available in this release`}
+            onclick={() => level && update({ level })}
+            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {level ===
+            query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
               : ''}"
           >
-            {option}
+            {label}
           </button>
         {/each}
       </div>
@@ -134,9 +150,13 @@ function reset() {
       {#if MapComponent}
         <MapComponent
           bind:this={mapControls}
+          bind:zoom={mapZoom}
           rows={data.rows}
           selected={selection.selected?.id ?? null}
           onselect={pickState}
+          level={query.level}
+          windowKey={windowFor(query).key}
+          religion={query.type}
         />
       {:else if mapError}
         <div
@@ -188,7 +208,7 @@ function reset() {
         </div>
         <p class="text-muted text-[12px]">Preliminary source counts · {selection.range}</p>
         <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-x-2 gap-y-3">
-          {#each CLASSES as cls (cls.label)}
+          {#each legend.classes as cls (cls.label)}
             <div class="flex min-w-0 flex-col gap-2">
               <div class="h-2.5" style:background={cls.color}></div>
               <span class="text-body text-[11.5px] whitespace-nowrap">{cls.label}</span>
@@ -203,11 +223,16 @@ function reset() {
           <p
             class="border-rule text-muted mt-0.5 border-t pt-3 text-[12.5px] leading-normal text-pretty"
           >
-            Fixed breaks at {BREAKS.map((value) => value.toLocaleString("en-US")).join(", ")} reported
-            closures apply across all published windows. Gray means the count is unavailable; zero remains
-            in the lightest class. Moves are excluded. Counts cover the full window, so longer windows
-            can contain more closures. Census data vintage: {manifest.boundaryYear}; generalized map
-            boundaries: {manifest.geometry.boundaryYear}. These vintages differ.
+            Fixed breaks at {legend.breaks.map((value) => value.toLocaleString("en-US")).join(", ")}
+            reported closures apply across all published windows. Gray means the count is unavailable;
+            zero remains in the lightest class. Moves are excluded. Counts cover the full window, so
+            longer windows can contain more closures.
+            {#if drawnLevel === "blockgroup"}
+              Block groups use {blockGroupManifest.boundaryYear} census boundaries.
+            {:else}
+              Census data vintage: {manifest.boundaryYear}; generalized map boundaries: {manifest
+                .geometry.boundaryYear}. These vintages differ.
+            {/if}
           </p>
         {/if}
       </div>

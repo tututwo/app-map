@@ -55,8 +55,8 @@ Explore colours exactly one **Level** at a time: state, county, ZIP (a ZCTA),
 tract, or block group. State and county are **Coarse levels**, drawn nationwide
 at every zoom. Tract, ZIP and block group are **Fine levels**, drawn only when
 the viewport is past the level's **Reveal zoom** (tract and ZIP: 7, block
-group: 9); below it the map shows state outlines and asks the user to zoom in.
-Fine-level geometry and metrics are delivered per **Shard**: tracts by state
-(GEOID prefix 2), block groups by county (prefix 5), ZIPs by state via the
-Census ZCTA relationship. The product glossary is
+group: 8); below it the map keeps the state level on screen and asks the user to
+zoom in.
+Fine-level metrics are delivered per **Shard**: tracts and block groups by state
+(GEOID prefix 2), ZIPs by state via the Census ZCTA relationship. The product glossary is
 `docs/UBIQUITOUS_LANGUAGE.md`; the delivery decision is ADR-0002.

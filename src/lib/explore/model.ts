@@ -1,6 +1,9 @@
+import blockGroupManifest from "$lib/generated/blockgroup-manifest.json";
 import manifest from "$lib/generated/state-manifest.json";
 
-export { manifest };
+export { blockGroupManifest, manifest };
+export const LEVELS = ["state", "blockgroup"] as const;
+export type Level = (typeof LEVELS)[number];
 export const WINDOWS = manifest.windows;
 export const FROM_YEARS = [...new Set(WINDOWS.map((window) => window.from))].sort((a, b) => a - b);
 export const TYPES = Object.fromEntries(
@@ -111,15 +114,38 @@ export const NO_DATA_COLOR = "#d9dde2";
 const COLORS = ["#dce5f1", "#a6bedf", "#6c93c7", "#3565a8", "#00356b"];
 const thresholdLabel = (value: number) =>
   value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
-export const CLASSES = COLORS.map((color, index) => ({
-  color,
-  label:
-    index === 0
-      ? `<${thresholdLabel(BREAKS[0])}`
-      : index === BREAKS.length
-        ? `${thresholdLabel(BREAKS[index - 1])}+`
-        : `${thresholdLabel(BREAKS[index - 1])}–<${thresholdLabel(BREAKS[index])}`,
-}));
+/** `exact` names whole counts ("0", "2–3") where the breaks are small enough to read that way. */
+const classesFor = (breaks: number[], exact = false) =>
+  COLORS.map((color, index) => {
+    const low = breaks[index - 1] ?? 0;
+    const high = breaks[index];
+    const label = exact
+      ? high === undefined
+        ? `${low}+`
+        : high - 1 === low
+          ? `${low}`
+          : `${low}–${high - 1}`
+      : index === 0
+        ? `<${thresholdLabel(high)}`
+        : high === undefined
+          ? `${thresholdLabel(low)}+`
+          : `${thresholdLabel(low)}–<${thresholdLabel(high)}`;
+    return { color, label };
+  });
+export const CLASSES = classesFor(BREAKS);
+export const LEGENDS = {
+  state: { breaks: BREAKS, classes: CLASSES },
+  blockgroup: {
+    breaks: blockGroupManifest.breaks,
+    classes: classesFor(blockGroupManifest.breaks, true),
+  },
+};
+
+/** "Tract 101.01 · Block group 1" from a 12-digit block-group GEOID. */
+export function blockGroupLabel(geoid: string) {
+  const suffix = geoid.slice(9, 11);
+  return `Tract ${Number(geoid.slice(5, 9))}${suffix === "00" ? "" : `.${suffix}`} · Block group ${geoid[11]}`;
+}
 export const classOf = (value: number | null) =>
   value === null ? -1 : BREAKS.filter((threshold) => value >= threshold).length;
 
@@ -128,6 +154,7 @@ export interface ExploreQuery {
   from: number;
   to: number;
   type: TypeKey;
+  level: Level;
 }
 
 const defaultWindow = WINDOWS.find(({ from, to }) => from === 2010 && to === 2015) ?? WINDOWS[0];
@@ -136,6 +163,7 @@ export const DEFAULT_QUERY: ExploreQuery = {
   from: defaultWindow.from,
   to: defaultWindow.to,
   type: manifest.religions[0],
+  level: "state",
 };
 
 /** Normalize old links to the closest window that was actually published. */
@@ -162,6 +190,7 @@ export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
     from: window.from,
     to: window.to,
     type: type && Object.hasOwn(TYPES, type) ? type : DEFAULT_QUERY.type,
+    level: params.get("level") === "blockgroup" ? "blockgroup" : "state",
   };
 }
 

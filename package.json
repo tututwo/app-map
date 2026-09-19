@@ -7,7 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "generate:data": "node scripts/prebuild-data.mjs && node scripts/prebuild-state.mjs",
+    "generate:data": "node scripts/prebuild-data.mjs && node scripts/prebuild-state.mjs && node scripts/prebuild-blockgroup.mjs",
     "predev": "npm run generate:data",
     "dev": "vite dev",
     "prebuild": "npm run generate:data",
@@ -62,6 +62,7 @@
     "jszip": "^3.10.1",
     "lucide-svelte": "^0.509.0",
     "maplibre-gl": "5.19.0",
+    "pmtiles": "^4.5.0",
     "runed": "^0.28.0",
     "svelte-maplibre-gl": "2.2.0",
     "tailwind-merge": "^3.3.0",

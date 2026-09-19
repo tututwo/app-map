@@ -9,6 +9,7 @@ node_modules
 /build
 /src/lib/server/data/generated/
 /src/lib/server/data/generated-state/
+/src/lib/server/data/generated-blockgroup/
 /playwright-report/
 /test-results/
 
@@ -26,6 +27,10 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 src/data/allMetricsByCounty_06042025.geojson
+# Lab deliverables from the OneDrive "GitHub LOCAL ONLY" folder
+src/data/*.parquet
+# Built by scripts/build-tiles.sh; production serves the archive from object storage (ADR-0002)
+static/tiles/
 
 # AI agent context (local only, not for the shared repo)
 .agents/

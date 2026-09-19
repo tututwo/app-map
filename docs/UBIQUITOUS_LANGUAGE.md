@@ -19,23 +19,23 @@ Extracted 2026-09-14 from the Yusuf ↔ Gordon call (2026-09-11), Yusuf's 2026-0
 
 ## Geography
 
-| Term             | Definition                                                                                                                             | Aliases to avoid                                                  |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Level**        | The kind of statistical unit the map colours: state, county, ZIP, tract, or block group.                                               | geography, geographic level, granularity, layer, view, resolution |
-| **Unit**         | One statistical geography at a level, identified by a GEOID (Indiana, Marion County, ZIP 46201, a tract).                              | geography, region, area, polygon, feature, neighborhood           |
-| **GEOID**        | The Census identifier that uniquely keys a unit within a level and vintage.                                                            | id, code, FIPS (partially), key                                   |
-| **Parent**       | The unit at the next level up that contains a unit; the U.S. is the parent of every state.                                             | containing area, higher level, upper geography                    |
-| **ZIP**          | The UI name for a ZCTA (ZIP Code Tabulation Area), the Census approximation of a postal ZIP code.                                      | ZIP code (implies postal), zipcode, postal code                   |
-| **Tract**        | A census tract; a fine level.                                                                                                          | neighborhood, census area                                         |
-| **Block group**  | A sub-tract Census level; the finest level shown on the map.                                                                           | block (a block is smaller and never shown)                        |
-| **Vintage**      | The boundary year a set of unit geometries and GEOIDs belongs to (e.g. 2010 tracts).                                                   | version, boundary year, edition                                   |
-| **Location**     | What a user searches for: a state, county, ZIP, city, or street address.                                                               | where, place, area, spot, search term                             |
-| **City**         | A location that can be searched but is not a unit; it resolves to a viewport and a level, never to a selection.                        | census place, place, town, municipality                           |
-| **Address**      | A location that resolves, via geocoding, to the tract unit containing it.                                                              | street address, point                                             |
-| **Viewport**     | The extent of the map currently panned and zoomed into view.                                                                           | view, map position, extent, zoom                                  |
-| **Coarse level** | State or county: drawn at every zoom, nationwide.                                                                                      | overview level                                                    |
-| **Fine level**   | Tract, block group, or ZIP: drawn only when the viewport is zoomed in past the level's reveal zoom.                                    | detail level, drill-down level                                    |
-| **Reveal zoom**  | The minimum viewport zoom at which a fine level's units are drawn; below it the map shows state outlines and asks the user to zoom in. | min zoom, threshold                                               |
+| Term             | Definition                                                                                                                              | Aliases to avoid                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Level**        | The kind of statistical unit the map colours: state, county, ZIP, tract, or block group.                                                | geography, geographic level, granularity, layer, view, resolution |
+| **Unit**         | One statistical geography at a level, identified by a GEOID (Indiana, Marion County, ZIP 46201, a tract).                               | geography, region, area, polygon, feature, neighborhood           |
+| **GEOID**        | The Census identifier that uniquely keys a unit within a level and vintage.                                                             | id, code, FIPS (partially), key                                   |
+| **Parent**       | The unit at the next level up that contains a unit; the U.S. is the parent of every state.                                              | containing area, higher level, upper geography                    |
+| **ZIP**          | The UI name for a ZCTA (ZIP Code Tabulation Area), the Census approximation of a postal ZIP code.                                       | ZIP code (implies postal), zipcode, postal code                   |
+| **Tract**        | A census tract; a fine level.                                                                                                           | neighborhood, census area                                         |
+| **Block group**  | A sub-tract Census level; the finest level shown on the map.                                                                            | block (a block is smaller and never shown)                        |
+| **Vintage**      | The boundary year a set of unit geometries and GEOIDs belongs to (e.g. 2010 tracts).                                                    | version, boundary year, edition                                   |
+| **Location**     | What a user searches for: a state, county, ZIP, city, or street address.                                                                | where, place, area, spot, search term                             |
+| **City**         | A location that can be searched but is not a unit; it resolves to a viewport and a level, never to a selection.                         | census place, place, town, municipality                           |
+| **Address**      | A location that resolves, via geocoding, to the tract unit containing it.                                                               | street address, point                                             |
+| **Viewport**     | The extent of the map currently panned and zoomed into view.                                                                            | view, map position, extent, zoom                                  |
+| **Coarse level** | State or county: drawn at every zoom, nationwide.                                                                                       | overview level                                                    |
+| **Fine level**   | Tract, block group, or ZIP: drawn only when the viewport is zoomed in past the level's reveal zoom.                                     | detail level, drill-down level                                    |
+| **Reveal zoom**  | The minimum viewport zoom at which a fine level's units are drawn; below it the map shows the state level and asks the user to zoom in. | min zoom, threshold                                               |
 
 ## Exploring
 
@@ -134,7 +134,7 @@ Words from the old dashboard and the August testing summary. They will keep appe
 - A **Window** has a start and an end year at least five years apart; a **Preset window** is a **Window** the UI offers first.
 - A **Query** has exactly one **Window**, one **Type**, one **Level**, and zero or one **Selection**; a **Selection** is always a **Unit** at the **Query**'s **Level**.
 - Changing the **Viewport** never changes the **Selection**; a **Hover preview** never replaces the **Selection**.
-- A **Fine level** is drawn only above its **Reveal zoom**; the **Level** stays part of the **Query** regardless of zoom, so a **Query** at a fine level with the **Viewport** on the whole U.S. shows state outlines, never nationwide fine units.
+- A **Fine level** is drawn only above its **Reveal zoom**; the **Level** stays part of the **Query** regardless of zoom, so a **Query** at a fine level with the **Viewport** on the whole U.S. shows the state level and a request to zoom in, never nationwide fine units.
 - A **Location** resolves to a **Selection** (state, county, ZIP, address) or to a **Viewport** plus a **Level** (city).
 - A **Comparison ladder** lists the **Closure rate** of the **Selection**, then the **Reference rate** of each **Parent** up to the U.S., all for the same **Window** and **Type**.
 - A **Reference rate** is computed from the **Parent**'s own **Closures** and **Baseline**, never by averaging child rates.

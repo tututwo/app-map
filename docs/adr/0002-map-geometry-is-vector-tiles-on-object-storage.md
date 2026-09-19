@@ -58,3 +58,46 @@ every level: for each rendered feature, ensure its shard's slice is loaded.
   merge into GeoJSON.
 - New front-end dependency: `pmtiles` (protocol only); build-time tools
   tippecanoe and ogr2ogr are maintainer-side, not app dependencies.
+
+## Amendment 2026-09-18: block groups shard by state
+
+Measured on `block_group_combined.parquet` (2010 vintage, all religions): one
+window of block-group counts is 48 KB gzipped for California, the largest
+state, and 493 KB for the whole country, while county shards would mean 3,139
+files per slice and 12 to 25 requests on reveal. Block-group metrics therefore
+shard by state (GEOID prefix 2), like tracts. The shard key is read from the
+promoted GEOID, so block-group and tract tiles carry `geoid` and nothing else.
+
+The first archive, `bg-2010.pmtiles`, is built from the lab's TIGER/Line
+GeoPackages (`bg_statefp_XX_2000_2010_2020.gpkg`) rather than cartographic
+boundary files: their GEOIDs are the ones the deliverables were computed on,
+and every metric GEOID joins. It holds one source layer. MapLibre overzooms per
+source, not per source layer, so levels with different maximum zooms cannot
+share an archive without every layer being built to the deepest zoom.
+
+## Amendment 2026-09-18 (later): Reveal zoom 8, and the state level below it
+
+Switching to Block group at the U.S. view used to show an empty map and a
+request to zoom, which Gordon found unfriendly. Drawing block groups at every
+zoom was built and dropped the same day: about 130,000 polygons on screen and
+all 51 metric shards made the national view sluggish, and city block groups,
+smaller than a pixel there, left the picture to large rural ones.
+
+What stands: the block-group Reveal zoom is 8, one level earlier than first
+planned. Below it the Block group view keeps the state level on screen with its
+own legend and a line asking the user to zoom in, so the map is never empty.
+The archive is built in two parts that `tile-join` merges. z7 and z8 use
+tippecanoe's tiny-polygon reduction, which replaces sub-pixel block groups with
+pixel squares that each keep one member's GEOID, so the join still colours them
+(largest tile 257 KB gzipped; z7 is only there so the Reveal zoom can be tried
+one level lower without a rebuild). z9 to z12 keeps every block group with its
+own shape. Shards to load are the states whose bounding boxes meet the viewport,
+which needs no tile and lets counts load alongside the boundaries.
+
+The national 2010 archive (217,182 block groups, z7 to z12, about twelve minutes
+and 9 GB of free disk to build) is live in the R2 bucket
+`worship-closures-tiles` on Gordon's account, read through `PUBLIC_TILES_URL`.
+Its largest z9 tile, New York with New Jersey, is 180 KB gzipped. The bucket
+answers on its `r2.dev` address, which Cloudflare rate-limits and does not
+cache; production traffic needs a custom domain on the bucket.
+`scripts/publish-tiles.sh` uploads a rebuilt archive.
