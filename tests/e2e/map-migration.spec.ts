@@ -8,7 +8,8 @@ import {
 } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-const appOrigin = "http://127.0.0.1:4173";
+const appOrigin =
+  process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? 4173}`;
 
 const autaugaReverseResponse = {
   display_name: "Autauga County, Alabama, United States",

@@ -8,6 +8,7 @@ node_modules
 /.svelte-kit
 /build
 /src/lib/server/data/generated/
+/src/worker-configuration.d.ts
 /playwright-report/
 /test-results/
 
@@ -18,6 +19,8 @@ Thumbs.db
 # Env
 .env
 .env.*
+.dev.vars
+.dev.vars.*
 !.env.example
 !.env.test
 

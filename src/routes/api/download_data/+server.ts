@@ -80,7 +80,7 @@ export const GET: RequestHandler = async ({ url }) => {
     zip.file("stacked_bar_chart_data.csv", csvFormat(stackedBarData));
     zip.file("statistics.csv", csvFormat(statistics));
 
-    const zipContent = await zip.generateAsync({ type: "nodebuffer" });
+    const zipContent = await zip.generateAsync({ type: "arraybuffer" });
 
     return new Response(zipContent, {
       status: 200,

@@ -31,7 +31,7 @@ test("/PDF tolerates a well-formed unknown geoid", async ({ request }) => {
 });
 
 function remoteHashFor(fn: string) {
-  const remoteDir = ".vercel/output/static/_app/remote";
+  const remoteDir = ".svelte-kit/cloudflare/_app/remote";
   const hash = readdirSync(remoteDir).find((hash) =>
     readdirSync(`${remoteDir}/${hash}`).includes(fn)
   );
@@ -42,7 +42,7 @@ function remoteHashFor(fn: string) {
 // The static-delivery contract: the build must emit one payload per
 // enumerated input (136 year windows; every geoid per by-geoid dataset).
 test("the build emits the prerendered remote payloads", () => {
-  const remoteDir = ".vercel/output/static/_app/remote";
+  const remoteDir = ".svelte-kit/cloudflare/_app/remote";
   const payloadsOf = (fn: string) => readdirSync(`${remoteDir}/${remoteHashFor(fn)}/${fn}`).length;
 
   expect(payloadsOf("getMapData")).toBe(136);
@@ -83,4 +83,18 @@ test("/explore server-renders source counts for a state, a window and every type
   expect(dom).toContain("476");
   expect(dom).toContain("Reported closures by type");
   expect(dom).toContain("withheld");
+});
+
+test("concurrent block-group deep links render across three large states", async ({ request }) => {
+  await Promise.all(
+    ["060014001001", "480019501001", "360010001001"].map(async (where) => {
+      const response = await request.get(
+        `/explore?where=${where}&level=blockgroup&from=2010&to=2015&type=all`
+      );
+      expect(response.status()).toBe(200);
+      const dom = domOf(await response.text());
+      expect(dom).toContain("Reported closures by type");
+      expect(dom).not.toContain("Data could not be loaded");
+    })
+  );
 });

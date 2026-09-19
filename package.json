@@ -13,7 +13,10 @@
     "prebuild": "npm run generate:data",
     "build": "node --max-old-space-size=5120 node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
-    "prepare": "husky && svelte-kit sync || echo ''",
+    "preview:worker": "CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=1000 wrangler dev --env-file .env.example",
+    "deploy": "npm run build && wrangler deploy --env-file .env.example",
+    "cf:types": "wrangler types src/worker-configuration.d.ts --env-file .env.example && node scripts/worker-types.mjs",
+    "prepare": "husky && npm run cf:types && svelte-kit sync || echo ''",
     "precheck": "npm run generate:data",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -29,7 +32,7 @@
     "@playwright/test": "1.62.1",
     "@rollup/plugin-dsv": "^3.0.5",
     "@standard-schema/spec": "^1.1.0",
-    "@sveltejs/adapter-vercel": "^6.3.4",
+    "@sveltejs/adapter-cloudflare": "^7.2.9",
     "@sveltejs/kit": "^2.70.2",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/vite": "^4.1.6",
@@ -47,7 +50,8 @@
     "tw-animate-css": "^1.3.4",
     "typescript": "^5.0.0",
     "vite": "^6.2.6",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "wrangler": "^4.135.0"
   },
   "dependencies": {
     "@deck.gl/core": "9.3.7",

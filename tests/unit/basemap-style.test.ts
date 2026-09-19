@@ -3,7 +3,8 @@ import { validateStyleMin, type StyleSpecification } from "@maplibre/maplibre-gl
 import basemap from "../../static/maps/yale-light.json";
 
 test("Yale Light is valid and keeps geographic context above thematic fills", () => {
-  const style = basemap as StyleSpecification;
+  // JSON imports widen literal and tuple types; the validator checks the actual schema below.
+  const style = basemap as unknown as StyleSpecification;
   expect(validateStyleMin(style).map((error) => error.message)).toEqual([]);
 
   const anchor = style.layers.findIndex((layer) => layer.id === "waterway");

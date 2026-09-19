@@ -11,8 +11,9 @@ interface ByGeoidReader<T> {
 }
 
 function createByGeoidReader<T>(asset: string): ByGeoidReader<T> {
-  let byGeoidPromise: Promise<Record<string, T>> | undefined;
-  const load = () => (byGeoidPromise ??= readCompressedJson<Record<string, T>>(asset));
+  // Cache immutable data only: in-flight asset I/O belongs to its Worker request.
+  let byGeoid: Record<string, T> | undefined;
+  const load = async () => (byGeoid ??= await readCompressedJson<Record<string, T>>(asset));
 
   return Object.assign(async (geoid: string) => (await load())[geoid], {
     keys: async () => Object.keys(await load()),

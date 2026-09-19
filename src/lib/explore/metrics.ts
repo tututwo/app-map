@@ -1,3 +1,4 @@
+import { browser } from "$app/environment";
 import { env } from "$env/dynamic/public";
 import manifest from "$lib/generated/metrics-manifest.json";
 
@@ -23,12 +24,12 @@ export const shardOf = (level: Level, geoid: string) =>
   manifest.levels[level].shards.length === 1 ? manifest.levels[level].shards[0] : geoid.slice(0, 2);
 export const shardsOf = (level: Level) => manifest.levels[level].shards;
 
-// Files are immutable per release, so a settled request is kept for the life of the page (or server).
+// Immutable files stay cached in the browser only. Workers must not share request I/O or retain matrices.
 const cache = new Map<string, Promise<ArrayBuffer>>();
 
 function file(level: Level, shard: string, name: string, fetcher: typeof fetch) {
   const url = `${env.PUBLIC_TILES_URL ?? "/tiles"}/metrics/${level}/${manifest.levels[level].release}/${shard}/${name}.gz`;
-  let hit = cache.get(url);
+  let hit = browser ? cache.get(url) : undefined;
   if (!hit) {
     hit = fetcher(url).then(async (response) => {
       if (!response.ok) throw new Error(`${response.status} for ${url}`);
@@ -39,8 +40,10 @@ function file(level: Level, shard: string, name: string, fetcher: typeof fetch) 
       const inflated = new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"));
       return new Response(inflated).arrayBuffer();
     });
-    hit.catch(() => cache.delete(url)); // a failed request may be retried
-    cache.set(url, hit);
+    if (browser) {
+      hit.catch(() => cache.delete(url)); // a failed request may be retried
+      cache.set(url, hit);
+    }
   }
   return hit;
 }
@@ -48,14 +51,16 @@ function file(level: Level, shard: string, name: string, fetcher: typeof fetch) 
 const shards = new Map<string, Promise<Shard>>();
 export function loadShard(level: Level, shard: string, fetcher: typeof fetch = fetch) {
   const key = `${level}/${shard}`;
-  let hit = shards.get(key);
+  let hit = browser ? shards.get(key) : undefined;
   if (!hit) {
     hit = file(level, shard, "geoids.json", fetcher).then((buffer) => {
       const geoids: string[] = JSON.parse(new TextDecoder().decode(buffer));
       return { geoids, row: new Map(geoids.map((geoid, index) => [geoid, index])) };
     });
-    hit.catch(() => shards.delete(key));
-    shards.set(key, hit);
+    if (browser) {
+      hit.catch(() => shards.delete(key));
+      shards.set(key, hit);
+    }
   }
   return hit;
 }
@@ -86,6 +91,18 @@ export async function loadBreakdown(
   fetcher: typeof fetch = fetch
 ): Promise<Record<string, number | null>> {
   const shard = shardOf(level, geoid);
+  if (!browser) {
+    const { row } = await loadShard(level, shard, fetcher);
+    const index = row.get(geoid);
+    const breakdown: Record<string, number | null> = {};
+    // Read one matrix at a time so a deep link does not retain all ten in a 128 MB Worker.
+    for (const religion of RELIGIONS)
+      breakdown[religion] =
+        index === undefined
+          ? null
+          : valueAt(await loadCounts(level, shard, religion, fetcher), index, yearWindow);
+    return breakdown;
+  }
   const [{ row }, ...counts] = await Promise.all([
     loadShard(level, shard, fetcher),
     ...RELIGIONS.map((religion) => loadCounts(level, shard, religion, fetcher)),
