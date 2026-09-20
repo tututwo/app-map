@@ -154,3 +154,12 @@ the national ZIP Shard of the previous amendment (a first click fetched 5.6 MB o
 about 60 KB) and the ZCTA-to-state relationship of the original Decision, since a prefix needs no
 lookup table. Five digits in a link are a county unless the ZIP view is on or no county has that
 GEOID.
+
+## Amendment 2026-09-20: community context rides the same rails
+
+The lab's social-determinant covariates (see `docs/state-data.md`) ship like the Metric cube:
+release-hashed, immutable, gzipped Shard files under `sdoh/<level>/<release>/<shard>.json.gz` in the
+same bucket, with the same Shard rule (national for state and county, a state per tract file, two ZIP
+digits per ZIP file) and the same delivery route, whose allow-list names them. They are JSON rather
+than typed arrays because they are thirteen mixed-unit numbers per place with gaps, read for one
+selected place at a time and never painted on the map: 2.5 MB in all, 222 KB for California's tracts.

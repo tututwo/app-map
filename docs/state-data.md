@@ -32,6 +32,14 @@ Consequently the cube holds counts only, and the panel shows a dash for the rate
 
 State classes are quintiles of the states' counts for the selected window and type, rounded to two significant digits: a five-year window and the 26-year one differ about twentyfold, and types by more, so no fixed break list serves every selection. A color therefore does not mean the same count in another window. Block groups keep fixed breaks at 1, 2, 4 and 8, because their counts are small whole numbers in every window. These are descriptive display thresholds, not population-adjusted risk or significance thresholds.
 
+## Community context (social determinants)
+
+Three places were checked for social-determinant data: the lab's reports (none; they only credit "demographics by Nick Begotka"), its GitHub repository (none; only decennial total population for the withheld rates) and its OneDrive, where the "Church closing" folder holds Insang Song's covariate tables. `closing_covariate_full_data_08032024.xlsx` is the one Explore uses: one sheet per geography and census year (state, county, tract, ZCTA, MSA for 2000 and 2010, plus NYC community health districts), and a "Variable availability" sheet that names thirteen covariates. For 2010 all of them exist for state, county and tract; ZCTAs have only population density, elderly, Black, Hispanic, rented housing and community health centers. There is **no block-group sheet**, and Alaska and Hawaii are absent (49 state rows, 3,103 counties, 71,138 tracts, 32,446 ZCTAs). Median household income matches ACS 2006–2010 (Connecticut $67,740, California $60,883, Texas $49,646).
+
+Of the places with closure counts, 49 of 51 states, 3,100 of 3,140 counties, 29,600 of 29,983 ZIPs and 69,176 of 70,705 tracts have context. Besides Alaska and Hawaii, the tract sheet has no rows for six counties: Miami-Dade, Broward, Collier and Monroe in Florida, Hidalgo and Cameron in Texas (1,094 tracts), a gap to raise with the lab rather than fill from another source.
+
+Two traps: Excel dropped the GEOIDs' leading zeros (the build pads them back), and the older `church_and_health_full_data_05282024.csv.gz`, from which the legacy dashboard's `data-raw/sideMetricData.csv` was cut, has a wrong `p_unemp` (county median 25% against 7.2% in the August workbook). The figures describe the place around 2010 and do not change with the Year Window.
+
 ## Reproduce
 
 DuckDB and numpy are needed only for the offline build, with no added application dependency. Rename the downloaded chunks `<level>__chunk_NNNN.parquet` (levels `state`, `county`, `tract`, `block_group`, `zcta`), then:
@@ -40,7 +48,8 @@ DuckDB and numpy are needed only for the offline build, with no added applicatio
 scripts/build-census-tiles.sh county && scripts/build-census-tiles.sh tract && scripts/build-census-tiles.sh zcta
 uv run --with duckdb --with numpy python scripts/build-metrics.py ~/Downloads --gpkg ~/Downloads
 PATH=/opt/homebrew/opt/node@22/bin:$PATH npx vitest run tests/unit/explore-model.test.ts
-scripts/publish-metrics.sh                     # uploads static/tiles/metrics to the R2 bucket
+uv run --with duckdb python scripts/build-sdoh.py ~/Downloads/closing_covariate_full_data_08032024.xlsx
+scripts/publish-metrics.sh                     # uploads static/tiles/metrics and static/tiles/sdoh to the R2 bucket
 scripts/publish-tiles.sh county-2010.pmtiles   # likewise tract-2010, zcta-2010, bg-2010
 ```
 
@@ -48,5 +57,6 @@ The cube build takes about three minutes and refuses to write a level when the w
 
 - `static/tiles/metrics/<level>/<release>/<shard>/…` (gitignored, 27 MB): the Shard files the site fetches.
 - `src/lib/generated/metrics-manifest.json`: window order, religions, and per level the release hash, dtype and Shard list.
+- `static/tiles/sdoh/<level>/<release>/<shard>.json.gz` (gitignored, 2.5 MB) and `src/lib/generated/sdoh-manifest.json`: the community-context Shards and their field order.
 
 Publish the files before deploying a manifest that names a new release; old releases can stay in the bucket.

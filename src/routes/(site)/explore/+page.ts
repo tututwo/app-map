@@ -1,5 +1,6 @@
 import { loadBreakdown, loadCounts, loadShard, windowIndexOf } from "$lib/explore/metrics";
 import { parseExploreQuery, placeFor } from "$lib/explore/model";
+import { loadContext } from "$lib/explore/sdoh";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ url, fetch }) => {
@@ -18,6 +19,8 @@ export const load: PageLoad = async ({ url, fetch }) => {
     // The page names the county legend, so it needs the counties' counts too.
     query.level === "county" ? national("county") : null,
     place ? loadBreakdown(place.level, place.id, windowIndexOf(query.from, query.to), fetch) : null,
+    // Context is secondary: without it the panel still shows the counts.
+    place ? loadContext(place.level, place.id, fetch).catch(() => null) : null,
   ]).catch(() => null);
   // A stalled response must not leave navigation waiting indefinitely.
   const loaded = await Promise.race([
@@ -30,8 +33,9 @@ export const load: PageLoad = async ({ url, fetch }) => {
       states: null,
       counties: null,
       breakdown: null,
+      context: null,
       error: "Data could not be loaded. Please retry.",
     };
-  const [states, counties, breakdown] = loaded;
-  return { query, states, counties, breakdown, error: null };
+  const [states, counties, breakdown, context] = loaded;
+  return { query, states, counties, breakdown, context, error: null };
 };

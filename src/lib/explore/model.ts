@@ -1,6 +1,7 @@
 import countyNames from "$lib/generated/county-names.json";
 import manifest from "$lib/generated/metrics-manifest.json";
 import type { Level as DataLevel } from "./metrics";
+import type { Context, ContextField } from "./sdoh";
 
 export { manifest };
 export const LEVELS = [
@@ -226,6 +227,31 @@ function tractLabel(geoid: string) {
   return `Tract ${Number(geoid.slice(5, 9))}${suffix === "00" ? "" : `.${suffix}`}`;
 }
 
+const dollars = (value: number) => `$${whole(value)}`;
+const percent = (value: number) => `${value.toFixed(1)}%`;
+/** The lab's covariates in panel order; wording follows its "Variable availability" sheet. */
+export const CONTEXT_FIELDS: Record<
+  ContextField,
+  { label: string; format: (value: number) => string }
+> = {
+  n_pop_total: { label: "Residents", format: whole },
+  n_medincome: { label: "Median household income", format: dollars },
+  p_poverty: { label: "Below the poverty level", format: percent },
+  p_unemp: { label: "Unemployed", format: percent },
+  p_edu_no_hs: { label: "Less than 12 years of education", format: percent },
+  p_renter: { label: "Rented housing", format: percent },
+  n_med_rent: { label: "Median gross rent", format: dollars },
+  p_overcrowding: { label: "Overcrowded housing", format: percent },
+  p_pct_65p: { label: "Aged 65 or older", format: percent },
+  p_pct_black: { label: "Black or African American", format: percent },
+  p_pct_hisp: { label: "Hispanic or Latino", format: percent },
+  i_gini: { label: "Gini index of income inequality", format: (value) => value.toFixed(3) },
+  r_commhlthcntr_100k: {
+    label: "Community health centers per 100,000 residents",
+    format: (value) => value.toFixed(1),
+  },
+};
+
 export interface ExploreQuery {
   where: string;
   from: number;
@@ -299,8 +325,15 @@ export function placeFor(where: string, level: Level = "state"): Place | undefin
   return found && { level: "state", id: found.id, name: found.name };
 }
 
-/** `breakdown` is the selected place's reported closures in this window, per Type. */
-export function selectionFor(query: ExploreQuery, breakdown: Record<string, number | null> | null) {
+/**
+ * `breakdown` is the selected place's reported closures in this window, per Type; `context` its
+ * community context, which does not depend on the window.
+ */
+export function selectionFor(
+  query: ExploreQuery,
+  breakdown: Record<string, number | null> | null,
+  context: Context | null = null
+) {
   const selected = placeFor(query.where, query.level);
   const range = `${query.from}–${query.to}`;
   const type = TYPES[query.type];
@@ -312,6 +345,13 @@ export function selectionFor(query: ExploreQuery, breakdown: Record<string, numb
       .filter((key) => key !== "all_religions")
       .map((key) => ({ key, label: TYPES[key].label, closed: breakdown?.[key] ?? null }))
       .sort((a, b) => (b.closed ?? -1) - (a.closed ?? -1)),
+    // Only what the lab publishes for this kind of place: ZIPs have fewer fields, block groups none.
+    context: (Object.keys(CONTEXT_FIELDS) as ContextField[]).flatMap((key) => {
+      const value = context?.[key];
+      return value == null
+        ? []
+        : [{ key, label: CONTEXT_FIELDS[key].label, value: CONTEXT_FIELDS[key].format(value) }];
+    }),
     range,
     name: selected?.name ?? "United States",
     windowText: `${range} · ${query.to - query.from + 1} inclusive years · ${type.label.toLowerCase()}`,

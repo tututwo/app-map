@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Upload the Metric cube built by scripts/build-metrics.py to the Cloudflare R2 bucket the site reads
-# through PUBLIC_TILES_URL. Maintainer-side only: needs `wrangler login` on the owning account.
+# Upload the data files built by scripts/build-metrics.py (metrics/) and scripts/build-sdoh.py (sdoh/) to
+# the Cloudflare R2 bucket the site reads through PUBLIC_TILES_URL. Maintainer-side only: needs
+# `wrangler login` on the owning account.
 #
-# Usage: scripts/publish-metrics.sh [level ...]     (default: every level under static/tiles/metrics)
+# Usage: scripts/publish-metrics.sh [dir ...]     dirs under static/tiles, e.g. metrics/zcta or sdoh
+#                                                 (default: metrics sdoh)
 #
 # Paths carry the release hash, so an upload never replaces a file a deployed site still reads, every
 # object may be cached for good, and running this again is harmless. Publish before deploying the
@@ -11,8 +13,8 @@ set -uo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root/static/tiles"
-levels=("$@")
-[ ${#levels[@]} -gt 0 ] || levels=($(ls metrics))
+dirs=("$@")
+[ ${#dirs[@]} -gt 0 ] || dirs=(metrics sdoh)
 
 # IPv4 first: over IPv6, uploads beyond a few MB were reset mid-request (seen 2026-09-18). Even so a
 # few requests in a thousand fail on a home connection, hence the retries.
@@ -29,9 +31,9 @@ put() {
 export -f put
 
 failed=0
-for level in "${levels[@]}"; do
-  misses=$(find "metrics/$level" -type f -name '*.gz' -print0 | xargs -0 -P 4 -n 1 bash -c 'put "$0"')
-  echo "$level: $(find "metrics/$level" -type f -name '*.gz' | wc -l | tr -d ' ') files, $(printf '%s' "$misses" | grep -c FAILED) failed"
+for dir in "${dirs[@]}"; do
+  misses=$(find "$dir" -type f -name '*.gz' -print0 | xargs -0 -P 4 -n 1 bash -c 'put "$0"')
+  echo "$dir: $(find "$dir" -type f -name '*.gz' | wc -l | tr -d ' ') files, $(printf '%s' "$misses" | grep -c FAILED) failed"
   [ -z "$misses" ] || { echo "$misses"; failed=1; }
 done
 exit $failed

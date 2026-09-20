@@ -115,9 +115,12 @@ describe("R2 tile delivery", () => {
       "private.json",
       "metrics/blockgroup/latest/06/all_religions.bin.gz",
       "metrics/blockgroup/012345abcdef/../secret.bin.gz",
+      "sdoh/blockgroup/012345abcdef/06.json.gz",
+      "sdoh/tract/latest/06.json.gz",
     ])
       expect((await server.request(key)).status).toBe(404);
     expect(server.bucket.get).not.toHaveBeenCalled();
+    expect((await server.request("sdoh/tract/012345abcdef/06.json.gz")).status).toBe(200);
     server.bucket.get.mockResolvedValue(null);
     expect((await server.request()).status).toBe(404);
     server.bucket.get.mockRejectedValue(new Error("R2 GET failed: InvalidRange (10039)"));

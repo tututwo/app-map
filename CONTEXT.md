@@ -76,3 +76,17 @@ every Level summed by state equals the state Level, and that every place with
 counts has a boundary on the map (2010 geography throughout: Census cartographic
 files for county, ZIP and tract, the lab's GeoPackages for block groups). `src/lib/explore/metrics.ts` is the only
 reader; a Shard file holds all windows, so changing the window makes no request.
+
+## Community context
+
+The social-determinant figures the panel shows under a selected place: the lab's
+2010 covariates (`closing_covariate_full_data_08032024.xlsx`, Insang Song, on the
+lab's OneDrive) for states, counties, ZIPs and tracts in the contiguous United
+States. There is no block-group sheet, Alaska and Hawaii are not covered, and ZIPs
+carry only the population-based fields; the workbook's "Variable availability"
+sheet is the authority on what exists where, and the panel lists only what is
+published for the place. The figures describe the place around 2010, not the
+selected Year Window. `scripts/build-sdoh.py` writes them as Shards that follow
+the Metric cube's Shard rule; `src/lib/explore/sdoh.ts` is the only reader. The
+older `church_and_health_full_data` CSV (and the legacy dashboard's
+`data-raw/sideMetricData.csv`, cut from it) has a wrong unemployment column.

@@ -58,6 +58,28 @@ let sentence = $derived(
         A dash means no place of that type was active here in this window.
       </p>
     </div>
+    <div>
+      <div class="label-caps">Community context · 2010</div>
+      {#if selection.context.length}
+        <ul class="mt-2.5 flex flex-col gap-1.5">
+          {#each selection.context as row (row.key)}
+            <li class="flex items-baseline justify-between gap-4 text-[14px]">
+              <span class="text-body">{row.label}</span>
+              <span class="text-ink font-semibold tabular-nums">{row.value}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      <p class="text-muted mt-2.5 text-[12.5px] leading-normal text-pretty">
+        {#if selection.context.length}
+          Census Bureau and County Health Rankings figures on 2010 geography, compiled by the
+          research team in 2024. They describe the place, not the selected years.
+        {:else}
+          The research team's community measures cover states, counties, ZIP codes and tracts in the
+          contiguous United States; none is published for this place.
+        {/if}
+      </p>
+    </div>
   {/if}
   <div class="border-rule text-muted border-l-2 pl-3 text-[13.5px] leading-normal">
     Preliminary source counts. Population rates and active-place totals are withheld while source

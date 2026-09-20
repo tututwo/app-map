@@ -53,7 +53,7 @@ let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );
 let legend = $derived(legendFor(breaks[drawnLevel]));
-let selection = $derived(selectionFor(query, data.breakdown));
+let selection = $derived(selectionFor(query, data.breakdown, data.context));
 let legendInfo = $state(false);
 let summaryOpen = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();

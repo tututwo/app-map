@@ -41,6 +41,14 @@ test("a selection keeps zero, missing and per-type counts apart", () => {
   expect(selection.types.at(-1)?.closed).toBeNull();
   expect(selection.types.map((type) => type.key)).not.toContain("all_religions");
   expect(selectionFor(query, null).stat.closed).toBeNull();
+  // Context rows keep the lab's order and skip what is not published for the place (ZIPs, block groups).
+  expect(selectionFor(query, null).context).toEqual([]);
+  const context = { n_pop_total: 35680, n_medincome: null, p_renter: 38, i_gini: 0.4 };
+  expect(selectionFor(query, null, context as never).context).toEqual([
+    { key: "n_pop_total", label: "Residents", value: "35,680" },
+    { key: "p_renter", label: "Rented housing", value: "38.0%" },
+    { key: "i_gini", label: "Gini index of income inequality", value: "0.400" },
+  ]);
   expect(selectionFor({ ...query, where: "" }, null).selected).toBeUndefined();
   expect(placeFor("090010101011")).toMatchObject({ level: "blockgroup", id: "090010101011" });
   // Counties are the 2010 ones: Connecticut keeps its eight counties, and renamed ones keep their old GEOID.

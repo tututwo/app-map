@@ -27,8 +27,9 @@ export const shardsOf = (level: Level) => manifest.levels[level].shards;
 // Immutable files stay cached in the browser only. Workers must not share request I/O or retain matrices.
 const cache = new Map<string, Promise<ArrayBuffer>>();
 
-function file(level: Level, shard: string, name: string, fetcher: typeof fetch) {
-  const url = `${env.PUBLIC_TILES_URL ?? "/tiles"}/metrics/${level}/${manifest.levels[level].release}/${shard}/${name}.gz`;
+/** A published `.gz` file under PUBLIC_TILES_URL, inflated. */
+export function inflated(path: string, fetcher: typeof fetch) {
+  const url = `${env.PUBLIC_TILES_URL ?? "/tiles"}/${path}.gz`;
   let hit = browser ? cache.get(url) : undefined;
   if (!hit) {
     hit = fetcher(url).then(async (response) => {
@@ -37,8 +38,8 @@ function file(level: Level, shard: string, name: string, fetcher: typeof fetch) 
       const [a, b] = new Uint8Array(body, 0, 2);
       // A host that already inflated the file (Content-Encoding) hands over the plain bytes.
       if (a !== 0x1f || b !== 0x8b) return body;
-      const inflated = new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"));
-      return new Response(inflated).arrayBuffer();
+      const stream = new Blob([body]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return new Response(stream).arrayBuffer();
     });
     if (browser) {
       hit.catch(() => cache.delete(url)); // a failed request may be retried
@@ -47,6 +48,9 @@ function file(level: Level, shard: string, name: string, fetcher: typeof fetch) 
   }
   return hit;
 }
+
+const file = (level: Level, shard: string, name: string, fetcher: typeof fetch) =>
+  inflated(`metrics/${level}/${manifest.levels[level].release}/${shard}/${name}`, fetcher);
 
 const shards = new Map<string, Promise<Shard>>();
 export function loadShard(level: Level, shard: string, fetcher: typeof fetch = fetch) {
