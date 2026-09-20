@@ -1,0 +1,1262 @@
+{
+  "before:T1": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2606,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.03,
+        "confidence": 0.97,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.98,
+          "1": 0.01,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 0.38,
+        "confidence": 0.62,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.62,
+          "1": 0.38,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "silent",
+        "confidence": 0.85,
+        "probabilities": {
+          "silent": 0.89,
+          "nothing_failed": 0.1,
+          "explained": 0,
+          "explained_with_next_step": 0.01
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "no_place_chosen",
+        "confidence": 0.94,
+        "probabilities": {
+          "says_none_were_active": 0,
+          "no_reason": 0.04,
+          "no_place_chosen": 0.95,
+          "says_not_in_the_data": 0,
+          "says_loading_failed": 0,
+          "shows_a_number": 0.01
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 0.48,
+        "confidence": 0.29,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.53,
+          "1": 0.46,
+          "2": 0.01
+        }
+      }
+    }
+  },
+  "before:T2": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2813,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.97,
+          "1": 0.02,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 0.34,
+        "confidence": 0.66,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.66,
+          "1": 0.34,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "silent",
+        "confidence": 0.82,
+        "probabilities": {
+          "explained": 0.01,
+          "explained_with_next_step": 0.01,
+          "nothing_failed": 0.12,
+          "silent": 0.86
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "no_place_chosen",
+        "confidence": 0.93,
+        "probabilities": {
+          "no_reason": 0.05,
+          "no_place_chosen": 0.94,
+          "says_not_in_the_data": 0,
+          "says_loading_failed": 0,
+          "says_none_were_active": 0,
+          "shows_a_number": 0.01
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 0.5,
+        "confidence": 0.25,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.52,
+          "1": 0.47,
+          "2": 0.01
+        }
+      }
+    }
+  },
+  "before:T3": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2065,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.04
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.3,
+        "confidence": 0.7,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.86,
+          "1": 0.03,
+          "2": 0.05,
+          "3": 0.06
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 1.18,
+        "confidence": 0.8,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.8,
+          "2": 0.19,
+          "3": 0
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.91
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.93,
+        "probabilities": {
+          "explained_with_next_step": 0,
+          "explained": 0,
+          "nothing_failed": 0.95,
+          "silent": 0.05
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.47,
+        "probabilities": {
+          "no_reason": 0.39,
+          "says_not_in_the_data": 0.01,
+          "says_loading_failed": 0,
+          "no_place_chosen": 0.01,
+          "says_none_were_active": 0.03,
+          "shows_a_number": 0.55
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.03,
+        "confidence": 0.79,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.06,
+          "1": 0.86,
+          "2": 0.08
+        }
+      }
+    }
+  },
+  "before:T4": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2616,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.05,
+        "confidence": 0.95,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.95,
+          "1": 0.04,
+          "2": 0.01,
+          "3": 0
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 0.28,
+        "confidence": 0.72,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.73,
+          "1": 0.27,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.96
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "silent",
+        "confidence": 0.78,
+        "probabilities": {
+          "silent": 0.84,
+          "explained": 0,
+          "nothing_failed": 0.16,
+          "explained_with_next_step": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "no_place_chosen",
+        "confidence": 0.94,
+        "probabilities": {
+          "no_place_chosen": 0.95,
+          "no_reason": 0.04,
+          "says_none_were_active": 0,
+          "shows_a_number": 0.01,
+          "says_loading_failed": 0,
+          "says_not_in_the_data": 0
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 0.49,
+        "confidence": 0.27,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.52,
+          "1": 0.46,
+          "2": 0.02
+        }
+      }
+    }
+  },
+  "before:T5": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2711,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.11
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.35,
+        "confidence": 0.65,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.78,
+          "1": 0.1,
+          "2": 0.09,
+          "3": 0.03
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 1.28,
+        "confidence": 0.4,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.16,
+          "1": 0.57,
+          "2": 0.11,
+          "3": 0.16
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.1
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.96,
+        "probabilities": {
+          "explained": 0,
+          "silent": 0.02,
+          "explained_with_next_step": 0.01,
+          "nothing_failed": 0.97
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.86,
+        "probabilities": {
+          "says_not_in_the_data": 0,
+          "shows_a_number": 0.88,
+          "no_place_chosen": 0.03,
+          "says_loading_failed": 0,
+          "says_none_were_active": 0,
+          "no_reason": 0.09
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.06,
+        "confidence": 0.79,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.04,
+          "1": 0.86,
+          "2": 0.1
+        }
+      }
+    }
+  },
+  "before:T6": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2150,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.01,
+        "confidence": 0.99,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.99,
+          "1": 0.01,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 0.08,
+        "confidence": 0.92,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.92,
+          "1": 0.08,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.97
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "silent",
+        "confidence": 0.99,
+        "probabilities": {
+          "explained": 0,
+          "explained_with_next_step": 0,
+          "silent": 0.99,
+          "nothing_failed": 0.01
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "no_place_chosen",
+        "confidence": 0.95,
+        "probabilities": {
+          "no_reason": 0.04,
+          "says_loading_failed": 0,
+          "no_place_chosen": 0.96,
+          "shows_a_number": 0,
+          "says_not_in_the_data": 0,
+          "says_none_were_active": 0
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 0.46,
+        "confidence": 0.3,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.56,
+          "1": 0.42,
+          "2": 0.02
+        }
+      }
+    }
+  },
+  "before:T8": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 1781,
+      "output_tokens": 212
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "effort": {
+        "type": "score",
+        "score": 2.92,
+        "confidence": 0.92,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.01,
+          "2": 0.01,
+          "3": 0.96
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.63,
+        "confidence": 0.63,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.03,
+          "2": 0.26,
+          "3": 0.69
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.94
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "explained",
+        "confidence": 0.94,
+        "probabilities": {
+          "silent": 0.01,
+          "nothing_failed": 0.03,
+          "explained": 0.96,
+          "explained_with_next_step": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "says_none_were_active",
+        "confidence": 0.99,
+        "probabilities": {
+          "shows_a_number": 0,
+          "says_loading_failed": 0,
+          "says_none_were_active": 0.99,
+          "no_reason": 0.01,
+          "says_not_in_the_data": 0,
+          "no_place_chosen": 0
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.05,
+        "confidence": 0.66,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.09,
+          "1": 0.77,
+          "2": 0.14
+        }
+      }
+    }
+  },
+  "after:T1": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2781,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.97
+      },
+      "effort": {
+        "type": "score",
+        "score": 1.62,
+        "confidence": 0.48,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.45,
+          "2": 0.48,
+          "3": 0.07
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.25,
+        "confidence": 0.25,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.13,
+          "1": 0.11,
+          "2": 0.14,
+          "3": 0.62
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.94
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.98,
+        "probabilities": {
+          "explained": 0,
+          "nothing_failed": 0.99,
+          "explained_with_next_step": 0.01,
+          "silent": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.79,
+        "probabilities": {
+          "says_not_in_the_data": 0,
+          "shows_a_number": 0.83,
+          "says_none_were_active": 0.16,
+          "no_place_chosen": 0,
+          "says_loading_failed": 0,
+          "no_reason": 0.01
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.37,
+        "confidence": 0.42,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.62,
+          "2": 0.38
+        }
+      }
+    }
+  },
+  "after:T2": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 3096,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.7
+      },
+      "effort": {
+        "type": "score",
+        "score": 1.96,
+        "confidence": 0.57,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.1,
+          "1": 0.03,
+          "2": 0.67,
+          "3": 0.2
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 1.94,
+        "confidence": 0.26,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.14,
+          "1": 0.13,
+          "2": 0.39,
+          "3": 0.34
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.61
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.99,
+        "probabilities": {
+          "silent": 0,
+          "nothing_failed": 1,
+          "explained": 0,
+          "explained_with_next_step": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.91,
+        "probabilities": {
+          "no_reason": 0.05,
+          "says_loading_failed": 0,
+          "says_none_were_active": 0.01,
+          "shows_a_number": 0.93,
+          "says_not_in_the_data": 0,
+          "no_place_chosen": 0.01
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.36,
+        "confidence": 0.4,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.6,
+          "2": 0.38
+        }
+      }
+    }
+  },
+  "after:T3": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2047,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.1
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.21,
+        "confidence": 0.79,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.91,
+          "1": 0.01,
+          "2": 0.04,
+          "3": 0.04
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.36,
+        "confidence": 0.36,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0.25,
+          "2": 0.13,
+          "3": 0.62
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.88
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.98,
+        "probabilities": {
+          "nothing_failed": 0.99,
+          "explained_with_next_step": 0,
+          "silent": 0.01,
+          "explained": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.96,
+        "probabilities": {
+          "no_place_chosen": 0.01,
+          "says_loading_failed": 0,
+          "no_reason": 0.03,
+          "says_not_in_the_data": 0,
+          "says_none_were_active": 0,
+          "shows_a_number": 0.96
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.37,
+        "confidence": 0.39,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.59,
+          "2": 0.39
+        }
+      }
+    }
+  },
+  "after:T4": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2713,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.97
+      },
+      "effort": {
+        "type": "score",
+        "score": 2.13,
+        "confidence": 0.87,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0,
+          "1": 0,
+          "2": 0.87,
+          "3": 0.13
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.8,
+        "confidence": 0.8,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.02,
+          "1": 0.02,
+          "2": 0.1,
+          "3": 0.86
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.95
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 1,
+        "probabilities": {
+          "explained": 0,
+          "nothing_failed": 1,
+          "silent": 0,
+          "explained_with_next_step": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.96,
+        "probabilities": {
+          "no_reason": 0.02,
+          "says_none_were_active": 0,
+          "says_loading_failed": 0,
+          "no_place_chosen": 0,
+          "says_not_in_the_data": 0,
+          "shows_a_number": 0.98
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.43,
+        "confidence": 0.32,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.55,
+          "2": 0.44
+        }
+      }
+    }
+  },
+  "after:T5": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2751,
+      "output_tokens": 209
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.23
+      },
+      "effort": {
+        "type": "score",
+        "score": 0.64,
+        "confidence": 0.36,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.68,
+          "1": 0.04,
+          "2": 0.24,
+          "3": 0.04
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.5,
+        "confidence": 0.5,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.13,
+          "2": 0.2,
+          "3": 0.66
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.32
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "nothing_failed",
+        "confidence": 0.99,
+        "probabilities": {
+          "silent": 0.01,
+          "nothing_failed": 0.99,
+          "explained_with_next_step": 0,
+          "explained": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "shows_a_number",
+        "confidence": 0.93,
+        "probabilities": {
+          "shows_a_number": 0.94,
+          "says_loading_failed": 0,
+          "no_reason": 0.04,
+          "says_none_were_active": 0,
+          "no_place_chosen": 0.02,
+          "says_not_in_the_data": 0
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.46,
+        "confidence": 0.27,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.52,
+          "2": 0.47
+        }
+      }
+    }
+  },
+  "after:T6": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 2223,
+      "output_tokens": 213
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.03
+      },
+      "effort": {
+        "type": "score",
+        "score": 0,
+        "confidence": 1,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 1,
+          "1": 0,
+          "2": 0,
+          "3": 0
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 0.88,
+        "confidence": 0.12,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.4,
+          "1": 0.4,
+          "2": 0.11,
+          "3": 0.09
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.97
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "explained_with_next_step",
+        "confidence": 0.99,
+        "probabilities": {
+          "silent": 0,
+          "explained": 0.01,
+          "explained_with_next_step": 0.99,
+          "nothing_failed": 0
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "no_place_chosen",
+        "confidence": 0.78,
+        "probabilities": {
+          "no_place_chosen": 0.81,
+          "says_not_in_the_data": 0.01,
+          "no_reason": 0.16,
+          "says_none_were_active": 0,
+          "shows_a_number": 0.01,
+          "says_loading_failed": 0
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 0.82,
+        "confidence": 0.48,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.26,
+          "1": 0.65,
+          "2": 0.09
+        }
+      }
+    }
+  },
+  "after:T8": {
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 1759,
+      "output_tokens": 212
+    },
+    "answers": {
+      "goal_reached": {
+        "type": "noul",
+        "noul": 0.09
+      },
+      "effort": {
+        "type": "score",
+        "score": 2.8,
+        "confidence": 0.8,
+        "legend": {
+          "0": "The session ends without the answer; the visitor would have to find another way, such as panning and zooming the map by hand.",
+          "1": "The answer appears, but only after an action that had no visible effect or that had to be repeated.",
+          "2": "The answer appears after a short chain of actions, each of which visibly moved the visitor forward.",
+          "3": "The answer appears right after the visitor names the place and chooses the level; no action was wasted."
+        },
+        "probabilities": {
+          "0": 0.04,
+          "1": 0.02,
+          "2": 0.03,
+          "3": 0.91
+        }
+      },
+      "feedback": {
+        "type": "score",
+        "score": 2.74,
+        "confidence": 0.74,
+        "legend": {
+          "0": "At least one action that should have done something left every field of `screen_after` unchanged, and no message explains why.",
+          "1": "Actions change the screen, but at some step the visitor is left guessing what is shown: the pressed level and the place named in the results panel do not belong together, or the panel ignores what was just asked.",
+          "2": "Every action is answered, and the results panel names the place, its level and the years, but nothing explains why this particular place is shown when it differs from what the visitor typed.",
+          "3": "Every action is answered; the results panel names the place, its level and the years, and where the place differs from what the visitor typed it says why this place is shown."
+        },
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.04,
+          "2": 0.14,
+          "3": 0.81
+        }
+      },
+      "level_matches_panel": {
+        "type": "noul",
+        "noul": 0.95
+      },
+      "dead_end": {
+        "type": "choice",
+        "choice": "explained",
+        "confidence": 0.99,
+        "probabilities": {
+          "silent": 0,
+          "explained_with_next_step": 0.01,
+          "nothing_failed": 0,
+          "explained": 0.99
+        }
+      },
+      "missing_number": {
+        "type": "choice",
+        "choice": "says_not_in_the_data",
+        "confidence": 0.99,
+        "probabilities": {
+          "says_not_in_the_data": 0.99,
+          "shows_a_number": 0,
+          "no_place_chosen": 0,
+          "says_loading_failed": 0,
+          "says_none_were_active": 0,
+          "no_reason": 0.01
+        }
+      },
+      "plain_language": {
+        "type": "score",
+        "score": 1.08,
+        "confidence": 0.54,
+        "legend": {
+          "0": "It leans on unexplained technical terms or codes; a newcomer could not tell what the numbers refer to.",
+          "1": "Mostly plain, but one or two terms that matter for reading the result are left unexplained.",
+          "2": "Plain throughout; the terms that matter are explained in the same view."
+        },
+        "probabilities": {
+          "0": 0.11,
+          "1": 0.7,
+          "2": 0.19
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "T1": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "sets the To year to 2019",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "types 06511 into the search box",
+      "then": {
+        "search_box": "06511",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Enter",
+      "then": {
+        "search_box": "06511",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses ZIP under View by",
+      "then": {
+        "search_box": "06511",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "ZIP",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    }
+  ],
+  "T2": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "sets the To year to 2019",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "types New Haven into the search box",
+      "then": {
+        "search_box": "New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Arrow Down",
+      "then": {
+        "search_box": "New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Enter",
+      "then": {
+        "search_box": "New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Tract under View by",
+      "then": {
+        "search_box": "New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "Tract",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    }
+  ],
+  "T3": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "Los Angeles County, CA",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "County",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / Los Angeles County, CA / 2010–2019 · 10 inclusive years · all places of worship / 3,430 / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / 3,430 closures of places of worship are reported in Los Angeles County, CA during 2010–2019. Moves are excluded. / REPORTED CLOSURES BY TYPE / Christian congregations / 2,865 / Unspecified type / 407 / Synagogues / 83 / Other religions / 65 / Buddhist temples / 18 / Interfaith / 9 / Mosques / 5 / Hindu temples / 0 / Sikh gurdwaras / 0 / A place"
+      }
+    },
+    {
+      "action": "presses ZIP under View by",
+      "then": {
+        "search_box": "ZIP 06037",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "ZIP",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / ZIP 06037 / 2010–2019 · 10 inclusive years · all places of worship / 3 / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / 3 closures of places of worship are reported in ZIP 06037 during 2010–2019. Moves are excluded. / REPORTED CLOSURES BY TYPE / Unspecified type / 2 / Christian congregations / 1 / Mosques / 0 / Synagogues / — / Buddhist temples / — / Hindu temples / — / Sikh gurdwaras / — / Other religions / — / Interfaith / — / A place of worship can carry more than one type, s"
+      }
+    }
+  ],
+  "T4": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "sets the To year to 2019",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Block group under View by",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "Block group",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "types the street address 60 College St, New Haven into the search box",
+      "then": {
+        "search_box": "60 College St, New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "Block group",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Enter",
+      "then": {
+        "search_box": "60 College St, New Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "Block group",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    }
+  ],
+  "T5": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "sets the To year to 2019",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "types Texas into the search box",
+      "then": {
+        "search_box": "Texas",
+        "search_options": ["Texas / 14,621 reported closures"],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2019 · 10 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designe"
+      }
+    },
+    {
+      "action": "presses Enter",
+      "then": {
+        "search_box": "Texas",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / Texas / 2010–2019 · 10 inclusive years · all places of worship / 14,621 / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / 14,621 closures of places of worship are reported in Texas during 2010–2019. Moves are excluded. / REPORTED CLOSURES BY TYPE / Christian congregations / 12,628 / Unspecified type / 1,864 / Synagogues / 88 / Other religions / 30 / Mosques / 13 / Interfaith / 5 / Buddhist temples / 2 / Hindu temples / 1 / Sikh gurdwaras / 0 / A place of worship can carry more th"
+      }
+    },
+    {
+      "action": "presses Tract under View by",
+      "then": {
+        "search_box": "Texas",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "Tract",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / Texas / 2010–2019 · 10 inclusive years · all places of worship / 14,621 / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / 14,621 closures of places of worship are reported in Texas during 2010–2019. Moves are excluded. / REPORTED CLOSURES BY TYPE / Christian congregations / 12,628 / Unspecified type / 1,864 / Synagogues / 88 / Other religions / 30 / Mosques / 13 / Interfaith / 5 / Buddhist temples / 2 / Hindu temples / 1 / Sikh gurdwaras / 0 / A place of worship can carry more th"
+      }
+    }
+  ],
+  "T6": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "types the misspelling Nwe Haven into the search box",
+      "then": {
+        "search_box": "Nwe Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    },
+    {
+      "action": "presses Enter",
+      "then": {
+        "search_box": "Nwe Haven",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "State",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / United States / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release. / Preliminary source counts. Population rates and active-place totals are withheld while source aggregation is reviewed. / ONE-PAGE SUMMARY / A preview of this selection’s reported closure counts. / preview placeholder · layout designed"
+      }
+    }
+  ],
+  "T8": [
+    {
+      "action": "opens the page",
+      "then": {
+        "search_box": "ZIP 99999",
+        "search_options": [],
+        "search_message": null,
+        "view_by_pressed": "ZIP",
+        "map_message": null,
+        "error_banner": null,
+        "panel": "SHOWING / ZIP 99999 / 2010–2015 · 6 inclusive years · all places of worship / — / REPORTED CLOSURES / — / PER 10,000 RESIDENTS / — / ACTIVE DURING WINDOW / No places of worship were active in ZIP 99999 during 2010–2015, so there is no closure count. / REPORTED CLOSURES BY TYPE / Christian congregations / — / Synagogues / — / Mosques / — / Buddhist temples / — / Hindu temples / — / Sikh gurdwaras / — / Other religions / — / Interfaith / — / Unspecified type / — / A place of worship can carry more than one type, so t"
+      }
+    }
+  ]
+}
