@@ -49,9 +49,20 @@ export const GET: RequestHandler = async ({ params, request, url, platform }) =>
 
   const bucket = platform.env.TILES;
   const head = request.method === "HEAD";
-  // ponytail: R2 has no If-Range; serve the full object for resumptions. Add atomic validation if needed.
-  const range =
-    head || request.headers.has("if-range") ? undefined : byteRange(request.headers.get("range"));
+  // A browser that holds part of an archive asks for the next part with If-Range. R2 has no If-Range, so
+  // the validator is checked here: a match gets its range, anything else the whole object (RFC 9110).
+  // Without this every such request was answered with the full archive, which the PMTiles reader aborts.
+  const ifRange = request.headers.get("if-range");
+  let fresh = true;
+  if (ifRange !== null && !head) {
+    const current = await bucket.head(key);
+    fresh =
+      !!current &&
+      (ifRange.startsWith('"')
+        ? ifRange === current.httpEtag
+        : Math.floor(current.uploaded.getTime() / 1000) * 1000 <= Date.parse(ifRange));
+  }
+  const range = head || !fresh ? undefined : byteRange(request.headers.get("range"));
 
   const cacheKey = new Request(`${url.origin}${url.pathname}`);
   const cacheable =

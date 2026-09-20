@@ -79,6 +79,21 @@ describe("R2 tile delivery", () => {
     const resumed = await server.request(archive, { range: "bytes=2-4", "if-range": '"old"' });
     expect(resumed.status).toBe(200);
     expect(server.bucket.get.mock.calls[0][1].range).toBeUndefined();
+
+    // A validator that still matches gets its range: the PMTiles reader aborts on a whole archive.
+    for (const validator of ['"current"', "Sat, 19 Sep 2026 00:00:00 GMT"]) {
+      const next = setup();
+      const part = await next.request(archive, { range: "bytes=2-4", "if-range": validator });
+      expect(part.status).toBe(206);
+      expect(part.headers.get("content-range")).toBe("bytes 2-4/10");
+      expect(next.bucket.get.mock.calls[0][1].range).toEqual({ offset: 2, length: 3 });
+    }
+    const stale = setup();
+    const whole = await stale.request(archive, {
+      range: "bytes=2-4",
+      "if-range": "Fri, 18 Sep 2026 00:00:00 GMT",
+    });
+    expect(whole.status).toBe(200);
   });
 
   it("distinguishes If-Match failure from If-None-Match hits, with strong/weak comparisons and precedence", async () => {
