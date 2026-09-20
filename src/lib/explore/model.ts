@@ -229,12 +229,12 @@ function tractLabel(geoid: string) {
 
 const dollars = (value: number) => `$${whole(value)}`;
 const percent = (value: number) => `${value.toFixed(1)}%`;
-/** The lab's covariates in panel order; wording follows its "Variable availability" sheet. */
+/** Panel order. Residents are the 2010 census count; the rest follows the lab's "Variable availability" sheet. */
 export const CONTEXT_FIELDS: Record<
   ContextField,
   { label: string; format: (value: number) => string }
 > = {
-  n_pop_total: { label: "Residents", format: whole },
+  pop2010: { label: "Residents, 2010 census", format: whole },
   n_medincome: { label: "Median household income", format: dollars },
   p_poverty: { label: "Below the poverty level", format: percent },
   p_unemp: { label: "Unemployed", format: percent },
@@ -326,6 +326,16 @@ export function placeFor(where: string, level: Level = "state"): Place | undefin
 }
 
 /**
+ * The rate is the lab's formula, closures per 10,000 of the place's 2010 census residents, worked out here
+ * because the chunk files' own rate columns rest on inflated denominators. No residents, no rate.
+ */
+const rated = (closed: number | null, residents: number | null): Stat => ({
+  closed,
+  per10k: closed !== null && residents ? (closed / residents) * 10_000 : null,
+  nOpen: null,
+});
+
+/**
  * `breakdown` is the selected place's reported closures in this window, per Type; `context` its
  * community context, which does not depend on the window.
  */
@@ -339,7 +349,7 @@ export function selectionFor(
   const type = TYPES[query.type];
   return {
     selected,
-    stat: { closed: breakdown?.[query.type] ?? null, per10k: null, nOpen: null } as Stat,
+    stat: rated(breakdown?.[query.type] ?? null, context?.pop2010 ?? null),
     // Every Type but the total, largest first; a Type that was never active here sorts last.
     types: (Object.keys(TYPES) as TypeKey[])
       .filter((key) => key !== "all_religions")

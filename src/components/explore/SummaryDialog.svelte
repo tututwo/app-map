@@ -48,8 +48,8 @@ function onclick(event: MouseEvent & { currentTarget: HTMLDialogElement }) {
       {/each}
     </div>
     <p class="mt-5 text-[12px] text-[#666]">
-      Preliminary source counts. Population rates and active-place totals are withheld while source
-      aggregation is reviewed.
+      Preliminary source counts. The rate divides them by the place's 2010 census residents;
+      active-place totals are withheld while source aggregation is reviewed.
     </p>
     <div
       class="mt-[26px] flex h-[220px] items-center justify-center p-5 text-center font-mono text-[11px] text-[#777]"

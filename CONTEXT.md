@@ -79,7 +79,9 @@ reader; a Shard file holds all windows, so changing the window makes no request.
 
 ## Community context
 
-The social-determinant figures the panel shows under a selected place: the lab's
+What the panel shows under a selected place. First its 2010 census residents, from
+Shelby Golden's block-level decennial table summed by GEOID prefix (every Level,
+every state), which is also the denominator of the panel's rate per 10,000. Then the lab's
 2010 covariates (`closing_covariate_full_data_08032024.xlsx`, Insang Song, on the
 lab's OneDrive) for states, counties, ZIPs and tracts in the contiguous United
 States. There is no block-group sheet, Alaska and Hawaii are not covered, and ZIPs

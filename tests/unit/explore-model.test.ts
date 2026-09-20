@@ -43,9 +43,18 @@ test("a selection keeps zero, missing and per-type counts apart", () => {
   expect(selectionFor(query, null).stat.closed).toBeNull();
   // Context rows keep the lab's order and skip what is not published for the place (ZIPs, block groups).
   expect(selectionFor(query, null).context).toEqual([]);
-  const context = { n_pop_total: 35680, n_medincome: null, p_renter: 38, i_gini: 0.4 };
+  const context = { pop2010: 35680, n_medincome: null, p_renter: 38, i_gini: 0.4 };
+  // The rate is closures per 10,000 of the place's 2010 residents; without residents there is none.
+  expect(selectionFor(query, { all_religions: 19 }, context as never).stat.per10k).toBeCloseTo(
+    5.325,
+    3
+  );
+  expect(selectionFor(query, { all_religions: 19 }, null).stat.per10k).toBeNull();
+  expect(
+    selectionFor(query, { all_religions: 19 }, { pop2010: 0 } as never).stat.per10k
+  ).toBeNull();
   expect(selectionFor(query, null, context as never).context).toEqual([
-    { key: "n_pop_total", label: "Residents", value: "35,680" },
+    { key: "pop2010", label: "Residents, 2010 census", value: "35,680" },
     { key: "p_renter", label: "Rented housing", value: "38.0%" },
     { key: "i_gini", label: "Gini index of income inequality", value: "0.400" },
   ]);

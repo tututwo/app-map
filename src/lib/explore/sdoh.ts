@@ -2,8 +2,9 @@ import manifest from "$lib/generated/sdoh-manifest.json";
 import { inflated } from "./metrics";
 
 /**
- * Community context (scripts/build-sdoh.py): the lab's 2010 social-determinant covariates for states,
- * counties, ZIPs and tracts. There is none for block groups, Alaska or Hawaii, and ZIPs carry fewer fields.
+ * Community context (scripts/build-sdoh.py): 2010 census residents for every place the map draws, plus
+ * the lab's social-determinant covariates for states, counties, ZIPs and tracts. Block groups, Alaska and
+ * Hawaii have residents only, and ZIPs carry fewer covariates.
  */
 export type ContextField = (typeof manifest.fields)[number];
 export type Context = Record<ContextField, number | null>;
@@ -22,6 +23,9 @@ export async function loadContext(
   const places: Record<string, (number | null)[]> = JSON.parse(new TextDecoder().decode(buffer));
   const values = places[id];
   return values
-    ? (Object.fromEntries(manifest.fields.map((field, index) => [field, values[index]])) as Context)
+    ? // Trailing gaps are cut from a place's list, so a missing index is a gap too.
+      (Object.fromEntries(
+        manifest.fields.map((field, index) => [field, values[index] ?? null])
+      ) as Context)
     : null;
 }

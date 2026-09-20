@@ -115,7 +115,7 @@ describe("R2 tile delivery", () => {
       "private.json",
       "metrics/blockgroup/latest/06/all_religions.bin.gz",
       "metrics/blockgroup/012345abcdef/../secret.bin.gz",
-      "sdoh/blockgroup/012345abcdef/06.json.gz",
+      "sdoh/msa/012345abcdef/06.json.gz",
       "sdoh/tract/latest/06.json.gz",
     ])
       expect((await server.request(key)).status).toBe(404);
