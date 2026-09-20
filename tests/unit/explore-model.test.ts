@@ -6,9 +6,11 @@ import {
   breaksFor,
   colorIndexOf,
   legendFor,
+  formatAt,
+  parentOf,
   parseExploreQuery,
-  placeFor,
   selectionFor,
+  unitFor,
 } from "$lib/explore/model";
 
 test("queries use published windows only", () => {
@@ -36,10 +38,13 @@ test("a selection keeps zero, missing and per-type counts apart", () => {
     muslim_mosque: null,
   });
   expect(selection.selected).toEqual({ level: "state", id: "09", name: "Connecticut" });
-  expect(selection.stat).toEqual({ closed: 0, per10k: null, nOpen: null });
-  expect(selection.types[0]).toMatchObject({ key: "christian_church", closed: 5 });
-  expect(selection.types.at(-1)?.closed).toBeNull();
-  expect(selection.types.map((type) => type.key)).not.toContain("all_religions");
+  expect(selection.stat).toEqual({ closed: 0, per10k: null });
+  // Types with a count, largest first; Types with No observation are named apart, never as zero.
+  expect(selection.types).toEqual([
+    { key: "christian_church", label: "Christian congregations", closed: 5 },
+  ]);
+  expect(selection.inactive).toContain("Mosques");
+  expect(selection.inactive).not.toContain("All places of worship");
   expect(selectionFor(query, null).stat.closed).toBeNull();
   // Context rows keep the lab's order and skip what is not published for the place (ZIPs, block groups).
   expect(selectionFor(query, null).context).toEqual([]);
@@ -59,19 +64,61 @@ test("a selection keeps zero, missing and per-type counts apart", () => {
     { key: "i_gini", label: "Gini index of income inequality", value: "0.400" },
   ]);
   expect(selectionFor({ ...query, where: "" }, null).selected).toBeUndefined();
-  expect(placeFor("090010101011")).toMatchObject({ level: "blockgroup", id: "090010101011" });
-  // Counties are the 2010 ones: Connecticut keeps its eight counties, and renamed ones keep their old GEOID.
-  expect(placeFor("09001")).toEqual({ level: "county", id: "09001", name: "Fairfield County, CT" });
-  expect(placeFor("46113")?.name).toBe("Shannon County, SD");
-  // Five digits are a county unless the ZIP view is on or no county has that GEOID (06037 is both).
-  expect(placeFor("06037")?.name).toBe("Los Angeles County, CA");
-  expect(placeFor("06037", "zcta")).toEqual({ level: "zcta", id: "06037", name: "ZIP 06037" });
-  expect(placeFor("06510")?.level).toBe("zcta");
-  expect(placeFor("09009361402")).toEqual({
-    level: "tract",
-    id: "09009361402",
-    name: "Tract 3614.02, New Haven County, CT",
+});
+
+test("the panel tells a missing Unit, a failed load and a Focus outside every Unit apart", () => {
+  const query = parseExploreQuery(new URLSearchParams("where=CT"));
+  expect(selectionFor(query, { all_religions: 3 }).status).toBe("ok");
+  expect(selectionFor(query, null).status).toBe("uncovered");
+  expect(selectionFor(query, "failed").status).toBe("failed");
+  expect(selectionFor(query, { all_religions: 3 }, null, true).status).toBe("locating");
+  expect(selectionFor(query, { all_religions: 3 }, null, "failed").status).toBe("failed");
+  expect(selectionFor({ ...query, where: "" }, null).status).toBe("none");
+  expect(selectionFor({ ...query, where: "", at: [-70, 30] }, null).status).toBe("outside");
+  // A searched Location explains a Unit it does not name; the address itself never reaches the URL.
+  const tract = { ...query, level: "tract" as const, where: "48201100000" };
+  expect(selectionFor({ ...tract, near: "Houston, TX" }, null).because).toBe(
+    "The tract that contains the focus point for Houston, TX."
+  );
+  expect(selectionFor({ ...tract, near: "address" }, null).because).toContain("address you looked");
+  expect(selectionFor({ ...query, near: "Connecticut" }, null).because).toBe("");
+});
+
+test("a GEOID is read at the Query's Level and never guessed from its shape", () => {
+  expect(unitFor("090010101011", "blockgroup")).toEqual({
+    level: "blockgroup",
+    id: "090010101011",
+    name: "Block group 1, Tract 101.01, Fairfield County, CT",
   });
+  // Counties are the 2010 ones: Connecticut keeps its eight counties, and renamed ones keep their old GEOID.
+  expect(unitFor("09001", "county")?.name).toBe("Fairfield County, CT");
+  expect(unitFor("46113", "county")?.name).toBe("Shannon County, SD");
+  // 06037 is Los Angeles County and also a ZIP in Connecticut: the Level decides, the digits never do.
+  expect(unitFor("06037", "county")?.name).toBe("Los Angeles County, CA");
+  expect(unitFor("06037", "zcta")).toEqual({ level: "zcta", id: "06037", name: "ZIP 06037" });
+  expect(unitFor("06037", "tract")).toBeUndefined();
+  expect(unitFor("06510", "county")).toBeUndefined();
+  expect(unitFor("09009", "state")).toBeUndefined();
+  expect(unitFor("09009361402", "tract")?.name).toBe("Tract 3614.02, New Haven County, CT");
+  // Home's form and links from before the Focus name a state in words.
+  expect(unitFor("connecticut", "state")?.id).toBe("09");
+});
+
+test("the Focus travels in the URL, and a coarser Level is a GEOID prefix away", () => {
+  const query = parseExploreQuery(new URLSearchParams("at=-72.92790,41.30830&near=New+Haven,+CT"));
+  expect(query.at).toEqual([-72.9279, 41.3083]);
+  expect(query.near).toBe("New Haven, CT");
+  expect(formatAt([-72.927912345, 41.3083])).toBe("-72.92791,41.30830");
+  for (const bad of ["", "abc", "1,2,3", "-200,10", "10,90", "10"])
+    expect(parseExploreQuery(new URLSearchParams({ at: bad })).at).toBeNull();
+  const blockGroup = unitFor("090093614021", "blockgroup")!;
+  expect(parentOf(blockGroup, "tract")).toBe("09009361402");
+  expect(parentOf(blockGroup, "county")).toBe("09009");
+  expect(parentOf(blockGroup, "state")).toBe("09");
+  // A ZIP nests in nothing, and nothing is finer than a block group.
+  expect(parentOf(blockGroup, "zcta")).toBeUndefined();
+  expect(parentOf(unitFor("06511", "zcta")!, "county")).toBeUndefined();
+  expect(parentOf(unitFor("09009", "county")!, "tract")).toBeUndefined();
 });
 
 test("breaks follow the data and classes always span the colour ramp", () => {

@@ -1,11 +1,14 @@
 <script lang="ts">
+import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import FindPlace from "$components/explore/FindPlace.svelte";
 import ImageSlot from "$components/site/ImageSlot.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import SiteFooter from "$components/site/SiteFooter.svelte";
-import { DEFAULT_QUERY, type TypeKey } from "$lib/explore/model";
+import { DEFAULT_QUERY, whereOf, writeQuery, type TypeKey } from "$lib/explore/model";
 
-// The bar is a plain GET to /explore; From/To/Type carry over in the URL.
+// The bar is a plain GET to /explore; From/To/Type carry over in the URL. A place chosen from the list
+// goes there at once, as the Focus (ADR-0003); Explore derives the Selection a city or address lacks.
 let from = $state(DEFAULT_QUERY.from);
 let to = $state(DEFAULT_QUERY.to);
 let type = $state<TypeKey>(DEFAULT_QUERY.type);
@@ -101,17 +104,25 @@ const tag =
       action={resolve("/explore")}
       class="border-rule flex flex-wrap rounded border bg-white shadow-[0_1px_2px_rgba(0,0,0,.05),0_14px_34px_-18px_rgba(0,0,0,.22)]"
     >
-      <label
-        class="border-rule flex min-w-0 flex-[1_1_320px] flex-col gap-1.5 border-r px-5 pt-3.5 pb-[13px]"
-      >
-        <span class="label-caps">Where</span>
-        <input
-          name="where"
-          type="text"
-          placeholder="State or territory — or leave empty to browse the map"
-          class="text-ink placeholder:text-faint focus-visible:outline-yale-blue w-full text-[14px] focus-visible:outline-2 focus-visible:outline-offset-4"
-        />
-      </label>
+      <FindPlace
+        value=""
+        label="Where"
+        class="min-w-0 flex-[1_1_320px] items-center pt-3.5 pb-[13px]"
+        onpick={({ at, level = DEFAULT_QUERY.level, geoid, near }) =>
+          goto(
+            resolve("/explore") +
+              "?" +
+              writeQuery(new URLSearchParams(), {
+                from,
+                to,
+                type,
+                level,
+                at,
+                near,
+                where: whereOf(level, geoid),
+              })
+          )}
+      />
       <QueryFields bind:from bind:to bind:type />
       <div class="flex items-stretch p-2">
         <button

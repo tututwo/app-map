@@ -11,14 +11,25 @@ let s = $derived(selection.stat);
 let stats = $derived([
   { value: fmt(s.closed), label: "Reported closures", color: "text-yale-blue" },
   { value: per10k(s.per10k), label: "Per 10,000 residents", color: "text-ink" },
-  { value: fmt(s.nOpen), label: "Active during window", color: "text-ink" },
 ]);
-let sentence = $derived(
-  !selection.selected
-    ? "Select a state, or any place on the map, to see reported closure counts. A national total is not available in this release."
-    : s.closed === null
-      ? `No ${selection.noun} were active in ${selection.name} during ${selection.range}, so there is no closure count.`
-      : `${fmt(s.closed)} closures of ${selection.noun} are reported in ${selection.name} during ${selection.range}. Moves are excluded.`
+// Zero closures, No observation, a Unit the source lacks and a failed load are four different facts.
+let sentence = $derived.by(() => {
+  const { status, name, noun, range, levelNoun } = selection;
+  if (status === "none")
+    return "Search for a place or click the map to say where to look. View by chooses what is reported there: the state, county, ZIP code, tract or block group around that point. A national total is not available in this release.";
+  if (status === "locating") return `Finding the ${levelNoun} at this point…`;
+  if (status === "outside")
+    return `No ${levelNoun} in the data contains this point. Click inside the United States, or search for another place.`;
+  if (status === "failed")
+    return `The numbers for this ${levelNoun} could not be loaded. Check your connection, then click the map again.`;
+  if (status === "uncovered")
+    return `${name} is not in the source data, so there is nothing to report for it. That is not the same as zero closures.`;
+  if (s.closed === null)
+    return `No ${noun} were active in ${name} during ${range}, so there is no closure count.`;
+  return `${fmt(s.closed)} ${s.closed === 1 ? "closure" : "closures"} of ${noun} ${s.closed === 1 ? "is" : "are"} reported in ${name} during ${range}. Moves are excluded.`;
+});
+let title = $derived(
+  selection.status === "outside" ? `No ${selection.levelNoun} here` : selection.name
 );
 </script>
 
@@ -27,13 +38,20 @@ let sentence = $derived(
 >
   <div>
     <div class="label-caps">Showing</div>
-    <h2 class="text-ink mt-1.5 mb-2 font-serif text-[40px] leading-[1.08] text-pretty">
-      {selection.name}
+    <h2
+      class="text-ink mt-1.5 mb-2 font-serif leading-[1.08] text-pretty {title.length > 30
+        ? 'text-[28px]'
+        : 'text-[40px]'}"
+    >
+      {title}
     </h2>
     <div class="text-muted text-[13.5px]">{selection.windowText}</div>
+    {#if selection.because}
+      <div class="text-body mt-1.5 text-[13.5px]">{selection.because}</div>
+    {/if}
   </div>
   <hr class="border-rule" />
-  <div class="flex flex-wrap justify-between gap-4">
+  <div class="flex flex-wrap gap-x-14 gap-y-4">
     {#each stats as stat (stat.label)}
       <div>
         <div class="font-serif text-[34px] leading-none {stat.color}">{stat.value}</div>
@@ -41,8 +59,8 @@ let sentence = $derived(
       </div>
     {/each}
   </div>
-  <p class="text-body text-[15px] leading-[1.55] text-pretty">{sentence}</p>
-  {#if selection.selected}
+  <p class="text-body text-[15px] leading-[1.55] text-pretty" aria-live="polite">{sentence}</p>
+  {#if selection.status === "ok"}
     <div>
       <div class="label-caps">Reported closures by type</div>
       <ul class="mt-2.5 flex flex-col gap-1.5">
@@ -54,10 +72,14 @@ let sentence = $derived(
         {/each}
       </ul>
       <p class="text-muted mt-2.5 text-[12.5px] leading-normal text-pretty">
+        {#if selection.inactive.length}
+          Not active here in this window, so not counted: {selection.inactive.join(", ")}.
+        {/if}
         A place of worship can carry more than one type, so types can add up to more than the total.
-        A dash means no place of that type was active here in this window.
       </p>
     </div>
+  {/if}
+  {#if selection.selected}
     <div>
       <div class="label-caps">Community context · 2010</div>
       {#if selection.context.length}

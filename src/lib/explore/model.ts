@@ -16,7 +16,7 @@ export type Level = (typeof LEVELS)[number];
  * Tile geometry per Level (ADR-0002), all on 2010 boundaries: counties, ZIPs (ZCTAs) and tracts from the
  * Census cartographic files (scripts/build-census-tiles.sh), block groups from the lab's GeoPackages
  * (scripts/build-tiles.sh). Below its Reveal zoom a Level leaves the states on screen; outlines fade
- * in from `outlineZoom`.
+ * in from `outlineZoom`. `focusZoom` is where the camera settles to show the Unit under a Focus.
  */
 export const TILES = {
   county: {
@@ -25,6 +25,7 @@ export const TILES = {
     revealZoom: 0,
     outlineZoom: 3,
     maxZoom: 10,
+    focusZoom: 7.5,
   },
   zcta: {
     archive: "zcta-2010.pmtiles",
@@ -32,6 +33,7 @@ export const TILES = {
     revealZoom: 7,
     outlineZoom: 8,
     maxZoom: 13,
+    focusZoom: 10.5,
   },
   tract: {
     archive: "tract-2010.pmtiles",
@@ -39,6 +41,7 @@ export const TILES = {
     revealZoom: 7,
     outlineZoom: 8,
     maxZoom: 13,
+    focusZoom: 11,
   },
   blockgroup: {
     archive: "bg-2010.pmtiles",
@@ -46,6 +49,7 @@ export const TILES = {
     revealZoom: 8,
     outlineZoom: 9,
     maxZoom: 15,
+    focusZoom: 13,
   },
 };
 export const LEVEL_NOUNS: Record<Level, { one: string; many: string }> = {
@@ -146,13 +150,8 @@ export const STATES: StateRow[] = STATE_NAMES.map(([id, abbreviation, name]) => 
   name,
 }));
 
-export interface Stat {
-  closed: number | null;
-  per10k: number | null;
-  nOpen: number | null;
-}
-/** Whatever the panel is showing: a state, or a place of any other Level picked on the map. */
-export interface Place {
+/** One statistical geography at a Level, identified by its GEOID. */
+export interface Unit {
   level: Level;
   id: string;
   name: string;
@@ -252,8 +251,15 @@ export const CONTEXT_FIELDS: Record<
   },
 };
 
+export type LngLat = [lng: number, lat: number];
+
 export interface ExploreQuery {
+  /** The Selection, written down for the server: the Unit of `level` that contains `at`. */
   where: string;
+  /** The Focus. Links from before ADR-0003 carry `where` alone. */
+  at: LngLat | null;
+  /** What was searched to set the Focus: a Location's label, or "address" (the text itself stays out of URLs). */
+  near: string;
   from: number;
   to: number;
   type: TypeKey;
@@ -263,6 +269,8 @@ export interface ExploreQuery {
 const defaultWindow = WINDOWS.find(({ from, to }) => from === 2010 && to === 2015) ?? WINDOWS[0];
 export const DEFAULT_QUERY: ExploreQuery = {
   where: "",
+  at: null,
+  near: "",
   from: defaultWindow.from,
   to: defaultWindow.to,
   type: "all_religions",
@@ -282,6 +290,26 @@ export function windowFor(query: Pick<ExploreQuery, "from" | "to">) {
 const year = (value: string | null, fallback: number) =>
   value !== null && /^\d{4}$/.test(value) ? Number(value) : fallback;
 
+function parseAt(value: string | null): LngLat | null {
+  const [lng, lat, ...rest] = (value ?? "").split(",").map(Number);
+  return !rest.length && Math.abs(lng) <= 180 && Math.abs(lat) <= 85 ? [lng, lat] : null;
+}
+export const formatAt = ([lng, lat]: LngLat) => `${lng.toFixed(5)},${lat.toFixed(5)}`;
+
+/** Write a patch of the Query into URL parameters. An empty value removes its parameter. */
+export function writeQuery(params: URLSearchParams, patch: Partial<ExploreQuery>) {
+  for (const [key, value] of Object.entries(patch)) {
+    const text = Array.isArray(value) ? formatAt(value) : String(value ?? "");
+    if (text === "") params.delete(key);
+    else params.set(key, text);
+  }
+  return params;
+}
+
+/** How a Unit is written into `where`: states keep their name, as Home's form and older links have it. */
+export const whereOf = (level: Level, geoid: string | undefined) =>
+  !geoid ? "" : level === "state" ? (STATES.find(({ id }) => id === geoid)?.name ?? geoid) : geoid;
+
 export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
   const window = windowFor({
     from: year(params.get("from"), DEFAULT_QUERY.from),
@@ -290,6 +318,8 @@ export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
   const type = params.get("type");
   return {
     where: params.get("where") ?? "",
+    at: parseAt(params.get("at")),
+    near: params.get("near") ?? "",
     from: window.from,
     to: window.to,
     type: type && Object.hasOwn(TYPES, type) ? (type as TypeKey) : DEFAULT_QUERY.type,
@@ -298,64 +328,100 @@ export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
 }
 
 /**
- * `where` is a state (name, abbreviation or GEOID) or the id of a place picked on the map: county (5
- * digits), ZIP (5 digits, read as a ZIP in the ZIP view or when no county has that GEOID), tract (11)
- * or block group (12).
+ * `where` is always read at `level` and never guessed from its shape (ADR-0003): 06037 is Los Angeles
+ * County at the county Level and a ZIP in Connecticut at the ZIP Level. A state also answers to its name
+ * or abbreviation, which is what Home's form and links from before the Focus send.
  */
-export function placeFor(where: string, level: Level = "state"): Place | undefined {
+export function unitFor(where: string, level: Level): Unit | undefined {
   const counties = countyNames as Record<string, string>;
   const state = STATES.find(({ id }) => id === where.slice(0, 2))?.abbreviation ?? "";
-  if (/^\d{12}$/.test(where))
-    return {
-      level: "blockgroup",
-      id: where,
-      name: `${tractLabel(where)} · Block group ${where[11]}, ${state}`,
-    };
-  if (/^\d{11}$/.test(where))
-    return {
-      level: "tract",
-      id: where,
-      name: `${tractLabel(where)}, ${counties[where.slice(0, 5)] ?? state}`,
-    };
-  if (/^\d{5}$/.test(where))
-    return level !== "zcta" && counties[where]
-      ? { level: "county", id: where, name: counties[where] }
-      : { level: "zcta", id: where, name: `ZIP ${where}` };
-  const found = findState(where);
-  return found && { level: "state", id: found.id, name: found.name };
+  const within = counties[where.slice(0, 5)] ?? state;
+  if (level === "state") {
+    const found = findState(where);
+    return found && { level, id: found.id, name: found.name };
+  }
+  if (level === "county")
+    return counties[where] ? { level, id: where, name: counties[where] } : undefined;
+  if (level === "zcta")
+    return /^\d{5}$/.test(where) ? { level, id: where, name: `ZIP ${where}` } : undefined;
+  if (level === "tract")
+    return /^\d{11}$/.test(where)
+      ? { level, id: where, name: `${tractLabel(where)}, ${within}` }
+      : undefined;
+  return /^\d{12}$/.test(where)
+    ? { level, id: where, name: `Block group ${where[11]}, ${tractLabel(where)}, ${within}` }
+    : undefined;
+}
+
+const GEOID_LENGTH: Partial<Record<Level, number>> = {
+  state: 2,
+  county: 5,
+  tract: 11,
+  blockgroup: 12,
+};
+/** Up the census hierarchy a Unit's parent is a prefix of its GEOID. ZIPs nest in nothing. */
+export function parentOf(unit: Unit, level: Level): string | undefined {
+  const [from, to] = [GEOID_LENGTH[unit.level], GEOID_LENGTH[level]];
+  return from && to && to < from ? unit.id.slice(0, to) : undefined;
 }
 
 /**
- * The rate is the lab's formula, closures per 10,000 of the place's 2010 census residents, worked out here
+ * The rate is the lab's formula, closures per 10,000 of the Unit's 2010 census residents, worked out here
  * because the chunk files' own rate columns rest on inflated denominators. No residents, no rate.
  */
-const rated = (closed: number | null, residents: number | null): Stat => ({
+const rated = (closed: number | null, residents: number | null) => ({
   closed,
   per10k: closed !== null && residents ? (closed / residents) * 10_000 : null,
-  nOpen: null,
 });
+export type Stat = ReturnType<typeof rated>;
+
+export type Breakdown = Record<string, number | null>;
+/**
+ * What the panel can say. `locating`: the Unit under the Focus is being read. `outside`: no Unit of the
+ * Level contains the Focus. `uncovered`: the source has no such Unit. `failed`: a file did not load. The
+ * last three are different facts and never share a sentence with Zero closures or No observation.
+ */
+export type Status = "none" | "locating" | "outside" | "uncovered" | "failed" | "ok";
 
 /**
- * `breakdown` is the selected place's reported closures in this window, per Type; `context` its
- * community context, which does not depend on the window.
+ * `breakdown` is the Selection's reported closures in this window, per Type: null when the source does
+ * not contain the Unit, "failed" when its Shard did not load. `context` does not depend on the window.
  */
 export function selectionFor(
   query: ExploreQuery,
-  breakdown: Record<string, number | null> | null,
-  context: Context | null = null
+  breakdown: Breakdown | "failed" | null,
+  context: Context | null = null,
+  locating: boolean | "failed" = false
 ) {
-  const selected = placeFor(query.where, query.level);
+  const selected = unitFor(query.where, query.level);
   const range = `${query.from}–${query.to}`;
   const type = TYPES[query.type];
+  const counts = typeof breakdown === "object" ? breakdown : null;
+  const status: Status =
+    locating === true
+      ? "locating"
+      : locating === "failed" || breakdown === "failed"
+        ? "failed"
+        : !selected
+          ? query.at
+            ? "outside"
+            : "none"
+          : counts
+            ? "ok"
+            : "uncovered";
+  const types = (Object.keys(TYPES) as TypeKey[])
+    .filter((key) => key !== "all_religions")
+    .map((key) => ({ key, label: TYPES[key].label, closed: counts?.[key] ?? null }));
   return {
     selected,
-    stat: rated(breakdown?.[query.type] ?? null, context?.pop2010 ?? null),
-    // Every Type but the total, largest first; a Type that was never active here sorts last.
-    types: (Object.keys(TYPES) as TypeKey[])
-      .filter((key) => key !== "all_religions")
-      .map((key) => ({ key, label: TYPES[key].label, closed: breakdown?.[key] ?? null }))
-      .sort((a, b) => (b.closed ?? -1) - (a.closed ?? -1)),
-    // Only what the lab publishes for this kind of place: ZIPs have fewer fields, block groups none.
+    status,
+    stat: rated(counts?.[query.type] ?? null, context?.pop2010 ?? null),
+    // Every Type with a count, largest first. Types with No observation are named together below them.
+    types: types
+      .filter((row) => row.closed !== null)
+      .sort((a, b) => (b.closed ?? 0) - (a.closed ?? 0)),
+    inactive: types.filter((row) => row.closed === null).map((row) => row.label),
+    // Only what the lab publishes for this kind of Unit: ZIPs have fewer fields, block groups none.
     context: (Object.keys(CONTEXT_FIELDS) as ContextField[]).flatMap((key) => {
       const value = context?.[key];
       return value == null
@@ -364,8 +430,23 @@ export function selectionFor(
     }),
     range,
     name: selected?.name ?? "United States",
+    // Why this Unit: it holds the Focus that a searched Location set. A searched Unit needs no reason.
+    because:
+      selected && query.near && query.near !== selected.name
+        ? `The ${LEVEL_NOUNS[selected.level].one} that contains ${
+            query.near === "address"
+              ? "the address you looked up"
+              : `the focus point for ${query.near}`
+          }.${
+            // Someone who named a city or an address is usually after something smaller than a state.
+            selected.level === "state" || selected.level === "county"
+              ? " View by ZIP, Tract or Block group for a closer look."
+              : ""
+          }`
+        : "",
     windowText: `${range} · ${query.to - query.from + 1} inclusive years · ${type.label.toLowerCase()}`,
     noun: type.noun,
+    levelNoun: LEVEL_NOUNS[query.level].one,
     requestText: selected
       ? `Data for ${selected.name} (${LEVEL_NOUNS[selected.level].one}), ${range}.`
       : `State-level data for ${range}.`,

@@ -40,6 +40,12 @@ Of the places with closure counts, 49 of 51 states, 3,100 of 3,140 counties, 29,
 
 Two traps: Excel dropped the GEOIDs' leading zeros (the build pads them back), and the older `church_and_health_full_data_05282024.csv.gz`, from which the legacy dashboard's `data-raw/sideMetricData.csv` was cut, has a wrong `p_unemp` (county median 25% against 7.2% in the August workbook). The figures describe the place around 2010 and do not change with the Year Window.
 
+## Finding a place
+
+Search sets a Focus, a point (ADR-0003). States, counties, ZIPs and cities resolve to a point through the Census Bureau's 2010 Gazetteer files ([places, counties, ZCTAs](https://www2.census.gov/geo/docs/maps-data/data/gazetteer/), the same vintage as the map's boundaries): 3,221 counties, 29,514 places and 33,120 ZCTAs, each with the Bureau's internal point, which lies inside the area. A state's point is the internal point of its most populous county, so "Texas" followed by Tract opens on Houston rather than on ranchland. Cities are ranked by 2010 residents, which is why the first "Houston" is the one in Texas. ZCTAs without closure counts stay searchable and answer "not in the source data".
+
+A street address is sent to the [Census Geocoder](https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html) (`locations/onelineaddress`, benchmark `Public_AR_Current`) only when the user submits it, through `POST /api/geocode`. The service needs no key and sends no CORS header. It matches street addresses only: a city name or a landmark returns no match (checked 2026-09-20: 0.45–0.8 s per request). The address text never enters a URL or a log; the URL carries the matched point (`at`) and `near=address`.
+
 ## Reproduce
 
 DuckDB and numpy are needed only for the offline build, with no added application dependency. Rename the downloaded chunks `<level>__chunk_NNNN.parquet` (levels `state`, `county`, `tract`, `block_group`, `zcta`), then:
@@ -51,12 +57,14 @@ PATH=/opt/homebrew/opt/node@22/bin:$PATH npx vitest run tests/unit/explore-model
 uv run --with duckdb python scripts/build-sdoh.py <covariate workbook> <block population parquet> <ZCTA population parquet>
 scripts/publish-metrics.sh                     # uploads static/tiles/metrics and static/tiles/sdoh to the R2 bucket
 scripts/publish-tiles.sh county-2010.pmtiles   # likewise tract-2010, zcta-2010, bg-2010
+python3 scripts/build-gazetteer.py ~/Downloads/census-2010/gazetteer   # the three Gaz_*_national.zip files
 ```
 
 The cube build takes about three minutes and refuses to write a level when the window list has gaps, when two chunks disagree on a populated value, when a level summed by state differs from the state level for any window and type, or when a place with counts has no boundary on the map (`static/tiles/<level>-2010-geoids.txt`, written by the tile builds; `--gpkg`, the directory of the lab's `bg_statefp_XX_2000_2010_2020.gpkg` files, writes the block-group list). These are consistency checks within one upstream run, not validation of the counts. It writes:
 
 - `static/tiles/metrics/<level>/<release>/<shard>/…` (gitignored, 27 MB): the Shard files the site fetches.
 - `src/lib/generated/metrics-manifest.json`: window order, religions, and per level the release hash, dtype and Shard list.
+- `static/gazetteer/{names,zips}.json` (committed, 2.4 MB, about 0.8 MB on the wire): the search tables, fetched on the first keystroke.
 - `static/tiles/sdoh/<level>/<release>/<shard>.json.gz` (gitignored, 2.5 MB) and `src/lib/generated/sdoh-manifest.json`: the community-context Shards and their field order.
 
 Publish the files before deploying a manifest that names a new release; old releases can stay in the bucket.

@@ -62,6 +62,19 @@ prefix 2), ZIPs by their first two digits; state and county are one national
 Shard each. The product glossary is
 `docs/UBIQUITOUS_LANGUAGE.md`; the delivery decision is ADR-0002.
 
+## Focus, Selection, Gazetteer, Geocoder
+
+The Query holds a **Focus**, a point (`at` in the URL), and the **Selection** is
+the Unit of the Query's Level that contains it: derived, never stored on its own
+and never re-read at another Level (ADR-0003). `src/lib/explore/locate.ts` is the
+only reader of the tile archives outside the map: it finds the Unit under a point
+and the bounds the camera frames. The explore page's `look()` is the one place a
+Selection is made, for a click, a search and a Level change alike; `where` in the
+URL is its result, written down so the server can render a shared link.
+`src/lib/explore/gazetteer.ts` searches the **Gazetteer**
+(`scripts/build-gazetteer.py`), and `src/routes/api/geocode` is the **Geocoder**'s
+only caller. The product glossary has the definitions.
+
 ## Metric cube
 
 Explore's counts: reported closures (`closures_no_moves_any`, 2010 census

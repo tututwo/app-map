@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
+import { resolve } from "$app/paths";
 import { navigating, page } from "$app/state";
 import { onMount } from "svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
@@ -12,15 +13,18 @@ import {
   FIXED_BREAKS,
   LEVEL_NOUNS,
   NO_DATA_COLOR,
-  STATES,
   STATE_GEOMETRY_YEAR,
   TILES,
   breaksFor,
   legendFor,
   manifest,
+  parentOf,
   selectionFor,
+  whereOf,
+  writeQuery,
   type ExploreQuery,
   type Level,
+  type LngLat,
 } from "$lib/explore/model";
 import type { PageData } from "./$types";
 
@@ -53,7 +57,9 @@ let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );
 let legend = $derived(legendFor(breaks[drawnLevel]));
-let selection = $derived(selectionFor(query, data.breakdown, data.context));
+// True while the Unit under the Focus is being read from the tiles; "failed" when that read failed.
+let locating = $state<boolean | "failed">(false);
+let selection = $derived(selectionFor(query, data.breakdown, data.context, locating));
 let legendInfo = $state(false);
 let summaryOpen = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
@@ -74,6 +80,8 @@ async function loadMap() {
 onMount(() => {
   mounted = true;
   void loadMap();
+  // A link may carry a Focus alone; the Selection is derived here, never on the server.
+  if (query.at && !selection.selected) void look({});
   return () => {
     mounted = false;
   };
@@ -83,22 +91,55 @@ onMount(() => {
 let pending: URL | null = null;
 function update(patch: Partial<ExploreQuery>) {
   const url = new URL(pending ?? page.url);
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === "") url.searchParams.delete(key);
-    else url.searchParams.set(key, String(value));
-  }
+  writeQuery(url.searchParams, patch);
   pending = url;
-  void goto(url, { replaceState: true, keepFocus: true, noScroll: true }).finally(() => {
+  void goto(resolve("/explore") + url.search, {
+    replaceState: true,
+    keepFocus: true,
+    noScroll: true,
+  }).finally(() => {
     if (pending === url) pending = null;
   });
 }
 
-/** A state GEOID from the map or Find a place, or the id of any other place from the map. */
-function pick(id: string) {
-  update({ where: STATES.find((state) => state.id === id)?.name ?? id });
+// The newest request wins: a slower lookup must not overwrite the Selection that followed it.
+let ticket = 0;
+/**
+ * Say where to look (`at`), what to report there (`level`), or both; the Selection follows (ADR-0003).
+ * A new Focus may name the Unit it was taken from. The same Focus at a coarser Level is the Selection's
+ * parent. Anything else is read from the tiles.
+ */
+async function look(next: { at?: LngLat; level?: Level; geoid?: string; near?: string }) {
+  const mine = ++ticket;
+  const level = next.level ?? query.level;
+  const at = next.at ?? query.at;
+  let id =
+    next.geoid ??
+    (next.at || !selection.selected ? undefined : parentOf(selection.selected, level));
+  locating = false;
+  if (!id && at) {
+    locating = true;
+    let failed = false;
+    try {
+      const { unitAt } = await import("$lib/explore/locate");
+      id = (await unitAt(level, at)) ?? undefined;
+    } catch {
+      failed = true;
+    }
+    if (mine !== ticket) return;
+    locating = failed ? "failed" : false;
+  }
+  update({
+    at,
+    level,
+    near: next.at ? (next.near ?? "") : query.near,
+    where: whereOf(level, id),
+  });
 }
 
 function reset() {
+  ticket++;
+  locating = false;
   update(DEFAULT_QUERY);
   mapControls?.reset();
   legendInfo = false;
@@ -111,7 +152,11 @@ function reset() {
 
 <main class="flex h-[max(720px,calc(100vh_-_65px))] flex-col" aria-busy={!!navigating.to}>
   <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
-    <FindPlace value={selection.selected?.name ?? ""} byId={closedByState} onpick={pick} />
+    <FindPlace
+      value={query.near === "address" ? "Address you looked up" : query.near}
+      byId={closedByState}
+      onpick={look}
+    />
     <QueryFields
       large
       bind:from={() => query.from, (from) => update({ from })}
@@ -129,7 +174,7 @@ function reset() {
             title={level
               ? `${label} view`
               : `${label} boundaries are not available in this release`}
-            onclick={() => level && update({ level })}
+            onclick={() => level && look({ level })}
             class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
@@ -168,7 +213,8 @@ function reset() {
           bind:this={mapControls}
           bind:zoom={mapZoom}
           selected={selection.selected?.id ?? null}
-          onselect={pick}
+          focus={query.at}
+          onpick={look}
           level={query.level}
           {yearWindow}
           {breaks}

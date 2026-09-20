@@ -87,35 +87,32 @@ export function valueAt(counts: Counts, row: number, yearWindow: number): number
   return value === (counts instanceof Uint8Array ? 255 : 65535) ? null : value;
 }
 
-/** One place, one window, every Type. */
+/** One Unit, one window, every Type; null when the source does not contain the Unit. */
 export async function loadBreakdown(
   level: Level,
   geoid: string,
   yearWindow: number,
   fetcher: typeof fetch = fetch
-): Promise<Record<string, number | null>> {
+): Promise<Record<string, number | null> | null> {
   const shard = shardOf(level, geoid);
+  // A Shard the source never published (a ZIP prefix with no ZIPs) is a missing Unit, not a failure.
+  if (!shardsOf(level).includes(shard)) return null;
+  const index = (await loadShard(level, shard, fetcher)).row.get(geoid);
+  if (index === undefined) return null;
+  const breakdown: Record<string, number | null> = {};
   if (!browser) {
-    const { row } = await loadShard(level, shard, fetcher);
-    const index = row.get(geoid);
-    const breakdown: Record<string, number | null> = {};
     // Read one matrix at a time so a deep link does not retain all ten in a 128 MB Worker.
     for (const religion of RELIGIONS)
-      breakdown[religion] =
-        index === undefined
-          ? null
-          : valueAt(await loadCounts(level, shard, religion, fetcher), index, yearWindow);
+      breakdown[religion] = valueAt(
+        await loadCounts(level, shard, religion, fetcher),
+        index,
+        yearWindow
+      );
     return breakdown;
   }
-  const [{ row }, ...counts] = await Promise.all([
-    loadShard(level, shard, fetcher),
-    ...RELIGIONS.map((religion) => loadCounts(level, shard, religion, fetcher)),
-  ]);
-  const index = row.get(geoid);
-  return Object.fromEntries(
-    RELIGIONS.map((religion, i) => [
-      religion,
-      index === undefined ? null : valueAt(counts[i], index, yearWindow),
-    ])
+  const counts = await Promise.all(
+    RELIGIONS.map((religion) => loadCounts(level, shard, religion, fetcher))
   );
+  RELIGIONS.forEach((religion, i) => (breakdown[religion] = valueAt(counts[i], index, yearWindow)));
+  return breakdown;
 }

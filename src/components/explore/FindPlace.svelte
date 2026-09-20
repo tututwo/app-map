@@ -1,92 +1,203 @@
 <script lang="ts">
-import { STATES, findState, fmt } from "$lib/explore/model";
+import { geocode, looksLikeAddress, search, type Hit } from "$lib/explore/gazetteer";
+import { fmt, type Level, type LngLat } from "$lib/explore/model";
 
 let {
   value,
   byId,
   onpick,
+  label = "Find a place",
+  class: wrapper = "h-14 min-w-60 flex-[0_1_340px] items-center",
 }: {
-  /** Name of the selected state, or "" for the U.S. */
+  /** Label of the Location that set the Focus, or "" when the map did. */
   value: string;
-  /** Reported closures by state GEOID for the current window and type. */
-  byId: Map<string, number | null>;
-  onpick: (id: string) => void;
+  /** Reported closures by state GEOID for the current window and type, where the page has them. */
+  byId?: Map<string, number | null>;
+  /** A Location only says where to look; one that is itself a Unit also names its Level. */
+  onpick: (pick: { at: LngLat; level?: Level; geoid?: string; near: string }) => void;
+  label?: string;
+  /** Size and alignment of the field inside its bar. */
+  class?: string;
 } = $props();
 
-// What the user has typed since the last pick; null shows the selection.
+// What the user has typed since the last pick; null shows the Focus's Location.
 let draft = $state<{ selection: string; text: string } | null>(null);
 let open = $state(false);
+let hits = $state.raw<Hit[]>([]);
+let active = $state(0);
+// Why the list is empty, or how the address lookup is going.
+let note = $state("");
+let busy = $state(false);
 let shown = $derived(draft?.selection === value ? draft.text : value);
-let matches = $derived.by(() => {
-  const q = shown.trim().toLowerCase();
-  if (!open || !q) return [];
-  return STATES.filter(
-    (s) => s.name.toLowerCase().includes(q) || s.abbreviation.toLowerCase() === q || s.id === q
-  ).slice(0, 6);
-});
+let address = $derived(looksLikeAddress(shown));
+// An address is not in any table: the last option sends it to the Geocoder.
+let options = $derived(open ? hits.length + (address ? 1 : 0) : 0);
 
-function pick(id: string) {
+// The newest keystroke owns the list.
+let ticket = 0;
+async function find(text: string) {
+  const mine = ++ticket;
+  note = "";
+  active = 0;
+  try {
+    const found = await search(text);
+    if (mine !== ticket) return;
+    hits = found;
+    if (!found.length && !looksLikeAddress(text) && text.trim().length > 2)
+      note =
+        "No state, county, ZIP code or city matches. For a street address, start with the house number.";
+  } catch {
+    if (mine === ticket)
+      note = "The list of places could not be loaded. Check your connection and type again.";
+  }
+}
+
+function pick(hit: Hit) {
+  close();
+  onpick({ at: hit.at, level: hit.unit?.level, geoid: hit.unit?.geoid, near: hit.label });
+}
+
+async function lookUp() {
+  const mine = ++ticket;
+  busy = true;
+  note = "Looking up the address…";
+  try {
+    const match = await geocode(shown);
+    if (mine !== ticket) return;
+    if (match) {
+      close();
+      // The address itself stays out of the URL; the Focus carries its point.
+      onpick({ at: match.at, near: "address" });
+    } else
+      note =
+        "No address matches. Check the house number and street, add the city or ZIP code, or search for the city instead.";
+  } catch {
+    if (mine === ticket)
+      note = "Address lookup is not available right now. Search for a city or a ZIP code instead.";
+  } finally {
+    if (mine === ticket) busy = false;
+  }
+}
+
+function close() {
   draft = null;
   open = false;
-  onpick(id);
+  hits = [];
+  note = "";
+}
+
+function choose(index: number) {
+  if (index < hits.length) pick(hits[index]);
+  else if (address && !busy) void lookUp();
 }
 
 function onkeydown(event: KeyboardEvent) {
-  if (event.key === "Enter") {
-    const state = findState(shown);
-    if (state) pick(state.id);
-  }
-  if (event.key === "Escape") open = false;
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    open = true;
+    if (options) active = (active + (event.key === "ArrowDown" ? 1 : options - 1)) % options;
+  } else if (event.key === "Enter") {
+    // An empty field lets Home's form go on to the map; typed text must not be dropped on the way.
+    if (options || shown.trim()) event.preventDefault();
+    if (options) choose(active);
+  } else if (event.key === "Escape") open = false;
 }
 
-function meta(id: string) {
-  const closed = byId.get(id) ?? null;
-  return closed === null ? "No data" : `${fmt(closed)} reported closures`;
+function meta(hit: Hit) {
+  if (hit.unit?.level !== "state" || !byId) return hit.kind;
+  const closed = byId.get(hit.unit.geoid) ?? null;
+  return closed === null ? "State · no data" : `State · ${fmt(closed)} reported closures`;
 }
 </script>
 
-<div
-  class="border-rule relative flex h-14 min-w-60 flex-[0_1_320px] items-center gap-3 border-r px-5"
->
+<div class="border-rule relative flex gap-3 border-r px-5 {wrapper}">
   <label class="flex min-w-0 flex-1 flex-col gap-1">
-    <span class="label-caps">Find a place</span>
+    <span class="label-caps">{label}</span>
     <input
       type="text"
       role="combobox"
-      aria-expanded={matches.length > 0}
+      autocomplete="off"
+      spellcheck="false"
+      aria-expanded={options > 0}
       aria-controls="find-options"
       aria-autocomplete="list"
+      aria-activedescendant={options ? `find-option-${active}` : undefined}
+      aria-describedby="find-note"
       value={shown}
       oninput={(event) => {
         draft = { selection: value, text: event.currentTarget.value };
         open = true;
+        void find(event.currentTarget.value);
       }}
-      onfocus={() => (open = true)}
+      onfocus={(event) => {
+        open = true;
+        event.currentTarget.select();
+      }}
+      onclick={(event) => {
+        // A mouse-up undoes the selection made on focus; typing must replace the Location, not split it.
+        if (!draft) event.currentTarget.select();
+      }}
       onblur={() => (open = false)}
       {onkeydown}
-      placeholder="State or territory"
+      placeholder="City, county, ZIP code, state or address"
       class="text-ink placeholder:text-faint focus-visible:outline-yale-blue w-full text-[16px] focus-visible:outline-2 focus-visible:outline-offset-4"
     />
   </label>
-  {#if matches.length}
-    <div
-      id="find-options"
-      role="listbox"
-      class="border-rule absolute top-full -right-px -left-px z-20 border border-t-0 bg-white py-1.5 shadow-[0_16px_28px_-14px_rgba(0,0,0,.3)]"
-    >
-      {#each matches as state (state.id)}
-        <button
-          type="button"
-          role="option"
-          aria-selected="false"
-          onmousedown={(event) => event.preventDefault()}
-          onclick={() => pick(state.id)}
-          class="text-ink hover:bg-footer flex w-full justify-between gap-3 px-6 py-[9px] text-left text-[14px]"
-        >
-          <span>{state.name}</span>
-          <span class="text-muted text-[12px] whitespace-nowrap">{meta(state.id)}</span>
-        </button>
-      {/each}
+  <div
+    class="border-rule absolute top-full -right-px -left-px z-20 border border-t-0 bg-white shadow-[0_16px_28px_-14px_rgba(0,0,0,.3)] {open &&
+    (options || note)
+      ? ''
+      : 'hidden'}"
+  >
+    <div id="find-options" role="listbox" aria-label="Places" class={options ? "py-1.5" : ""}>
+      {#if open}
+        {#each hits as hit, index (`${hit.label}|${hit.kind}|${hit.at}`)}
+          <button
+            type="button"
+            role="option"
+            tabindex="-1"
+            id="find-option-{index}"
+            aria-selected={index === active}
+            onmousedown={(event) => event.preventDefault()}
+            onmousemove={() => (active = index)}
+            onclick={() => choose(index)}
+            class="text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] {index ===
+            active
+              ? 'bg-footer'
+              : ''}"
+          >
+            <span>{hit.label}</span>
+            <span class="text-muted text-[12px] whitespace-nowrap">{meta(hit)}</span>
+          </button>
+        {/each}
+        {#if address}
+          <button
+            type="button"
+            role="option"
+            tabindex="-1"
+            id="find-option-{hits.length}"
+            aria-selected={active === hits.length}
+            disabled={busy}
+            onmousedown={(event) => event.preventDefault()}
+            onmousemove={() => (active = hits.length)}
+            onclick={() => choose(hits.length)}
+            class="text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] disabled:opacity-60 {active ===
+            hits.length
+              ? 'bg-footer'
+              : ''}"
+          >
+            <span>Look up the address “{shown.trim()}”</span>
+            <span class="text-muted text-[12px] whitespace-nowrap">Street address · Enter</span>
+          </button>
+        {/if}
+      {/if}
     </div>
-  {/if}
+    <p
+      id="find-note"
+      role="status"
+      class="text-muted px-5 text-[12.5px] leading-normal text-pretty {note ? 'py-2.5' : ''}"
+    >
+      {note}
+    </p>
+  </div>
 </div>

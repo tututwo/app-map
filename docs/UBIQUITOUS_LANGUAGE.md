@@ -29,9 +29,9 @@ Extracted 2026-09-14 from the Yusuf ↔ Gordon call (2026-09-11), Yusuf's 2026-0
 | **Tract**        | A census tract; a fine level.                                                                                                           | neighborhood, census area                                         |
 | **Block group**  | A sub-tract Census level; the finest level shown on the map.                                                                            | block (a block is smaller and never shown)                        |
 | **Vintage**      | The boundary year a set of unit geometries and GEOIDs belongs to (e.g. 2010 tracts).                                                    | version, boundary year, edition                                   |
-| **Location**     | What a user searches for: a state, county, ZIP, city, or street address.                                                                | where, place, area, spot, search term                             |
-| **City**         | A location that can be searched but is not a unit; it resolves to a viewport and a level, never to a selection.                         | census place, place, town, municipality                           |
-| **Address**      | A location that resolves, via geocoding, to the tract unit containing it.                                                               | street address, point                                             |
+| **Location**     | What a user searches for: a state, county, ZIP, city, or street address. Choosing one sets the focus.                                   | where, place, area, spot, search term                             |
+| **City**         | A location that can be searched but is not a unit; it sets the focus to the city's point and leaves the level unchanged.                | census place, place, town, municipality                           |
+| **Address**      | A location that resolves, via geocoding, to a point, which becomes the focus; it leaves the level unchanged.                            | street address                                                    |
 | **Viewport**     | The extent of the map currently panned and zoomed into view.                                                                            | view, map position, extent, zoom                                  |
 | **Coarse level** | State or county: drawn at every zoom, nationwide.                                                                                       | overview level                                                    |
 | **Fine level**   | Tract, block group, or ZIP: drawn only when the viewport is zoomed in past the level's reveal zoom.                                     | detail level, drill-down level                                    |
@@ -41,16 +41,20 @@ Extracted 2026-09-14 from the Yusuf ↔ Gordon call (2026-09-11), Yusuf's 2026-0
 
 | Term                  | Definition                                                                                                                      | Aliases to avoid                                               |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Query**             | The set of conditions the map answers: window, type, level, and at most one selection.                                          | filters, criteria, settings, conditions, parameters            |
+| **Query**             | The set of conditions the map answers: window, type, level, and at most one focus.                                              | filters, criteria, settings, conditions, parameters            |
+| **Focus**             | The point on the map the user is looking at, set by clicking the map or by choosing a location. It says where, never what.      | anchor, pin, marker, selected point, selected place            |
 | **Applied query**     | The query currently reflected in the map, panel, URL, share link, and summary.                                                  | current state, active filters                                  |
 | **Draft query**       | Edits to the omnibar not yet applied (only exists if an apply button is kept).                                                  | pending changes, unsaved filters                               |
 | **Default view**      | The applied query on first load: whole U.S., the default preset window, all types, by state, no selection.                      | home state, initial state, national view                       |
-| **Selection**         | The single unit whose numbers fill the panel and the summary; set by clicking a unit or by a location that resolves to one.     | selected area, focus, highlighted region, current place        |
+| **Selection**         | The unit at the query's level that contains the focus; its numbers fill the panel and the summary. Derived, never set directly. | selected area, highlighted region, current place               |
 | **Hover preview**     | Temporary display of a unit's numbers while the pointer is over it; never replaces the selection.                               | hover state, tooltip (as a concept)                            |
 | **Class**             | One of the fixed rate bands the map colours (e.g. 4–5.9%).                                                                      | bin, bucket, category, quartile, quintile                      |
 | **Break**             | The rate value at the boundary between two classes; fixed across windows of equal length.                                       | cut point, threshold, break point                              |
 | **Legend**            | The on-map key listing the classes, their colours, and the "No data" swatch.                                                    | color key, scale                                               |
-| **No data**           | A unit for which the rate is undefined or absent, drawn in a swatch distinct from the lowest class.                             | 0%, missing, blank, grey area                                  |
+| **Zero closures**     | A unit where places of the type were active during the window and none closed. A count, drawn in the lowest class.              | none, no closures (when nothing was active), no data           |
+| **No observation**    | A unit × window × type for which the source holds no value because no place of that type was active there.                      | 0, zero, missing, blank                                        |
+| **Not covered**       | A focus that falls in no unit of the level, or a unit the source does not contain at all.                                       | no observation, 0, missing                                     |
+| **No data**           | The legend's swatch for a unit with no observation or not covered; never the same as zero closures.                             | 0%, missing, blank, grey area                                  |
 | **Reference rate**    | The closure rate of a parent or of the U.S. for the same window and type, computed from the parent's own closures and baseline. | average, U.S. average, state average, national rate, benchmark |
 | **Comparison ladder** | The ordered list of rates for the selection, its parent(s), and the U.S., shown with a difference in percentage points.         | compared with, comparison bars, benchmark section              |
 | **Percentage points** | The unit of difference between two closure rates.                                                                               | points, percent difference, % lower                            |
@@ -108,8 +112,8 @@ Extracted 2026-09-14 from the Yusuf ↔ Gordon call (2026-09-11), Yusuf's 2026-0
 | **Data contract**      | The written agreement between Gordon and the data team on file shapes, fields, keys, missing-value rules, and versioning.         | schema, spec, format requirements, interface                         |
 | **Fixture data**       | Synthetic data in the data contract's exact shape, used to build and demo before real data arrives.                               | dummy data, mock data, placeholder data, static files, "static crap" |
 | **Source version**     | A string identifying which release of the data team's outputs a file came from.                                                   | version, date stamp, build                                           |
-| **Geocoder**           | The free service that turns an address into coordinates and a tract GEOID.                                                        | address lookup, Census API                                           |
-| **Gazetteer**          | The lookup table from city name to state, centroid, and bounding box.                                                             | city list, places file                                               |
+| **Geocoder**           | The Census Bureau's free service that turns a street address into a point; asked only when the user submits an address.           | address lookup, Census API                                           |
+| **Gazetteer**          | The Census 2010 lookup table from a city, county or ZIP to a point inside it.                                                     | city list, places file                                               |
 
 ## Retired terms
 
@@ -132,10 +136,11 @@ Words from the old dashboard and the August testing summary. They will keep appe
 - A **Unit** belongs to exactly one **Level** and has exactly one **Parent**, except the U.S.
 - An **Aggregate** is keyed by one **Unit** × one **Window** × one **Type**; its **Closure rate** is **Closures** ÷ **Baseline**.
 - A **Window** has a start and an end year at least five years apart; a **Preset window** is a **Window** the UI offers first.
-- A **Query** has exactly one **Window**, one **Type**, one **Level**, and zero or one **Selection**; a **Selection** is always a **Unit** at the **Query**'s **Level**.
-- Changing the **Viewport** never changes the **Selection**; a **Hover preview** never replaces the **Selection**.
+- A **Query** has exactly one **Window**, one **Type**, one **Level**, and zero or one **Focus**; the **Selection** is the **Unit** at the **Query**'s **Level** that contains the **Focus**, so it always belongs to that **Level**.
+- Changing the **Level** keeps the **Focus** and re-derives the **Selection**: one focus answers at every level. A **GEOID** is never re-read at another **Level**.
+- Changing the **Viewport** never changes the **Focus**; a **Hover preview** never replaces the **Selection**.
 - A **Fine level** is drawn only above its **Reveal zoom**; the **Level** stays part of the **Query** regardless of zoom, so a **Query** at a fine level with the **Viewport** on the whole U.S. shows the state level and a request to zoom in, never nationwide fine units.
-- A **Location** resolves to a **Selection** (state, county, ZIP, address) or to a **Viewport** plus a **Level** (city).
+- A **Location** sets the **Focus**. A location that is itself a **Unit** (state, county, ZIP) puts the focus inside that unit and also sets the **Level** to the unit's level, so the unit becomes the **Selection**; a **City** or an **Address** leaves the **Level** unchanged.
 - A **Comparison ladder** lists the **Closure rate** of the **Selection**, then the **Reference rate** of each **Parent** up to the U.S., all for the same **Window** and **Type**.
 - A **Reference rate** is computed from the **Parent**'s own **Closures** and **Baseline**, never by averaging child rates.
 - A **Summary** is produced from exactly one **Applied query** that has a **Selection**, and shows that **Selection**'s **Community indicators** for one **Reference year**.
@@ -154,9 +159,9 @@ Words from the old dashboard and the August testing summary. They will keep appe
 >
 > **Domain expert:** "Right. It's a **Reference rate**, never an average. Same for the U.S. row."
 >
-> **Dev:** "Last one: a **Community member** types 'Gary, IN'. Gary is a **City**, not a **Unit**, so we zoom the **Viewport** to Gary, switch the **Level** to ZIP, and leave the **Selection** empty until they click a ZIP?"
+> **Dev:** "Last one: a **Community member** types 'Gary, IN'. Gary is a **City**, not a **Unit**, so the **Focus** moves to Gary and the **Level** stays where it was — at the ZIP level the **Selection** is the ZIP that contains Gary's centre?"
 >
-> **Domain expert:** "Yes — and the panel should say so, so they don't read Indiana's numbers as Gary's. Once they click a ZIP, that's the **Selection**, and the **Summary** and **Share link** follow it."
+> **Domain expert:** "Yes — and the panel names that ZIP, so they don't read one ZIP's numbers as all of Gary's. Pressing County or Tract answers for the same **Focus**, and the **Summary** and **Share link** follow it."
 
 ## Flagged ambiguities
 

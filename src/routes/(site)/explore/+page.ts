@@ -1,13 +1,13 @@
 import { loadBreakdown, loadCounts, loadShard, windowIndexOf } from "$lib/explore/metrics";
-import { parseExploreQuery, placeFor } from "$lib/explore/model";
+import { parseExploreQuery, unitFor } from "$lib/explore/model";
 import { loadContext } from "$lib/explore/sdoh";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ url, fetch }) => {
   const query = parseExploreQuery(url.searchParams);
-  const place = placeFor(query.where, query.level);
+  const unit = unitFor(query.where, query.level);
   // Shard files hold every Year Window and are cached once fetched, so after the first load a new
-  // window, and a new place in an already loaded Shard, resolve without a request.
+  // window, and a new Unit in an already loaded Shard, resolve without a request.
   // ponytail: a block-group deep link makes the server fetch that state's ten Type files; load the
   // breakdown in the browser instead if that ever shows up in server timings.
   const national = (level: "state" | "county") =>
@@ -18,9 +18,14 @@ export const load: PageLoad = async ({ url, fetch }) => {
     national("state"),
     // The page names the county legend, so it needs the counties' counts too.
     query.level === "county" ? national("county") : null,
-    place ? loadBreakdown(place.level, place.id, windowIndexOf(query.from, query.to), fetch) : null,
+    // The Selection's files fail on their own: the map keeps its colours and the panel says so.
+    unit
+      ? loadBreakdown(unit.level, unit.id, windowIndexOf(query.from, query.to), fetch).catch(
+          () => "failed" as const
+        )
+      : null,
     // Context is secondary: without it the panel still shows the counts.
-    place ? loadContext(place.level, place.id, fetch).catch(() => null) : null,
+    unit ? loadContext(unit.level, unit.id, fetch).catch(() => null) : null,
   ]).catch(() => null);
   // A stalled response must not leave navigation waiting indefinitely.
   const loaded = await Promise.race([

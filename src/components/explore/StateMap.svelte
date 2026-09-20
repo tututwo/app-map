@@ -1,14 +1,15 @@
 <script lang="ts" module>
 import { addProtocol } from "maplibre-gl";
-import { Protocol } from "pmtiles";
+import { protocol } from "$lib/explore/locate";
 
-// One reader for the page: it keeps each archive's directory cached across map instances.
-addProtocol("pmtiles", new Protocol().tile);
+// One reader for the page: the map and the Focus lookup share each archive's header and directories.
+addProtocol("pmtiles", protocol.tile);
 </script>
 
 <script lang="ts">
 import { onMount } from "svelte";
 import {
+  CircleLayer,
   FillLayer,
   GeoJSONSource,
   LineLayer,
@@ -22,8 +23,8 @@ import type {
   ExpressionSpecification,
   Map as MapInstance,
   MapLayerMouseEvent,
+  VectorTileSource as VectorSource,
 } from "maplibre-gl";
-import { env } from "$env/dynamic/public";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import {
   loadCounts,
@@ -34,6 +35,7 @@ import {
   type Counts,
   type Shard,
 } from "$lib/explore/metrics";
+import { archiveUrl, frameOf } from "$lib/explore/locate";
 import {
   COLORS,
   LEVEL_NOUNS,
@@ -41,8 +43,9 @@ import {
   TILES,
   colorIndexOf,
   fmt,
-  placeFor,
+  unitFor,
   type Level,
+  type LngLat,
 } from "$lib/explore/model";
 import zctaShardBounds from "$lib/generated/zcta-shard-bounds.json";
 import { loadTopology } from "$lib/map/static-assets";
@@ -57,16 +60,20 @@ setWorkerUrl(workerUrl);
 
 let {
   selected,
-  onselect,
+  focus,
+  onpick,
   level,
   yearWindow,
   breaks,
   religion,
   zoom = $bindable(3.5),
 }: {
-  /** Id of the selected place, at any Level. */
+  /** GEOID of the Selection, a Unit of `level`. */
   selected: string | null;
-  onselect: (geoid: string) => void;
+  /** Where the user is looking; the Selection is the Unit of `level` around it. */
+  focus: LngLat | null;
+  /** A click says where to look, and names the Unit under it when that Unit is of `level`. */
+  onpick: (pick: { at: LngLat; geoid?: string }) => void;
   level: Level;
   /** Index of the Year Window in the Metric cube. */
   yearWindow: number;
@@ -100,11 +107,9 @@ let hovered = $state<string | null>(null);
 let hoveredCount = $state<number | null>(null);
 // States are GeoJSON; every other Level is a tile archive, mounted while it is the chosen Level.
 const tiles = $derived(level === "state" ? null : TILES[level]);
-const tileUrl = $derived(
-  tiles &&
-    `pmtiles://${new URL(`${env.PUBLIC_TILES_URL ?? "/tiles"}/${tiles.archive}`, location.href)}`
-);
+const tileUrl = $derived(tiles && `pmtiles://${archiveUrl(tiles.archive)}`);
 const revealZoom = $derived(tiles?.revealZoom ?? 0);
+let tileSource = $state.raw<VectorSource>();
 let notice = $state<string | null>(null);
 let pointer = $state({ x: 0, y: 0 });
 let mapLoaded = $state(false);
@@ -118,6 +123,12 @@ const mapData = $derived<CountyFeatureCollection>({
       ...feature,
       properties: { ...feature.properties, geoid: String(feature.id) },
     })) ?? [],
+});
+const focusData = $derived<GeoJSON.FeatureCollection>({
+  type: "FeatureCollection",
+  features: focus
+    ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: focus } }]
+    : [],
 });
 // Below its Reveal zoom a tiled Level keeps the state level on screen, never an empty map.
 const stateMaxZoom = $derived(tiles ? revealZoom : 24);
@@ -257,36 +268,61 @@ $effect(() => {
 });
 
 $effect(() => {
-  void [level, yearWindow, religion, breaks];
+  // The tile source joins the map a microtask after a Level change, so its arrival repaints too.
+  void [level, yearWindow, religion, breaks, tileSource];
   // A Level change swaps the tile source, and the feature-state of the old one goes with it.
   for (const key of painted.keys())
     if (!key.startsWith(`${level}/`) && !key.startsWith("state/")) painted.delete(key);
   refresh();
 });
 
-function select(event: MapLayerMouseEvent) {
+// The point of the last click on the chosen Level's own Units.
+let clicked: LngLat | null = null;
+function pick(event: MapLayerMouseEvent) {
   const geoid = event.features?.[0]?.properties.geoid;
-  if (typeof geoid === "string") onselect(geoid);
+  const at: LngLat = [event.lngLat.lng, event.lngLat.lat];
+  // Below a Reveal zoom the states stand in for the Level: a click there only says where to look.
+  const own = typeof geoid === "string" && (geoid.length === 2) === (level === "state");
+  clicked = own ? at : null;
+  onpick({ at, geoid: own ? geoid : undefined });
 }
 
-let framed = false;
+// The camera frames the Selection when a search, a Level change or a link chose it. A click on a Unit
+// never moves the camera: the user picked that view. A state is always framed whole.
+let settled: string | undefined;
 $effect(() => {
   if (!mapLoaded || !map || !geometry) return;
-  const picked = !!selected && selected.length > 2;
-  // A place picked on the map is already in view.
-  // ponytail: a shared link to a county, tract or block group opens on its state, and one to a ZIP on the
-  // whole country (a ZIP does not name its state); frame the place itself once tiles can be queried.
-  if (picked && framed) return;
-  framed = true;
-  const id = selected?.length === 5 && level === "zcta" ? null : selected?.slice(0, 2);
+  const key = `${level}|${focus}|${selected}`;
+  if (key === settled) return;
+  settled = key;
+  const target = map;
+  const move = { duration: 650, bearing: 0, pitch: 0 };
+  if (focus && level !== "state") {
+    const [at, lvl] = [focus, level];
+    // The URL keeps five decimals of the clicked point.
+    const byClick = clicked?.every((value, axis) => Math.abs(value - at[axis]) < 1e-4);
+    clicked = null;
+    if (byClick) return;
+    target.stop();
+    const room = Math.min(90, target.getContainer().clientWidth / 6);
+    void frameOf(lvl, at)
+      .catch(() => null)
+      .then((bounds) => {
+        if (settled !== key || target !== map) return;
+        if (bounds)
+          target.fitBounds(bounds, { ...move, padding: room, maxZoom: TILES[lvl].maxZoom - 1 });
+        else target.easeTo({ ...move, center: at, zoom: TILES[lvl].focusZoom });
+      });
+    return;
+  }
+  // A link from before the Focus names a Unit only: frame its state, or the country for a ZIP.
+  const id = level === "zcta" ? null : selected?.slice(0, 2);
   const feature = geometry.features.find((candidate) => String(candidate.id) === id);
-  map.stop();
-  map.fitBounds(feature ? featureBounds(feature) : NATIONAL_BOUNDS, {
+  target.stop();
+  target.fitBounds(feature ? featureBounds(feature) : NATIONAL_BOUNDS, {
+    ...move,
     padding: 45,
-    duration: 650,
     maxZoom: 8,
-    bearing: 0,
-    pitch: 0,
   });
 });
 </script>
@@ -294,7 +330,8 @@ $effect(() => {
 <figure
   bind:this={container}
   class="state-map"
-  aria-label="Source-reported closures by state. Use Find a place to select a state with the keyboard."
+  aria-label="Reported closures by {LEVEL_NOUNS[level]
+    .one}. With the keyboard, use Find a place to say where to look and View by to choose what is reported there."
   data-state-map={error ? "error" : mapLoaded && geometry ? "ready" : "loading"}
   data-selected-state={selected ?? ""}
 >
@@ -321,6 +358,19 @@ $effect(() => {
         error = "The map's graphics context was lost.";
       }}
     >
+      <!-- First and always mounted: the Selection's stroke sits right under it, above the basemap's
+           roads, and stays there when a Level change remounts the tile layers. -->
+      <GeoJSONSource id="explore-focus" data={focusData}>
+        <CircleLayer
+          id="focus-dot"
+          paint={{
+            "circle-radius": 5,
+            "circle-color": "#ffffff",
+            "circle-stroke-color": "#111827",
+            "circle-stroke-width": 2.5,
+          }}
+        />
+      </GeoJSONSource>
       <GeoJSONSource id={STATE_SOURCE} data={mapData} promoteId="geoid">
         <FillLayer
           id="state-fill"
@@ -331,7 +381,7 @@ $effect(() => {
             "fill-opacity": 0.85,
             "fill-outline-color": "#ffffff",
           }}
-          onclick={select}
+          onclick={pick}
           onmousemove={hover}
           onmouseleave={() => {
             hovered = null;
@@ -344,17 +394,25 @@ $effect(() => {
           filter={["==", ["get", "geoid"], hovered ?? ""]}
           paint={{ "line-color": "#16406a", "line-width": 1.5 }}
         />
+        <!-- The Selection's stroke has to survive the darkest class: a white casing under a dark line. -->
+        <LineLayer
+          id="state-selected-casing"
+          beforeId="focus-dot"
+          filter={["==", ["get", "geoid"], selected ?? ""]}
+          paint={{ "line-color": "#ffffff", "line-width": 6 }}
+        />
         <LineLayer
           id="state-selected"
-          beforeId="waterway"
+          beforeId="focus-dot"
           filter={["==", ["get", "geoid"], selected ?? ""]}
-          paint={{ "line-color": "#111827", "line-width": 3 }}
+          paint={{ "line-color": "#111827", "line-width": 2.5 }}
         />
       </GeoJSONSource>
       {#if tiles && tileUrl}
         {#key level}
           <VectorTileSource
             id={TILE_SOURCE}
+            bind:source={tileSource}
             url={tileUrl}
             promoteId={{ [tiles.sourceLayer]: "geoid" }}
           >
@@ -377,7 +435,7 @@ $effect(() => {
                   "rgba(255,255,255,0.8)",
                 ],
               }}
-              onclick={select}
+              onclick={pick}
               onmousemove={hover}
               onmouseleave={() => {
                 hovered = null;
@@ -392,12 +450,20 @@ $effect(() => {
               paint={{ "line-color": "#16406a", "line-width": 1.5 }}
             />
             <LineLayer
-              id="tile-selected"
+              id="tile-selected-casing"
               sourceLayer={tiles.sourceLayer}
-              beforeId="waterway"
+              beforeId="focus-dot"
               minzoom={revealZoom}
               filter={["==", ["get", "geoid"], selected ?? ""]}
-              paint={{ "line-color": "#111827", "line-width": 3 }}
+              paint={{ "line-color": "#ffffff", "line-width": 6 }}
+            />
+            <LineLayer
+              id="tile-selected"
+              sourceLayer={tiles.sourceLayer}
+              beforeId="focus-dot"
+              minzoom={revealZoom}
+              filter={["==", ["get", "geoid"], selected ?? ""]}
+              paint={{ "line-color": "#111827", "line-width": 2.5 }}
             />
           </VectorTileSource>
         {/key}
@@ -413,7 +479,8 @@ $effect(() => {
       <div class="map-message pointer-events-none" role="status">Loading state map…</div>
     {:else if notice || zoom < revealZoom}
       <p class="map-hint" role="status">
-        {notice ?? `Showing states. Zoom in to see ${LEVEL_NOUNS[level].many}.`}
+        {notice ??
+          `Showing states. Search for a place or click the map to see ${LEVEL_NOUNS[level].many} there.`}
       </p>
     {/if}
 
@@ -436,7 +503,11 @@ $effect(() => {
     sideOffset={18}
   >
     <div class="py-1">
-      <strong>{hovered ? (placeFor(hovered, level)?.name ?? hovered) : ""}</strong>
+      <strong
+        >{hovered
+          ? (unitFor(hovered, hovered.length === 2 ? "state" : level)?.name ?? hovered)
+          : ""}</strong
+      >
       <p>Reported closures: {fmt(hoveredCount)}</p>
       <p class="text-xs text-gray-600">
         {hovered && hovered.length > 2 ? `GEOID ${hovered} · ` : ""}Preliminary source output

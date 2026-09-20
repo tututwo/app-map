@@ -7,7 +7,6 @@ let s = $derived(selection.stat);
 let stats = $derived([
   [fmt(s.closed), "Reported closures"],
   [per10k(s.per10k), "Per 10,000 residents"],
-  [fmt(s.nOpen), "Active during window"],
 ]);
 
 // `toggle` (not `close`) mirrors the native state back: Chrome stops firing
