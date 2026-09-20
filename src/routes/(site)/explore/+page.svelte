@@ -80,8 +80,17 @@ async function loadMap() {
 onMount(() => {
   mounted = true;
   void loadMap();
-  // A link may carry a Focus alone; the Selection is derived here, never on the server.
-  if (query.at && !selection.selected) void look({});
+  // The Focus is the authority: `where` only lets the server render a shared link. A link that carries
+  // a Focus alone, or a `where` that someone edited, is put right here.
+  if (query.at) void look({ quiet: true });
+  // Or a Unit alone (Home's form, older links): give it a Focus, so View by can answer at other Levels.
+  else if (!query.at && selection.selected) {
+    const unit = selection.selected;
+    void import("$lib/explore/gazetteer")
+      .then(({ pointOf }) => pointOf(unit))
+      .then((at) => at && !query.at && selection.selected?.id === unit.id && update({ at }))
+      .catch(() => {});
+  }
   return () => {
     mounted = false;
   };
@@ -91,7 +100,9 @@ onMount(() => {
 let pending: URL | null = null;
 function update(patch: Partial<ExploreQuery>) {
   const url = new URL(pending ?? page.url);
+  const before = url.search;
   writeQuery(url.searchParams, patch);
+  if (url.search === before) return;
   pending = url;
   void goto(resolve("/explore") + url.search, {
     replaceState: true,
@@ -109,7 +120,14 @@ let ticket = 0;
  * A new Focus may name the Unit it was taken from. The same Focus at a coarser Level is the Selection's
  * parent. Anything else is read from the tiles.
  */
-async function look(next: { at?: LngLat; level?: Level; geoid?: string; near?: string }) {
+async function look(next: {
+  at?: LngLat;
+  level?: Level;
+  geoid?: string;
+  near?: string;
+  /** Checking a link's Selection against its Focus must not blank a panel the server already filled. */
+  quiet?: boolean;
+}) {
   const mine = ++ticket;
   const level = next.level ?? query.level;
   const at = next.at ?? query.at;
@@ -118,7 +136,7 @@ async function look(next: { at?: LngLat; level?: Level; geoid?: string; near?: s
     (next.at || !selection.selected ? undefined : parentOf(selection.selected, level));
   locating = false;
   if (!id && at) {
-    locating = true;
+    if (!next.quiet) locating = true;
     let failed = false;
     try {
       const { unitAt } = await import("$lib/explore/locate");
@@ -133,6 +151,13 @@ async function look(next: { at?: LngLat; level?: Level; geoid?: string; near?: s
     at,
     level,
     near: next.at ? (next.near ?? "") : query.near,
+    // A new Level for the same Focus: remember what was being read, so the panel can say why this Unit.
+    via:
+      next.at || query.near
+        ? ""
+        : next.level && next.level !== query.level
+          ? query.via || (selection.selected?.name ?? "")
+          : query.via,
     where: whereOf(level, id),
   });
 }
@@ -150,7 +175,8 @@ function reset() {
   <title>Explore · Where are places of worship closing?</title>
 </svelte:head>
 
-<main class="flex h-[max(720px,calc(100vh_-_65px))] flex-col" aria-busy={!!navigating.to}>
+<!-- Below desktop width the map sits above the panel instead of beside it. -->
+<main class="flex flex-col lg:h-[max(720px,calc(100vh_-_65px))]" aria-busy={!!navigating.to}>
   <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
     <FindPlace
       value={query.near === "address" ? "Address you looked up" : query.near}
@@ -163,7 +189,9 @@ function reset() {
       bind:to={() => query.to, (to) => update({ to })}
       bind:type={() => query.type, (type) => update({ type })}
     />
-    <div class="flex h-14 flex-auto items-center justify-end gap-3 px-5">
+    <div
+      class="flex min-h-14 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
+    >
       <span class="text-muted text-[12.5px] whitespace-nowrap">View by</span>
       <div class="bg-seg inline-flex gap-0.5 rounded-[5px] p-[3px]">
         {#each VIEWS as { label, level } (label)}
@@ -175,7 +203,7 @@ function reset() {
               ? `${label} view`
               : `${label} boundaries are not available in this release`}
             onclick={() => level && look({ level })}
-            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40 {level ===
+            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
               : ''}"
@@ -206,8 +234,10 @@ function reset() {
     </div>
   {/if}
 
-  <div class="flex min-h-0 flex-1">
-    <div class="bg-map relative min-h-0 min-w-0 flex-auto overflow-hidden">
+  <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div
+      class="bg-map relative h-[58vh] min-h-[340px] min-w-0 flex-none overflow-hidden lg:h-auto lg:min-h-0 lg:flex-auto"
+    >
       {#if MapComponent}
         <MapComponent
           bind:this={mapControls}
@@ -258,18 +288,22 @@ function reset() {
       </div>
 
       <div
-        class="border-rule absolute bottom-8 left-6 flex w-[min(470px,calc(100%_-_48px))] flex-col gap-3 rounded border bg-white px-[22px] pt-[18px] pb-4 shadow-[0_6px_20px_-10px_rgba(0,0,0,.18)]"
+        class="border-rule absolute right-2 bottom-7 left-2 flex flex-col gap-3 rounded border bg-white px-3 pt-2.5 pb-2 shadow-[0_6px_20px_-10px_rgba(0,0,0,.18)] lg:right-auto lg:bottom-8 lg:left-6 lg:w-[min(470px,calc(100%_-_48px))] lg:px-[22px] lg:pt-[18px] lg:pb-4"
       >
-        <div class="flex flex-wrap items-baseline justify-between gap-4">
-          <span class="text-ink text-[15px] font-semibold">Reported closures</span>
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span class="text-ink text-[13px] font-semibold lg:text-[15px]">Reported closures</span>
           <button
             type="button"
             onclick={() => (legendInfo = !legendInfo)}
             class="text-medium-blue text-[13px] hover:underline">How are colors chosen?</button
           >
         </div>
-        <p class="text-muted text-[12px]">Preliminary source counts · {selection.range}</p>
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(64px,1fr))] gap-x-2 gap-y-3">
+        <p class="text-muted text-[12px] max-lg:hidden">
+          Preliminary source counts · {selection.range}
+        </p>
+        <div
+          class="grid grid-cols-6 gap-x-1.5 gap-y-3 lg:grid-cols-[repeat(auto-fit,minmax(64px,1fr))] lg:gap-x-2"
+        >
           {#each legend.classes as cls (cls.label)}
             <div class="flex min-w-0 flex-col gap-2">
               <div class="h-2.5" style:background={cls.color}></div>

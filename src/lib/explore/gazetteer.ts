@@ -87,6 +87,18 @@ export async function search(text: string, limit = 8): Promise<Hit[]> {
   return [...hits, ...inside].slice(0, limit);
 }
 
+/**
+ * A point inside a state, county or ZIP: the Focus for a link that names a Unit only (Home's form, links
+ * from before ADR-0003), so that View by can answer for it at the other Levels too.
+ */
+export async function pointOf(unit: { level: Level; id: string }): Promise<LngLat | undefined> {
+  if (unit.level === "zcta") return (await loadZips()).points[unit.id];
+  const { states, rows } = await loadNames();
+  if (unit.level === "state") return states[unit.id];
+  const row = unit.level === "county" && rows.find((candidate) => candidate[2] === unit.id);
+  return row ? [row[3], row[4]] : undefined;
+}
+
 /** Null when the Geocoder finds no such address; throws when it cannot be reached. */
 export async function geocode(address: string): Promise<{ at: LngLat; label: string } | null> {
   const response = await fetch(resolve("/api/geocode"), {

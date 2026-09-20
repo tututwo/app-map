@@ -13,14 +13,15 @@ let exploreActive = $derived(page.url.pathname.startsWith("/explore"));
 
 <div class="text-body bg-white font-sans text-[15px] leading-normal">
   <header
-    class="border-rule relative z-[5] flex h-16 items-center justify-between gap-6 border-b bg-white px-[60px]"
+    class="border-rule relative z-[5] flex h-16 items-center justify-between gap-6 border-b bg-white px-5 lg:px-[60px]"
   >
     <a
       href={resolve("/")}
       class="text-yale-blue text-[16px] font-bold tracking-[-0.01em] whitespace-nowrap"
       >[Project name]</a
     >
-    <nav class="flex h-full items-stretch gap-[30px]">
+    <!-- On a phone the links scroll inside the bar; the page never grows wider than the screen. -->
+    <nav class="flex h-full min-w-0 items-stretch gap-[30px] overflow-x-auto overflow-y-hidden">
       <a
         href={resolve("/explore")}
         class="{link} {exploreActive ? 'border-yale-blue' : 'border-transparent'}">Explore</a

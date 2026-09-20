@@ -78,10 +78,20 @@ test("the panel tells a missing Unit, a failed load and a Focus outside every Un
   // A searched Location explains a Unit it does not name; the address itself never reaches the URL.
   const tract = { ...query, level: "tract" as const, where: "48201100000" };
   expect(selectionFor({ ...tract, near: "Houston, TX" }, null).because).toBe(
-    "The tract that contains the focus point for Houston, TX."
+    "The tract at the dot on the map, which marks Houston, TX. Click the map to see another tract."
   );
   expect(selectionFor({ ...tract, near: "address" }, null).because).toContain("address you looked");
+  // A Level change without a search remembers what was being read; a searched Unit needs no reason.
+  expect(selectionFor({ ...tract, via: "Harris County, TX" }, null).because).toContain(
+    "which marks Harris County, TX"
+  );
+  expect(selectionFor({ ...query, via: "New Haven County, CT" }, null).because).toBe(
+    "The state that contains New Haven County, CT."
+  );
+  expect(selectionFor({ ...query, near: "New Haven, CT" }, null).because).toContain("closer look");
   expect(selectionFor({ ...query, near: "Connecticut" }, null).because).toBe("");
+  expect(selectionFor(tract, null).note).toContain("about 4,000 residents");
+  expect(selectionFor(query, null).note).toBe("");
 });
 
 test("a GEOID is read at the Query's Level and never guessed from its shape", () => {

@@ -34,7 +34,7 @@ let title = $derived(
 </script>
 
 <aside
-  class="border-rule flex max-h-full min-h-0 max-w-full flex-[0_0_440px] flex-col gap-[18px] overflow-auto border-l bg-white px-[34px] pt-[30px] pb-[34px]"
+  class="border-rule flex min-h-0 max-w-full flex-col gap-[18px] border-t bg-white px-5 pt-[30px] pb-[34px] lg:max-h-full lg:flex-[0_0_440px] lg:overflow-auto lg:border-t-0 lg:border-l lg:px-[34px]"
 >
   <div>
     <div class="label-caps">Showing</div>
@@ -47,7 +47,10 @@ let title = $derived(
     </h2>
     <div class="text-muted text-[13.5px]">{selection.windowText}</div>
     {#if selection.because}
-      <div class="text-body mt-1.5 text-[13.5px]">{selection.because}</div>
+      <div class="text-body mt-1.5 text-[13.5px] text-pretty">{selection.because}</div>
+    {/if}
+    {#if selection.selected && selection.note}
+      <div class="text-muted mt-1.5 text-[12.5px] leading-normal text-pretty">{selection.note}</div>
     {/if}
   </div>
   <hr class="border-rule" />

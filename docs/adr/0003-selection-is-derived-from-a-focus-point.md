@@ -29,7 +29,9 @@ at another Level. A map click moves the Focus. Search only sets the Focus: a
 Location that is itself a Unit (state, county, ZIP) also sets the Level to its
 own; a City or an Address leaves the Level alone. The URL keeps the derived
 `where` beside `at` so a shared link renders on the server without decoding
-tiles, and links from before this decision still open.
+tiles; the browser derives it again from `at` on load, so the Focus stays the
+authority even in an edited link. Links from before this decision still open:
+a Unit without a Focus gets one from the Gazetteer.
 
 The containing Unit is found by reading one tile at the archive's highest zoom
 directly from the PMTiles archive, decoding it, and testing the point against

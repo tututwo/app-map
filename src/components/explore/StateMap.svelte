@@ -310,7 +310,12 @@ $effect(() => {
       .then((bounds) => {
         if (settled !== key || target !== map) return;
         if (bounds)
-          target.fitBounds(bounds, { ...move, padding: room, maxZoom: TILES[lvl].maxZoom - 1 });
+          target.fitBounds(bounds, {
+            ...move,
+            // The legend lies over the bottom of the map; the Selection must clear it.
+            padding: { top: room, right: room, left: room, bottom: room + 110 },
+            maxZoom: TILES[lvl].maxZoom - 1,
+          });
         else target.easeTo({ ...move, center: at, zoom: TILES[lvl].focusZoom });
       });
     return;

@@ -52,6 +52,13 @@ export const TILES = {
     focusZoom: 13,
   },
 };
+/** What a newcomer needs to know to read a number for a Fine level. */
+export const LEVEL_NOTES: Partial<Record<Level, string>> = {
+  zcta: "A ZIP here is a ZIP Code Tabulation Area, the Census Bureau's approximation of a postal ZIP code.",
+  tract:
+    "A census tract is a small area drawn by the Census Bureau, home to about 4,000 residents.",
+  blockgroup: "A block group is a part of a census tract, usually home to 600 to 3,000 residents.",
+};
 export const LEVEL_NOUNS: Record<Level, { one: string; many: string }> = {
   state: { one: "state", many: "states" },
   county: { one: "county", many: "counties" },
@@ -260,6 +267,8 @@ export interface ExploreQuery {
   at: LngLat | null;
   /** What was searched to set the Focus: a Location's label, or "address" (the text itself stays out of URLs). */
   near: string;
+  /** Name of the Unit the visitor was reading when View by changed, unless a search already explains the Focus. */
+  via: string;
   from: number;
   to: number;
   type: TypeKey;
@@ -271,6 +280,7 @@ export const DEFAULT_QUERY: ExploreQuery = {
   where: "",
   at: null,
   near: "",
+  via: "",
   from: defaultWindow.from,
   to: defaultWindow.to,
   type: "all_religions",
@@ -320,6 +330,7 @@ export function parseExploreQuery(params: URLSearchParams): ExploreQuery {
     where: params.get("where") ?? "",
     at: parseAt(params.get("at")),
     near: params.get("near") ?? "",
+    via: params.get("via") ?? "",
     from: window.from,
     to: window.to,
     type: type && Object.hasOwn(TYPES, type) ? (type as TypeKey) : DEFAULT_QUERY.type,
@@ -374,6 +385,16 @@ const rated = (closed: number | null, residents: number | null) => ({
   per10k: closed !== null && residents ? (closed / residents) * 10_000 : null,
 });
 export type Stat = ReturnType<typeof rated>;
+
+function reason({ near, via }: ExploreQuery, selected: Unit | undefined) {
+  const what = near === "address" ? "the address you looked up" : near || via;
+  if (!selected || !what || what === selected.name) return "";
+  const { one } = LEVEL_NOUNS[selected.level];
+  if (selected.level !== "state" && selected.level !== "county")
+    return `The ${one} at the dot on the map, which marks ${what}. Click the map to see another ${one}.`;
+  // Someone who named a city or an address is usually after something smaller than a state.
+  return `The ${one} that contains ${what}.${near ? " View by ZIP, Tract or Block group for a closer look." : ""}`;
+}
 
 export type Breakdown = Record<string, number | null>;
 /**
@@ -430,20 +451,10 @@ export function selectionFor(
     }),
     range,
     name: selected?.name ?? "United States",
-    // Why this Unit: it holds the Focus that a searched Location set. A searched Unit needs no reason.
-    because:
-      selected && query.near && query.near !== selected.name
-        ? `The ${LEVEL_NOUNS[selected.level].one} that contains ${
-            query.near === "address"
-              ? "the address you looked up"
-              : `the focus point for ${query.near}`
-          }.${
-            // Someone who named a city or an address is usually after something smaller than a state.
-            selected.level === "state" || selected.level === "county"
-              ? " View by ZIP, Tract or Block group for a closer look."
-              : ""
-          }`
-        : "",
+    // Why this Unit, when the visitor did not pick it: it lies at the Focus that a search set, or that they
+    // were reading at another Level. At a Fine level it is one of many, and a click shows another.
+    because: reason(query, selected),
+    note: LEVEL_NOTES[query.level] ?? "",
     windowText: `${range} · ${query.to - query.from + 1} inclusive years · ${type.label.toLowerCase()}`,
     noun: type.noun,
     levelNoun: LEVEL_NOUNS[query.level].one,
