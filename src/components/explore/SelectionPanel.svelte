@@ -1,9 +1,11 @@
 <script lang="ts">
 import { Play } from "lucide-svelte";
+import { resolve } from "$app/paths";
 import { CopyLink } from "$lib/copy-link.svelte";
 import { fmt, per10k, type Selection } from "$lib/explore/model";
 
-let { selection, onsummary }: { selection: Selection; onsummary: () => void } = $props();
+// The Summary reads the same Query, so its link carries this page's own search.
+let { selection, search }: { selection: Selection; search: string } = $props();
 
 const share = new CopyLink();
 
@@ -127,21 +129,30 @@ let title = $derived(
     <div class="flex min-w-0 flex-col gap-2">
       <div class="label-caps">One-page summary</div>
       <p class="text-body text-[14px] leading-normal text-pretty">
-        A preview of this selection’s reported closure counts.
+        A printable page for this selection: the map, the reported closures and the community
+        measures. Save it as a PDF to share.
       </p>
-      <div class="text-faint font-mono text-[11px]">
-        preview placeholder · layout designed later
-      </div>
     </div>
   </div>
   <div class="flex gap-2.5">
-    <button
-      type="button"
-      onclick={onsummary}
-      class="bg-yale-blue h-[46px] flex-1 rounded-[3px] text-[14px] font-semibold text-white hover:brightness-[.92]"
-    >
-      View one-page summary →
-    </button>
+    <!-- Only a Selection with numbers has a Summary. -->
+    {#if selection.status === "ok"}
+      <a
+        href="{resolve('/summary')}{search}"
+        class="bg-yale-blue flex h-[46px] flex-1 items-center justify-center rounded-[3px] text-[14px] font-semibold text-white hover:brightness-[.92]"
+      >
+        View one-page summary →
+      </a>
+    {:else}
+      <button
+        type="button"
+        disabled
+        title="Choose a place with reported numbers first"
+        class="bg-yale-blue h-[46px] flex-1 cursor-not-allowed rounded-[3px] text-[14px] font-semibold text-white opacity-40"
+      >
+        View one-page summary →
+      </button>
+    {/if}
     <button
       type="button"
       onclick={() => share.copy()}

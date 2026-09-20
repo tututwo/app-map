@@ -67,6 +67,7 @@ let {
   breaks,
   religion,
   zoom = $bindable(3.5),
+  still = false,
 }: {
   /** GEOID of the Selection, a Unit of `level`. */
   selected: string | null;
@@ -82,6 +83,12 @@ let {
   religion: string;
   /** The page reads it to show the legend of whichever level is drawn at this zoom. */
   zoom?: number;
+  /**
+   * The Summary's picture: framed on the Selection at once, no gestures, no hover, and no Focus dot, which
+   * on a printed page would mark the address someone looked up. It keeps a copy that paper can show.
+   * The page prints the basemap's attribution itself: the control never folds on a map nobody moves.
+   */
+  still?: boolean;
 } = $props();
 
 const NATIONAL_BOUNDS: [[number, number], [number, number]] = [
@@ -126,9 +133,10 @@ const mapData = $derived<CountyFeatureCollection>({
 });
 const focusData = $derived<GeoJSON.FeatureCollection>({
   type: "FeatureCollection",
-  features: focus
-    ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: focus } }]
-    : [],
+  features:
+    focus && !still
+      ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: focus } }]
+      : [],
 });
 // Below its Reveal zoom a tiled Level keeps the state level on screen, never an empty map.
 const stateMaxZoom = $derived(tiles ? revealZoom : 24);
@@ -276,6 +284,13 @@ $effect(() => {
   refresh();
 });
 
+// Paper cannot run WebGL, and a print layout may resize the canvas blank. Whenever the picture is
+// complete, keep a copy that prints as an ordinary image.
+let printCopy = $state<string>();
+function copyForPrint() {
+  if (map?.areTilesLoaded()) printCopy = map.getCanvas().toDataURL("image/png");
+}
+
 // The point of the last click on the chosen Level's own Units.
 let clicked: LngLat | null = null;
 function pick(event: MapLayerMouseEvent) {
@@ -296,7 +311,7 @@ $effect(() => {
   if (key === settled) return;
   settled = key;
   const target = map;
-  const move = { duration: 650, bearing: 0, pitch: 0 };
+  const move = { duration: still ? 0 : 650, bearing: 0, pitch: 0 };
   if (focus && level !== "state") {
     const [at, lvl] = [focus, level];
     // The URL keeps five decimals of the clicked point.
@@ -312,8 +327,8 @@ $effect(() => {
         if (bounds)
           target.fitBounds(bounds, {
             ...move,
-            // The legend lies over the bottom of the map; the Selection must clear it.
-            padding: { top: room, right: room, left: room, bottom: room + 110 },
+            // Explore's legend lies over the bottom of the map; the Selection must clear it.
+            padding: { top: room, right: room, left: room, bottom: room + (still ? 0 : 110) },
             maxZoom: TILES[lvl].maxZoom - 1,
           });
         else target.easeTo({ ...move, center: at, zoom: TILES[lvl].focusZoom });
@@ -351,6 +366,11 @@ $effect(() => {
       maxZoom={tiles?.maxZoom ?? 8}
       bind:map
       cursor={hovered ? "pointer" : ""}
+      interactive={!still}
+      attributionControl={still ? false : undefined}
+      pixelRatio={still ? Math.max(2, devicePixelRatio) : undefined}
+      canvasContextAttributes={still ? { preserveDrawingBuffer: true } : undefined}
+      onidle={still ? copyForPrint : undefined}
       onload={() => {
         mapLoaded = true;
       }}
@@ -386,8 +406,8 @@ $effect(() => {
             "fill-opacity": 0.85,
             "fill-outline-color": "#ffffff",
           }}
-          onclick={pick}
-          onmousemove={hover}
+          onclick={still ? undefined : pick}
+          onmousemove={still ? undefined : hover}
           onmouseleave={() => {
             hovered = null;
           }}
@@ -440,8 +460,8 @@ $effect(() => {
                   "rgba(255,255,255,0.8)",
                 ],
               }}
-              onclick={pick}
-              onmousemove={hover}
+              onclick={still ? undefined : pick}
+              onmousemove={still ? undefined : hover}
               onmouseleave={() => {
                 hovered = null;
               }}
@@ -482,11 +502,15 @@ $effect(() => {
       </div>
     {:else if !mapLoaded || !geometry}
       <div class="map-message pointer-events-none" role="status">Loading state map…</div>
-    {:else if notice || zoom < revealZoom}
+    {:else if notice || (!still && zoom < revealZoom)}
       <p class="map-hint" role="status">
         {notice ??
           `Showing states. Search for a place or click the map to see ${LEVEL_NOUNS[level].many} there.`}
       </p>
+    {/if}
+
+    {#if printCopy}
+      <img class="print-copy" src={printCopy} alt="" data-print-copy />
     {/if}
 
     {#snippet failed(cause)}
@@ -527,6 +551,19 @@ $effect(() => {
   height: 100%;
   width: 100%;
   margin: 0;
+}
+.print-copy {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media print {
+  .print-copy {
+    display: block;
+  }
 }
 .map-message {
   position: absolute;

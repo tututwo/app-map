@@ -12,8 +12,9 @@ let exploreActive = $derived(page.url.pathname.startsWith("/explore"));
 </script>
 
 <div class="text-body bg-white font-sans text-[15px] leading-normal">
+  <!-- Paper carries the page alone: the Summary prints without the site's navigation. -->
   <header
-    class="border-rule relative z-[5] flex h-16 items-center justify-between gap-6 border-b bg-white px-5 lg:px-[60px]"
+    class="border-rule relative z-[5] flex h-16 items-center justify-between gap-6 border-b bg-white px-5 lg:px-[60px] print:hidden"
   >
     <a
       href={resolve("/")}

@@ -5,9 +5,9 @@ import { navigating, page } from "$app/state";
 import { onMount } from "svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
-import SummaryDialog from "$components/explore/SummaryDialog.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
-import { valueAt, windowIndexOf } from "$lib/explore/metrics";
+import { countsIn, levelBreaks } from "$lib/explore/load";
+import { windowIndexOf } from "$lib/explore/metrics";
 import {
   DEFAULT_QUERY,
   FIXED_BREAKS,
@@ -15,7 +15,6 @@ import {
   NO_DATA_COLOR,
   STATE_GEOMETRY_YEAR,
   TILES,
-  breaksFor,
   legendFor,
   manifest,
   parentOf,
@@ -45,14 +44,8 @@ let drawnLevel = $derived<Level>(
 );
 // Every Year Window is already in memory, so a new window is a lookup into the same arrays.
 let yearWindow = $derived(windowIndexOf(query.from, query.to));
-const countsIn = (national: typeof data.states) =>
-  national?.shard.geoids.map((_, row) => valueAt(national.counts, row, yearWindow)) ?? [];
-let stateCounts = $derived(countsIn(data.states));
-let breaks = $derived({
-  state: breaksFor(stateCounts),
-  county: breaksFor(countsIn(data.counties)),
-  ...FIXED_BREAKS,
-});
+let stateCounts = $derived(countsIn(data.states, yearWindow));
+let breaks = $derived(levelBreaks(data, yearWindow));
 let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );
@@ -61,7 +54,6 @@ let legend = $derived(legendFor(breaks[drawnLevel]));
 let locating = $state<boolean | "failed">(false);
 let selection = $derived(selectionFor(query, data.breakdown, data.context, locating));
 let legendInfo = $state(false);
-let summaryOpen = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
 let mapControls = $state<{ zoomIn: () => void; zoomOut: () => void; reset: () => void }>();
 let mapError = $state<string | null>(null);
@@ -342,8 +334,6 @@ function reset() {
         {/if}
       </div>
     </div>
-    <SelectionPanel {selection} onsummary={() => (summaryOpen = true)} />
+    <SelectionPanel {selection} search={page.url.search} />
   </div>
 </main>
-
-<SummaryDialog bind:open={summaryOpen} {selection} />

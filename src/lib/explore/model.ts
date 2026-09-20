@@ -177,7 +177,9 @@ export function findState(text: string): StateRow | undefined {
 
 export const fmt = (value: number | null) =>
   value === null ? "—" : Math.round(value).toLocaleString("en-US");
-export const per10k = (value: number | null) => (value === null ? "—" : value.toFixed(2));
+// A minor Type's rate is far below one in 10,000; two decimals would print every such rate as 0.01.
+export const per10k = (value: number | null) =>
+  value === null ? "—" : value > 0 && value < 0.1 ? value.toPrecision(2) : value.toFixed(2);
 
 export const NO_DATA_COLOR = "#d9dde2";
 export const COLORS = ["#dce5f1", "#a6bedf", "#6c93c7", "#3565a8", "#00356b"];
@@ -380,7 +382,7 @@ export function parentOf(unit: Unit, level: Level): string | undefined {
  * The rate is the lab's formula, closures per 10,000 of the Unit's 2010 census residents, worked out here
  * because the chunk files' own rate columns rest on inflated denominators. No residents, no rate.
  */
-const rated = (closed: number | null, residents: number | null) => ({
+export const rated = (closed: number | null, residents: number | null) => ({
   closed,
   per10k: closed !== null && residents ? (closed / residents) * 10_000 : null,
 });
