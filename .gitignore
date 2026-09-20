@@ -35,5 +35,7 @@ static/tiles/
 
 # AI agent context (local only, not for the shared repo)
 .agents/
+# The skills CLI links each installed skill here; skills-lock.json is what the repo keeps.
+.claude/skills/
 .cursor/
 LLM/
