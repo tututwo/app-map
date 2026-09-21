@@ -296,3 +296,56 @@
     }
   }
 }
+
+/* Shared feedback for actual controls, scoped to the current research site. */
+.site-shell .motion-control {
+  touch-action: manipulation;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    box-shadow 180ms ease-out,
+    color 150ms ease-out;
+}
+.site-shell .motion-control:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 70ms;
+}
+.site-shell .motion-control:focus-visible {
+  outline: 2px solid var(--color-yale-blue);
+  outline-offset: 3px;
+}
+.site-shell .motion-arrow {
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.site-shell .motion-link {
+  text-underline-offset: 0.25em;
+  text-decoration-color: transparent;
+  text-decoration-line: underline;
+  transition:
+    color 150ms ease-out,
+    text-decoration-color 150ms ease-out;
+}
+@media (hover: hover) {
+  .site-shell .motion-control:hover:not(:disabled) {
+    box-shadow: 0 3px 10px rgb(0 30 70 / 10%);
+  }
+  .site-shell .motion-control:hover .motion-arrow {
+    transform: translateX(3px);
+  }
+  .site-shell .motion-link:hover {
+    color: var(--color-yale-blue);
+    text-decoration-color: currentColor;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-shell .motion-control,
+  .site-shell .motion-arrow,
+  .site-shell .motion-link {
+    transition: none;
+  }
+  .site-shell .motion-control:active:not(:disabled),
+  .site-shell .motion-control:hover .motion-arrow {
+    transform: none;
+  }
+}

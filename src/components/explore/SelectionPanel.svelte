@@ -1,5 +1,7 @@
 <script lang="ts">
 import { resolve } from "$app/paths";
+import { prefersReducedMotion } from "svelte/motion";
+import { fade } from "svelte/transition";
 import { CopyLink } from "$lib/copy-link.svelte";
 import { fmt, per10k, type Selection } from "$lib/explore/model";
 
@@ -39,13 +41,16 @@ let title = $derived(
 >
   <div>
     <div class="label-caps">Showing</div>
-    <h2
-      class="text-ink mt-1.5 mb-2 font-serif leading-[1.08] text-pretty {title.length > 30
-        ? 'text-[28px]'
-        : 'text-[40px]'}"
-    >
-      {title}
-    </h2>
+    {#key title}
+      <h2
+        in:fade={{ duration: prefersReducedMotion.current ? 100 : 180 }}
+        class="text-ink mt-1.5 mb-2 font-serif leading-[1.08] text-pretty {title.length > 30
+          ? 'text-[28px]'
+          : 'text-[40px]'}"
+      >
+        {title}
+      </h2>
+    {/key}
     <div class="text-muted text-[13.5px]">{selection.windowText}</div>
     {#if selection.because}
       <div class="text-body mt-1.5 text-[13.5px] text-pretty">{selection.because}</div>
@@ -58,14 +63,21 @@ let title = $derived(
   <div class="flex flex-wrap gap-x-14 gap-y-4">
     {#each stats as stat (stat.label)}
       <div>
-        <div class="font-serif text-[34px] leading-none {stat.color}">{stat.value}</div>
+        {#key stat.value}
+          <div
+            in:fade={{ duration: prefersReducedMotion.current ? 100 : 180 }}
+            class="font-serif text-[34px] leading-none tabular-nums {stat.color}"
+          >
+            {stat.value}
+          </div>
+        {/key}
         <div class="label-caps mt-2">{stat.label}</div>
       </div>
     {/each}
   </div>
   <p class="text-body text-[15px] leading-[1.55] text-pretty" aria-live="polite">{sentence}</p>
   {#if selection.status === "ok"}
-    <div>
+    <div in:fade={{ duration: prefersReducedMotion.current ? 100 : 180 }}>
       <div class="label-caps">Reported closures by type</div>
       <ul class="mt-2.5 flex flex-col gap-1.5">
         {#each selection.types as type (type.key)}
@@ -84,7 +96,7 @@ let title = $derived(
     </div>
   {/if}
   {#if selection.selected}
-    <div>
+    <div in:fade={{ duration: prefersReducedMotion.current ? 100 : 180 }}>
       <div class="label-caps">Community context · 2010</div>
       {#if selection.context.length}
         <ul class="mt-2.5 flex flex-col gap-1.5">
@@ -138,7 +150,7 @@ let title = $derived(
     {#if selection.status === "ok"}
       <a
         href="{resolve('/summary')}{search}"
-        class="bg-yale-blue flex h-[46px] flex-1 items-center justify-center rounded-[3px] text-[14px] font-semibold text-white hover:brightness-[.92]"
+        class="motion-control bg-yale-blue flex h-[46px] flex-1 items-center justify-center rounded-[3px] text-[14px] font-semibold text-white hover:brightness-[.92]"
       >
         View one-page summary →
       </a>
@@ -155,9 +167,12 @@ let title = $derived(
     <button
       type="button"
       onclick={() => share.copy()}
-      class="border-field-border text-ink hover:border-ink h-[46px] flex-[0_0_84px] rounded-[3px] border bg-white text-[14px] font-semibold"
+      aria-live="polite"
+      class="motion-control border-field-border text-ink hover:border-ink h-[46px] flex-[0_0_84px] rounded-[3px] border bg-white text-[14px] font-semibold"
     >
-      {share.copied ? "Copied" : "Share"}
+      {#key share.copied}
+        <span in:fade={{ duration: 120 }}>{share.copied ? "Copied" : "Share"}</span>
+      {/key}
     </button>
   </div>
   <div class="text-body text-[14px]">

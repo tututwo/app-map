@@ -3,6 +3,8 @@ import { beforeNavigate, goto, replaceState } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { navigating, page } from "$app/state";
 import { onMount } from "svelte";
+import { prefersReducedMotion } from "svelte/motion";
+import { fade, scale } from "svelte/transition";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
@@ -148,6 +150,15 @@ function reset() {
 }
 </script>
 
+<svelte:window
+  onkeydown={(event) => {
+    if (event.key === "Escape" && legendInfo) {
+      legendInfo = false;
+      document.getElementById("legend-help-toggle")?.focus();
+    }
+  }}
+/>
+
 <svelte:head>
   <title>Explore · Where are places of worship closing?</title>
 </svelte:head>
@@ -168,10 +179,10 @@ function reset() {
       bind:type={() => query.type, (type) => navigation.update({ type })}
     />
     <div
-      class="flex min-h-14 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
+      class="flex min-h-14 min-w-0 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
     >
       <span class="text-muted text-[12.5px] whitespace-nowrap">View by</span>
-      <div class="bg-seg inline-flex gap-0.5 rounded-[5px] p-[3px]">
+      <div class="bg-seg inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[5px] p-[3px]">
         {#each VIEWS as { label, level } (label)}
           <button
             type="button"
@@ -181,7 +192,7 @@ function reset() {
               ? `${label} view`
               : `${label} boundaries are not available in this release`}
             onclick={() => level && navigation.look({ level })}
-            class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
+            class="motion-control text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
               : ''}"
@@ -193,7 +204,7 @@ function reset() {
       <button
         type="button"
         onclick={reset}
-        class="border-field-border text-ink hover:border-ink h-[34px] rounded-[3px] border bg-white px-3.5 text-[11px] font-bold tracking-[.1em] uppercase"
+        class="motion-control border-field-border text-ink hover:border-ink h-[34px] rounded-[3px] border bg-white px-3.5 text-[11px] font-bold tracking-[.1em] uppercase"
       >
         Reset
       </button>
@@ -201,17 +212,22 @@ function reset() {
   </div>
 
   {#if navigation.notice}
-    <p role="status" class="bg-footer text-body px-5 py-3 text-sm">{navigation.notice}</p>
+    <p in:fade={{ duration: 140 }} role="status" class="bg-footer text-body px-5 py-3 text-sm">
+      {navigation.notice}
+    </p>
   {/if}
 
   {#if data.error}
     <div
+      in:fade={{ duration: 140 }}
       role="alert"
       class="flex items-center justify-between gap-4 bg-red-50 px-6 py-3 text-sm text-red-800"
     >
       <span>{data.error}</span>
-      <button type="button" onclick={() => window.location.reload()} class="font-semibold underline"
-        >Retry data</button
+      <button
+        type="button"
+        onclick={() => window.location.reload()}
+        class="motion-control font-semibold underline">Retry data</button
       >
     </div>
   {/if}
@@ -238,7 +254,9 @@ function reset() {
           class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm"
         >
           <p>{mapError}</p>
-          <button type="button" onclick={loadMap} class="font-semibold underline">Retry map</button>
+          <button type="button" onclick={loadMap} class="motion-control font-semibold underline"
+            >Retry map</button
+          >
         </div>
       {:else}
         <div
@@ -257,7 +275,7 @@ function reset() {
           aria-label="Zoom in"
           disabled={!mapControls}
           onclick={() => mapControls?.zoomIn()}
-          class="border-rule text-ink hover:bg-footer size-[42px] border-b text-[18px] disabled:opacity-40"
+          class="motion-control border-rule text-ink hover:bg-footer size-[42px] border-b text-[18px] disabled:opacity-40"
           >+</button
         >
         <button
@@ -265,7 +283,8 @@ function reset() {
           aria-label="Zoom out"
           disabled={!mapControls}
           onclick={() => mapControls?.zoomOut()}
-          class="text-ink hover:bg-footer size-[42px] text-[18px] disabled:opacity-40">−</button
+          class="motion-control text-ink hover:bg-footer size-[42px] text-[18px] disabled:opacity-40"
+          >−</button
         >
       </div>
 
@@ -275,9 +294,13 @@ function reset() {
         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <span class="text-ink text-[13px] font-semibold lg:text-[15px]">Reported closures</span>
           <button
+            id="legend-help-toggle"
             type="button"
+            aria-expanded={legendInfo}
+            aria-controls={legendInfo ? "legend-help" : undefined}
             onclick={() => (legendInfo = !legendInfo)}
-            class="text-medium-blue text-[13px] hover:underline">How are colors chosen?</button
+            class="motion-control text-medium-blue text-[13px] hover:underline"
+            >How are colors chosen?</button
           >
         </div>
         <p class="text-muted text-[12px] max-lg:hidden">
@@ -298,8 +321,18 @@ function reset() {
           </div>
         </div>
         {#if legendInfo}
-          <p
-            class="border-rule text-muted mt-0.5 border-t pt-3 text-[12.5px] leading-normal text-pretty"
+          <!-- The scrollable color guide must support keyboard scrolling. -->
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <div
+            id="legend-help"
+            role="region"
+            aria-label="Map color guide"
+            tabindex="0"
+            transition:scale={{
+              start: prefersReducedMotion.current ? 1 : 0.98,
+              duration: prefersReducedMotion.current ? 100 : 180,
+            }}
+            class="legend-help border-rule text-body absolute right-0 bottom-[calc(100%_+_8px)] left-0 max-h-[min(30vh,11rem)] origin-bottom-right overflow-auto rounded-lg border bg-white p-4 text-[12.5px] leading-normal text-pretty shadow-[0_8px_28px_-8px_rgba(0,0,0,.2)] lg:max-h-80"
           >
             {#if drawnLevel !== "state" && drawnLevel !== "county"}
               Fixed breaks at {FIXED_BREAKS[drawnLevel].join(", ")} reported closures apply to every
@@ -320,10 +353,18 @@ function reset() {
             Gray means no place of worship of this type was active there in the window; zero stays in
             the lightest class. Moves are excluded. Counts cover the full window, so longer windows can
             contain more closures.
-          </p>
+          </div>
         {/if}
       </div>
     </div>
     <SelectionPanel {selection} search={page.url.search} />
   </div>
 </main>
+
+<style>
+@media (prefers-reduced-motion: reduce) {
+  .legend-help {
+    transform: none !important;
+  }
+}
+</style>

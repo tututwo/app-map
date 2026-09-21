@@ -1,6 +1,7 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
+import { prefersReducedMotion } from "svelte/motion";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import ImageSlot from "$components/site/ImageSlot.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
@@ -57,6 +58,31 @@ const wrap = "mx-auto max-w-[1400px] px-5 lg:px-[60px]";
 const h2 = "font-serif text-[30px] leading-[1.15] text-ink";
 const tag =
   "pointer-events-none absolute rounded-[2px] bg-white px-[7px] py-1 text-[8.5px] font-bold tracking-[.12em] text-ink uppercase";
+
+// Content stays visible without JavaScript; each group settles into place once it enters view.
+function reveal(node: HTMLElement) {
+  if (prefersReducedMotion.current) return;
+  let animation: Animation | undefined;
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting) return;
+      animation = node.animate(
+        [
+          { opacity: 0, transform: "translateY(14px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 480, easing: "cubic-bezier(.2,.8,.2,1)" }
+      );
+      observer.disconnect();
+    },
+    { threshold: 0.08 }
+  );
+  observer.observe(node);
+  return () => {
+    observer.disconnect();
+    animation?.cancel();
+  };
+}
 </script>
 
 <svelte:head>
@@ -73,7 +99,7 @@ const tag =
     <div
       class="{wrap} grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-end gap-14 pt-10 pb-16"
     >
-      <div class="pb-2.5">
+      <div class="pb-2.5" {@attach reveal}>
         <div class="text-kicker mb-7 text-[10.5px] font-bold tracking-[.14em] uppercase">
           Yale School of Public Health · Research project
         </div>
@@ -90,6 +116,7 @@ const tag =
       </div>
       <div
         class="border-rule relative aspect-[2.15] w-full min-w-0 overflow-hidden rounded border bg-white"
+        {@attach reveal}
       >
         <ImageSlot label="Hero image — a place of worship, then and now" />
       </div>
@@ -101,7 +128,7 @@ const tag =
     <form
       method="get"
       action={resolve("/explore")}
-      class="border-rule flex flex-wrap rounded border bg-white shadow-[0_1px_2px_rgba(0,0,0,.05),0_14px_34px_-18px_rgba(0,0,0,.22)]"
+      class="home-search border-rule flex flex-wrap rounded border bg-white shadow-[0_1px_2px_rgba(0,0,0,.05),0_14px_34px_-18px_rgba(0,0,0,.22)]"
     >
       <FindPlace
         value=""
@@ -132,9 +159,9 @@ const tag =
       <div class="flex items-stretch p-2">
         <button
           type="submit"
-          class="bg-yale-blue min-h-12 rounded-[3px] px-6 text-[14px] font-semibold whitespace-nowrap text-white hover:brightness-[.92]"
+          class="motion-control bg-yale-blue min-h-12 rounded-[3px] px-6 text-[14px] font-semibold whitespace-nowrap text-white hover:brightness-[.92]"
         >
-          Explore →
+          Explore <span class="motion-arrow inline-block" aria-hidden="true">→</span>
         </button>
       </div>
     </form>
@@ -145,7 +172,7 @@ const tag =
 
   <!-- Then and now -->
   <section class="{wrap} pt-24">
-    <div class="mb-[30px] flex flex-col gap-3.5">
+    <div class="mb-[30px] flex flex-col gap-3.5" {@attach reveal}>
       <h2 class={h2}>Then and now</h2>
       <p class="text-muted max-w-[640px] text-[15px] leading-[1.55] text-pretty">
         Each pair is the same address a few years apart — a congregation in use, then the building
@@ -154,7 +181,7 @@ const tag =
     </div>
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-10">
       {#each pairs as pair (pair.name)}
-        <figure>
+        <figure {@attach reveal}>
           <div class="grid aspect-[2.68] grid-cols-2 gap-0.5 overflow-hidden rounded-[3px]">
             <div class="bg-nodata relative">
               <ImageSlot label="photo — open {pair.open}" />
@@ -176,13 +203,14 @@ const tag =
 
   <!-- From our research -->
   <section class="{wrap} pt-[104px]">
-    <div class="mb-7 flex items-baseline justify-between gap-6">
+    <div class="mb-7 flex items-baseline justify-between gap-6" {@attach reveal}>
       <h2 class={h2}>From our research</h2>
     </div>
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-6">
       {#each papers as paper (paper.title)}
         <article
           class="border-rule flex flex-col gap-2.5 rounded border bg-white px-[22px] pt-[22px] pb-5"
+          {@attach reveal}
         >
           <span
             class="bg-scale-1 text-yale-blue self-start rounded-[2px] px-2 py-1 text-[9px] font-bold tracking-[.12em] uppercase"
@@ -202,11 +230,11 @@ const tag =
   </section>
 
   <!-- Stories -->
-  <section id="stories" class="{wrap} scroll-mt-6 pt-24">
-    <h2 class="{h2} mb-7">Stories</h2>
+  <section id="stories" class="{wrap} pt-24">
+    <h2 class="{h2} mb-7" {@attach reveal}>Stories</h2>
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] items-start gap-6">
       {#each stories as story (story.quote)}
-        <article class="border-yale-blue flex flex-col gap-3 border-t pt-[22px]">
+        <article class="border-yale-blue flex flex-col gap-3 border-t pt-[22px]" {@attach reveal}>
           <blockquote class="text-ink font-serif text-[23px] leading-[1.3] text-pretty">
             “{story.quote}”
           </blockquote>
@@ -218,3 +246,25 @@ const tag =
 </main>
 
 <SiteFooter />
+
+<style>
+.home-search {
+  transition:
+    box-shadow 200ms ease-out,
+    border-color 200ms ease-out;
+}
+.home-search:focus-within {
+  border-color: var(--color-yale-blue);
+  box-shadow:
+    0 0 0 3px rgb(0 53 107 / 8%),
+    0 14px 34px -18px rgb(0 0 0 / 22%);
+}
+#stories {
+  scroll-margin-top: 8rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-search {
+    transition: none;
+  }
+}
+</style>

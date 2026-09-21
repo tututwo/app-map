@@ -161,7 +161,7 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
   >
     <a
       href="{resolve('/explore')}{page.url.search}"
-      class="text-medium-blue text-[14px] font-semibold hover:underline">← Back to the map</a
+      class="motion-link text-medium-blue text-[14px] font-semibold">← Back to the map</a
     >
     {#if selection.status === "ok"}
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -169,7 +169,7 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
         <button
           type="button"
           onclick={() => window.print()}
-          class="bg-yale-blue h-[42px] rounded-[3px] px-5 text-[14px] font-semibold whitespace-nowrap text-white hover:brightness-[.92]"
+          class="motion-control bg-yale-blue h-[42px] rounded-[3px] px-5 text-[14px] font-semibold whitespace-nowrap text-white hover:brightness-[.92]"
         >
           Save as PDF
         </button>
@@ -183,8 +183,10 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
       class="mx-auto mb-5 flex max-w-[8.5in] items-center justify-between gap-4 bg-red-50 px-5 py-3 text-sm text-red-800 print:hidden"
     >
       <span>{data.error}</span>
-      <button type="button" onclick={() => window.location.reload()} class="font-semibold underline"
-        >Retry data</button
+      <button
+        type="button"
+        onclick={() => window.location.reload()}
+        class="motion-control font-semibold underline">Retry data</button
       >
     </div>
   {/if}
@@ -210,7 +212,7 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
         </p>
         <a
           href="{resolve('/explore')}{page.url.search}"
-          class="bg-yale-blue flex h-[42px] items-center rounded-[3px] px-5 text-[14px] font-semibold text-white hover:brightness-[.92]"
+          class="motion-control bg-yale-blue flex h-[42px] items-center rounded-[3px] px-5 text-[14px] font-semibold text-white hover:brightness-[.92]"
           >Choose a place on the map →</a
         >
       </div>

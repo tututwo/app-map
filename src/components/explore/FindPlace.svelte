@@ -1,5 +1,7 @@
 <script lang="ts">
 import { onDestroy } from "svelte";
+import { prefersReducedMotion } from "svelte/motion";
+import { scale } from "svelte/transition";
 import { geocode, looksLikeAddress, search, type Hit } from "$lib/explore/gazetteer";
 import { fmt, type Level, type LngLat } from "$lib/explore/model";
 
@@ -133,10 +135,10 @@ function meta(hit: Hit) {
       autocomplete="off"
       spellcheck="false"
       aria-expanded={options > 0}
-      aria-controls="find-options"
+      aria-controls={open && (options || note) ? "find-options" : undefined}
       aria-autocomplete="list"
       aria-activedescendant={options ? `find-option-${active}` : undefined}
-      aria-describedby="find-note"
+      aria-describedby={open && note ? "find-note" : undefined}
       value={shown}
       oninput={(event) => {
         draft = { selection: value, text: event.currentTarget.value };
@@ -150,14 +152,15 @@ function meta(hit: Hit) {
       class="text-ink placeholder:text-faint focus-visible:outline-yale-blue w-full text-[16px] focus-visible:outline-2 focus-visible:outline-offset-4"
     />
   </label>
-  <div
-    class="border-rule absolute top-full -right-px -left-px z-20 border border-t-0 bg-white shadow-[0_16px_28px_-14px_rgba(0,0,0,.3)] {open &&
-    (options || note)
-      ? ''
-      : 'hidden'}"
-  >
-    <div id="find-options" role="listbox" aria-label="Places" class={options ? "py-1.5" : ""}>
-      {#if open}
+  {#if open && (options || note)}
+    <div
+      transition:scale={{
+        start: prefersReducedMotion.current ? 1 : 0.98,
+        duration: prefersReducedMotion.current ? 100 : 180,
+      }}
+      class="place-suggestions border-rule absolute top-full -right-px -left-px z-20 origin-top-left rounded-b-lg border border-t-0 bg-white shadow-[0_16px_28px_-14px_rgba(0,0,0,.3)]"
+    >
+      <div id="find-options" role="listbox" aria-label="Places" class={options ? "py-1.5" : ""}>
         {#each hits as hit, index (`${hit.label}|${hit.kind}|${hit.at}`)}
           <button
             type="button"
@@ -168,7 +171,7 @@ function meta(hit: Hit) {
             onmousedown={(event) => event.preventDefault()}
             onmousemove={() => (active = index)}
             onclick={() => choose(index)}
-            class="text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] {index ===
+            class="motion-control text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] {index ===
             active
               ? 'bg-footer'
               : ''}"
@@ -188,7 +191,7 @@ function meta(hit: Hit) {
             onmousedown={(event) => event.preventDefault()}
             onmousemove={() => (active = hits.length)}
             onclick={() => choose(hits.length)}
-            class="text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] disabled:opacity-60 {active ===
+            class="motion-control text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] disabled:opacity-60 {active ===
             hits.length
               ? 'bg-footer'
               : ''}"
@@ -197,14 +200,22 @@ function meta(hit: Hit) {
             <span class="text-muted text-[12px] whitespace-nowrap">Street address · Enter</span>
           </button>
         {/if}
-      {/if}
+      </div>
+      <p
+        id="find-note"
+        role="status"
+        class="text-muted px-5 text-[12.5px] leading-normal text-pretty {note ? 'py-2.5' : ''}"
+      >
+        {note}
+      </p>
     </div>
-    <p
-      id="find-note"
-      role="status"
-      class="text-muted px-5 text-[12.5px] leading-normal text-pretty {note ? 'py-2.5' : ''}"
-    >
-      {note}
-    </p>
-  </div>
+  {/if}
 </div>
+
+<style>
+@media (prefers-reduced-motion: reduce) {
+  .place-suggestions {
+    transform: none !important;
+  }
+}
+</style>

@@ -8,6 +8,8 @@ addProtocol("pmtiles", protocol.tile);
 
 <script lang="ts">
 import { onMount } from "svelte";
+import { prefersReducedMotion } from "svelte/motion";
+import { fade } from "svelte/transition";
 import {
   CircleLayer,
   FillLayer,
@@ -160,14 +162,23 @@ onMount(() => {
 });
 
 export function zoomIn() {
-  map?.zoomIn();
+  map?.zoomIn({ duration: prefersReducedMotion.current ? 0 : 300 });
 }
 export function zoomOut() {
-  map?.zoomOut();
+  map?.zoomOut({ duration: prefersReducedMotion.current ? 0 : 300 });
 }
 export function reset() {
-  map?.fitBounds(NATIONAL_BOUNDS, { padding: 35, duration: 650, bearing: 0, pitch: 0 });
+  map?.fitBounds(NATIONAL_BOUNDS, {
+    padding: 35,
+    duration: prefersReducedMotion.current ? 0 : 500,
+    bearing: 0,
+    pitch: 0,
+  });
 }
+
+$effect(() => {
+  if (prefersReducedMotion.current) map?.stop();
+});
 
 function retry() {
   // The wrapper clears its map context before child-layer teardown; reload runtime failures safely.
@@ -305,13 +316,17 @@ function pick(event: MapLayerMouseEvent) {
 // The camera frames the Selection when a search, a Level change or a link chose it. A click on a Unit
 // never moves the camera: the user picked that view. A state is always framed whole.
 let settled: string | undefined;
+const cameraMotion = $derived({
+  duration: still || prefersReducedMotion.current ? 0 : 500,
+  bearing: 0,
+  pitch: 0,
+});
 $effect(() => {
   if (!mapLoaded || !map || !geometry) return;
   const key = `${level}|${focus}|${selected}`;
   if (key === settled) return;
   settled = key;
   const target = map;
-  const move = { duration: still ? 0 : 650, bearing: 0, pitch: 0 };
   if (focus && level !== "state") {
     const [at, lvl] = [focus, level];
     // The URL keeps five decimals of the clicked point.
@@ -326,12 +341,12 @@ $effect(() => {
         if (settled !== key || target !== map) return;
         if (bounds)
           target.fitBounds(bounds, {
-            ...move,
+            ...cameraMotion,
             // Explore's legend lies over the bottom of the map; the Selection must clear it.
             padding: { top: room, right: room, left: room, bottom: room + (still ? 0 : 110) },
             maxZoom: TILES[lvl].maxZoom - 1,
           });
-        else target.easeTo({ ...move, center: at, zoom: TILES[lvl].focusZoom });
+        else target.easeTo({ ...cameraMotion, center: at, zoom: TILES[lvl].focusZoom });
       });
     return;
   }
@@ -340,7 +355,7 @@ $effect(() => {
   const feature = geometry.features.find((candidate) => String(candidate.id) === id);
   target.stop();
   target.fitBounds(feature ? featureBounds(feature) : NATIONAL_BOUNDS, {
-    ...move,
+    ...cameraMotion,
     padding: 45,
     maxZoom: 8,
   });
@@ -496,14 +511,20 @@ $effect(() => {
     </MapLibre>
 
     {#if error}
-      <div class="map-message" role="alert">
+      <div in:fade={{ duration: 140 }} class="map-message" role="alert">
         <p>Map unavailable: {error}</p>
-        <button onclick={retry}>Retry map</button>
+        <button class="motion-control" onclick={retry}>Retry map</button>
       </div>
     {:else if !mapLoaded || !geometry}
-      <div class="map-message pointer-events-none" role="status">Loading state map…</div>
+      <div
+        out:fade={{ duration: still ? 0 : 180 }}
+        class="map-message pointer-events-none"
+        role="status"
+      >
+        Loading state map…
+      </div>
     {:else if notice || (!still && zoom < revealZoom)}
-      <p class="map-hint" role="status">
+      <p transition:fade={{ duration: 140 }} class="map-hint" role="status">
         {notice ??
           `Showing states. Search for a place or click the map to see ${LEVEL_NOUNS[level].many} there.`}
       </p>
@@ -518,7 +539,7 @@ $effect(() => {
         <p>
           Map unavailable: {cause instanceof Error ? cause.message : "Unable to start the map."}
         </p>
-        <button onclick={retry}>Retry map</button>
+        <button class="motion-control" onclick={retry}>Retry map</button>
       </div>
     {/snippet}
   </svelte:boundary>

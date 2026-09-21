@@ -22,7 +22,9 @@ function changeFrom(event: Event & { currentTarget: HTMLSelectElement }) {
 
 const focus =
   "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yale-blue";
-let field = $derived(large ? "flex flex-col gap-1" : "flex flex-col gap-1.5");
+let field = $derived(
+  large ? "query-field flex flex-col gap-1" : "query-field flex flex-col gap-1.5"
+);
 let select = $derived(
   `${focus} cursor-pointer appearance-none ${large ? "pr-[22px] text-[16px] font-medium" : "pr-5 text-[14px] font-semibold"}`
 );
@@ -75,3 +77,20 @@ let caret = $derived(`pointer-events-none absolute text-muted ${large ? "right-1
     </span>
   </label>
 </div>
+
+<style>
+.query-field :global(.label-caps),
+.query-field :global(svg) {
+  transition: color 150ms ease-out;
+}
+.query-field:focus-within :global(.label-caps),
+.query-field:focus-within :global(svg) {
+  color: var(--color-yale-blue);
+}
+@media (prefers-reduced-motion: reduce) {
+  .query-field :global(.label-caps),
+  .query-field :global(svg) {
+    transition: none;
+  }
+}
+</style>
