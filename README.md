@@ -34,6 +34,16 @@ npm run preview:worker
 
 ## Deploy
 
+Cloudflare Workers Builds is configured for `tututwo/app-map`, production branch `main`.
+Push commits to `origin/main` to build and deploy; a local commit alone does not trigger a build.
+The Cloudflare Workers and Pages GitHub App must have access to this repository.
+
+Build settings: Node.js 22 (`NODE_VERSION=22`), root `/`, build command `npm run build`,
+deploy command `npx wrangler deploy --env-file .env.example`. Non-production branch builds
+are disabled. Check build status and logs in the Worker's **Deployments** tab.
+
+For a manual deployment:
+
 ```sh
 npx wrangler login
 npm run deploy
