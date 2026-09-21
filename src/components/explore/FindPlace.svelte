@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import { geocode, looksLikeAddress, search, type Hit } from "$lib/explore/gazetteer";
 import { fmt, type Level, type LngLat } from "$lib/explore/model";
 
@@ -14,7 +15,13 @@ let {
   /** Reported closures by state GEOID for the current window and type, where the page has them. */
   byId?: Map<string, number | null>;
   /** A Location only says where to look; one that is itself a Unit also names its Level. */
-  onpick: (pick: { at: LngLat; level?: Level; geoid?: string; near: string }) => void;
+  onpick: (pick: {
+    at: LngLat;
+    level?: Level;
+    geoid?: string;
+    near: string;
+    address?: string;
+  }) => void;
   label?: string;
   /** Size and alignment of the field inside its bar. */
   class?: string;
@@ -35,17 +42,23 @@ let options = $derived(open ? hits.length + (address ? 1 : 0) : 0);
 
 // The newest keystroke owns the list.
 let ticket = 0;
+onDestroy(() => ticket++);
 async function find(text: string) {
   const mine = ++ticket;
+  hits = [];
+  busy = false;
   note = "";
   active = 0;
+  if (text.trim().length < 2 || looksLikeAddress(text)) return;
+  note = "Finding places…";
   try {
     const found = await search(text);
     if (mine !== ticket) return;
     hits = found;
-    if (!found.length && !looksLikeAddress(text) && text.trim().length > 2)
-      note =
-        "No state, county, ZIP code or city matches. For a street address, start with the house number.";
+    note =
+      !found.length && text.trim().length > 2
+        ? "No state, county, ZIP code or city matches. For a street address, start with the house number."
+        : "";
   } catch {
     if (mine === ticket)
       note = "The list of places could not be loaded. Check your connection and type again.";
@@ -53,21 +66,23 @@ async function find(text: string) {
 }
 
 function pick(hit: Hit) {
+  draft = null;
   close();
   onpick({ at: hit.at, level: hit.unit?.level, geoid: hit.unit?.geoid, near: hit.label });
 }
 
 async function lookUp() {
   const mine = ++ticket;
+  const enteredAddress = shown;
   busy = true;
   note = "Looking up the address…";
   try {
-    const match = await geocode(shown);
+    const match = await geocode(enteredAddress);
     if (mine !== ticket) return;
     if (match) {
       close();
-      // The address itself stays out of the URL; the Focus carries its point.
-      onpick({ at: match.at, near: "address" });
+      // Keep the original text visible until the parent accepts it; the URL carries only the Focus.
+      onpick({ at: match.at, near: "address", address: enteredAddress });
     } else
       note =
         "No address matches. Check the house number and street, add the city or ZIP code, or search for the city instead.";
@@ -80,7 +95,6 @@ async function lookUp() {
 }
 
 function close() {
-  draft = null;
   open = false;
   hits = [];
   note = "";
@@ -129,14 +143,7 @@ function meta(hit: Hit) {
         open = true;
         void find(event.currentTarget.value);
       }}
-      onfocus={(event) => {
-        open = true;
-        event.currentTarget.select();
-      }}
-      onclick={(event) => {
-        // A mouse-up undoes the selection made on focus; typing must replace the Location, not split it.
-        if (!draft) event.currentTarget.select();
-      }}
+      onfocus={() => (open = true)}
       onblur={() => (open = false)}
       {onkeydown}
       placeholder="City, county, ZIP code, state or address"

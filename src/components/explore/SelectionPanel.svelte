@@ -1,5 +1,4 @@
 <script lang="ts">
-import { Play } from "lucide-svelte";
 import { resolve } from "$app/paths";
 import { CopyLink } from "$lib/copy-link.svelte";
 import { fmt, per10k, type Selection } from "$lib/explore/model";
@@ -164,25 +163,4 @@ let title = $derived(
   <div class="text-body text-[14px]">
     Counts cover the selected window, including both endpoint years.
   </div>
-  <div>
-    <a href="/request-data" class="text-medium-blue text-[14px] font-semibold hover:underline"
-      >Request this data →</a
-    >
-    <div class="text-muted mt-2 text-[13.5px] leading-normal">{selection.requestText}</div>
-  </div>
-  <hr class="border-rule" />
-  <!-- Links James's explainer video once it exists (handoff §6.13). -->
-  <button type="button" class="flex items-center gap-4 text-left">
-    <div class="hatch flex h-[52px] flex-[0_0_90px] items-center justify-center rounded-[3px]">
-      <div
-        class="flex size-[26px] items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.15)]"
-      >
-        <Play size={10} class="fill-ink text-ink ml-0.5" />
-      </div>
-    </div>
-    <div>
-      <div class="text-ink text-[14px] font-semibold">How to use this map</div>
-      <div class="text-muted mt-0.5 text-[12px]">Video · 1 min · opens in a dialog</div>
-    </div>
-  </button>
 </aside>

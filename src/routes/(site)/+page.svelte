@@ -5,7 +5,7 @@ import FindPlace from "$components/explore/FindPlace.svelte";
 import ImageSlot from "$components/site/ImageSlot.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import SiteFooter from "$components/site/SiteFooter.svelte";
-import { DEFAULT_QUERY, whereOf, writeQuery, type TypeKey } from "$lib/explore/model";
+import { DEFAULT_QUERY, formatAt, whereOf, writeQuery, type TypeKey } from "$lib/explore/model";
 
 // The bar is a plain GET to /explore; From/To/Type carry over in the URL. A place chosen from the list
 // goes there at once, as the Focus (ADR-0003); Explore derives the Selection a city or address lacks.
@@ -53,9 +53,8 @@ const stories = [
   },
 ];
 
-const wrap = "mx-auto max-w-[1400px] px-[60px]";
+const wrap = "mx-auto max-w-[1400px] px-5 lg:px-[60px]";
 const h2 = "font-serif text-[30px] leading-[1.15] text-ink";
-const link = "text-[13px] font-semibold text-medium-blue hover:underline";
 const tag =
   "pointer-events-none absolute rounded-[2px] bg-white px-[7px] py-1 text-[8.5px] font-bold tracking-[.12em] text-ink uppercase";
 </script>
@@ -68,11 +67,11 @@ const tag =
   />
 </svelte:head>
 
-<main>
+<main id="main-content" tabindex="-1">
   <!-- Hero band -->
   <section class="bg-yale-blue">
     <div
-      class="{wrap} grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] items-end gap-14 pt-10 pb-16"
+      class="{wrap} grid grid-cols-[repeat(auto-fit,minmax(min(100%,380px),1fr))] items-end gap-14 pt-10 pb-16"
     >
       <div class="pb-2.5">
         <div class="text-kicker mb-7 text-[10.5px] font-bold tracking-[.14em] uppercase">
@@ -90,7 +89,7 @@ const tag =
         </p>
       </div>
       <div
-        class="border-rule relative aspect-[2.15] min-h-60 overflow-hidden rounded border bg-white"
+        class="border-rule relative aspect-[2.15] w-full min-w-0 overflow-hidden rounded border bg-white"
       >
         <ImageSlot label="Hero image — a place of worship, then and now" />
       </div>
@@ -108,7 +107,7 @@ const tag =
         value=""
         label="Where"
         class="min-w-0 flex-[1_1_320px] items-center pt-3.5 pb-[13px]"
-        onpick={({ at, level = DEFAULT_QUERY.level, geoid, near }) =>
+        onpick={({ at, level = DEFAULT_QUERY.level, geoid, near, address }) =>
           goto(
             resolve("/explore") +
               "?" +
@@ -120,7 +119,13 @@ const tag =
                 at,
                 near,
                 where: whereOf(level, geoid),
-              })
+              }),
+            {
+              state: {
+                exploreAddress:
+                  address === undefined ? undefined : { at: formatAt(at), text: address },
+              },
+            }
           )}
       />
       <QueryFields bind:from bind:to bind:type />
@@ -147,7 +152,7 @@ const tag =
         after it closed. [Paragraph placeholder; the research team supplies final wording.]
       </p>
     </div>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-10">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-10">
       {#each pairs as pair (pair.name)}
         <figure>
           <div class="grid aspect-[2.68] grid-cols-2 gap-0.5 overflow-hidden rounded-[3px]">
@@ -173,9 +178,8 @@ const tag =
   <section class="{wrap} pt-[104px]">
     <div class="mb-7 flex items-baseline justify-between gap-6">
       <h2 class={h2}>From our research</h2>
-      <a href="/health-impacts" class="{link} whitespace-nowrap">See all research →</a>
     </div>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-6">
       {#each papers as paper (paper.title)}
         <article
           class="border-rule flex flex-col gap-2.5 rounded border bg-white px-[22px] pt-[22px] pb-5"
@@ -192,7 +196,6 @@ const tag =
           <div class="bg-nodata relative mt-1.5 aspect-[1.9] overflow-hidden rounded-[3px]">
             <ImageSlot label={paper.image} />
           </div>
-          <a href="/health-impacts" class="{link} mt-auto pt-2">Read the paper →</a>
         </article>
       {/each}
     </div>
@@ -201,27 +204,15 @@ const tag =
   <!-- Stories -->
   <section id="stories" class="{wrap} scroll-mt-6 pt-24">
     <h2 class="{h2} mb-7">Stories</h2>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] items-start gap-6">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] items-start gap-6">
       {#each stories as story (story.quote)}
         <article class="border-yale-blue flex flex-col gap-3 border-t pt-[22px]">
           <blockquote class="text-ink font-serif text-[23px] leading-[1.3] text-pretty">
             “{story.quote}”
           </blockquote>
           <div class="text-muted text-[12px]">{story.who}</div>
-          <a href="/stories" class={link}>Read the story →</a>
         </article>
       {/each}
-      <aside class="border-rule flex flex-col gap-[18px] rounded border bg-white p-6">
-        <p class="text-ink text-[15px] leading-normal text-pretty">
-          Did a place of worship near you close? Tell us what changed.
-        </p>
-        <a
-          href="/stories"
-          class="border-yale-blue text-yale-blue hover:bg-yale-blue flex h-[42px] items-center justify-center rounded-full border-[1.5px] text-[13.5px] font-semibold hover:text-white"
-        >
-          Share your story
-        </a>
-      </aside>
     </div>
   </section>
 </main>

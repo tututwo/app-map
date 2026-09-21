@@ -1,5 +1,5 @@
 <script lang="ts">
-import { goto } from "$app/navigation";
+import { beforeNavigate, goto, replaceState } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { navigating, page } from "$app/state";
 import { onMount } from "svelte";
@@ -8,8 +8,8 @@ import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import { countsIn, levelBreaks } from "$lib/explore/load";
 import { windowIndexOf } from "$lib/explore/metrics";
+import { ExploreNavigation, type AddressText } from "$lib/explore/navigation.svelte";
 import {
-  DEFAULT_QUERY,
   FIXED_BREAKS,
   LEVEL_NOUNS,
   NO_DATA_COLOR,
@@ -17,13 +17,10 @@ import {
   TILES,
   legendFor,
   manifest,
-  parentOf,
+  formatAt,
   selectionFor,
-  whereOf,
   writeQuery,
-  type ExploreQuery,
   type Level,
-  type LngLat,
 } from "$lib/explore/model";
 import type { PageData } from "./$types";
 
@@ -50,14 +47,57 @@ let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );
 let legend = $derived(legendFor(breaks[drawnLevel]));
-// True while the Unit under the Focus is being read from the tiles; "failed" when that read failed.
-let locating = $state<boolean | "failed">(false);
-let selection = $derived(selectionFor(query, data.breakdown, data.context, locating));
 let legendInfo = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
 let mapControls = $state<{ zoomIn: () => void; zoomOut: () => void; reset: () => void }>();
 let mapError = $state<string | null>(null);
 let mounted = false;
+
+// Keep address text in this tab, separate from the coordinates in shareable URLs.
+let addressText = $state.raw<AddressText>();
+const navigation = new ExploreNavigation(
+  () => ({ query, address: addressText ?? page.state.exploreAddress }),
+  async ({ query: next, address }) => {
+    if (!mounted) return;
+    addressText = address;
+    try {
+      if (address) sessionStorage.setItem("explore-address", JSON.stringify(address));
+      else sessionStorage.removeItem("explore-address");
+    } catch {
+      // Storage can be unavailable; the current page still retains the address.
+    }
+    const url = new URL(page.url);
+    writeQuery(url.searchParams, next);
+    const state = { ...page.state, exploreAddress: address };
+    if (url.search === page.url.search && !navigating.to) {
+      replaceState(url, state);
+      return;
+    }
+    await goto(resolve("/explore") + url.search, {
+      replaceState: true,
+      keepFocus: true,
+      noScroll: true,
+      state,
+    });
+  },
+  async (level, at) => (await import("$lib/explore/locate")).unitAt(level, at)
+);
+let selection = $derived(selectionFor(query, data.breakdown, data.context, navigation.locating));
+let searchValue = $derived.by(() => {
+  const { query: current, address } = navigation.current;
+  return current.near === "address"
+    ? address && current.at && address.at === formatAt(current.at)
+      ? address.text
+      : "Address you looked up"
+    : current.near;
+});
+
+beforeNavigate(({ to }) => {
+  if (to?.route.id !== page.route.id) {
+    mounted = false;
+    navigation.cancel();
+  }
+});
 
 async function loadMap() {
   mapError = null;
@@ -72,92 +112,37 @@ async function loadMap() {
 onMount(() => {
   mounted = true;
   void loadMap();
+  try {
+    const saved = JSON.parse(sessionStorage.getItem("explore-address") ?? "null");
+    if (saved && typeof saved.at === "string" && typeof saved.text === "string")
+      addressText = page.state.exploreAddress ?? saved;
+  } catch {
+    // A saved address is optional; invalid or inaccessible storage does not block the map.
+  }
   // The Focus is the authority: `where` only lets the server render a shared link. A link that carries
   // a Focus alone, or a `where` that someone edited, is put right here.
-  if (query.at) void look({ quiet: true });
+  if (query.at) void navigation.look({ quiet: true });
   // Or a Unit alone (Home's form, older links): give it a Focus, so View by can answer at other Levels.
   else if (!query.at && selection.selected) {
     const unit = selection.selected;
+    const { where, level } = query;
     void import("$lib/explore/gazetteer")
       .then(({ pointOf }) => pointOf(unit))
-      .then((at) => at && !query.at && selection.selected?.id === unit.id && update({ at }))
+      .then((at) => {
+        const current = navigation.current.query;
+        if (at && mounted && !current.at && current.where === where && current.level === level)
+          return navigation.update({ at });
+      })
       .catch(() => {});
   }
   return () => {
     mounted = false;
+    navigation.cancel();
   };
 });
 
-// Consecutive From/To writes preserve the whole pending URL.
-let pending: URL | null = null;
-function update(patch: Partial<ExploreQuery>) {
-  const url = new URL(pending ?? page.url);
-  const before = url.search;
-  writeQuery(url.searchParams, patch);
-  if (url.search === before) return;
-  pending = url;
-  void goto(resolve("/explore") + url.search, {
-    replaceState: true,
-    keepFocus: true,
-    noScroll: true,
-  }).finally(() => {
-    if (pending === url) pending = null;
-  });
-}
-
-// The newest request wins: a slower lookup must not overwrite the Selection that followed it.
-let ticket = 0;
-/**
- * Say where to look (`at`), what to report there (`level`), or both; the Selection follows (ADR-0003).
- * A new Focus may name the Unit it was taken from. The same Focus at a coarser Level is the Selection's
- * parent. Anything else is read from the tiles.
- */
-async function look(next: {
-  at?: LngLat;
-  level?: Level;
-  geoid?: string;
-  near?: string;
-  /** Checking a link's Selection against its Focus must not blank a panel the server already filled. */
-  quiet?: boolean;
-}) {
-  const mine = ++ticket;
-  const level = next.level ?? query.level;
-  const at = next.at ?? query.at;
-  let id =
-    next.geoid ??
-    (next.at || !selection.selected ? undefined : parentOf(selection.selected, level));
-  locating = false;
-  if (!id && at) {
-    if (!next.quiet) locating = true;
-    let failed = false;
-    try {
-      const { unitAt } = await import("$lib/explore/locate");
-      id = (await unitAt(level, at)) ?? undefined;
-    } catch {
-      failed = true;
-    }
-    if (mine !== ticket) return;
-    locating = failed ? "failed" : false;
-  }
-  update({
-    at,
-    level,
-    near: next.at ? (next.near ?? "") : query.near,
-    // A new Level for the same Focus: remember what was being read, so the panel can say why this Unit.
-    via:
-      next.at || query.near
-        ? ""
-        : next.level && next.level !== query.level
-          ? query.via || (selection.selected?.name ?? "")
-          : query.via,
-    where: whereOf(level, id),
-  });
-}
-
 function reset() {
-  ticket++;
-  locating = false;
-  update(DEFAULT_QUERY);
+  void navigation.reset();
   mapControls?.reset();
   legendInfo = false;
 }
@@ -168,18 +153,19 @@ function reset() {
 </svelte:head>
 
 <!-- Below desktop width the map sits above the panel instead of beside it. -->
-<main class="flex flex-col lg:h-[max(720px,calc(100vh_-_65px))]" aria-busy={!!navigating.to}>
+<main
+  id="main-content"
+  tabindex="-1"
+  class="flex flex-col lg:h-[max(720px,calc(100vh_-_65px))]"
+  aria-busy={!!navigating.to || navigation.locating === true}
+>
   <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
-    <FindPlace
-      value={query.near === "address" ? "Address you looked up" : query.near}
-      byId={closedByState}
-      onpick={look}
-    />
+    <FindPlace value={searchValue} byId={closedByState} onpick={(pick) => navigation.look(pick)} />
     <QueryFields
       large
-      bind:from={() => query.from, (from) => update({ from })}
-      bind:to={() => query.to, (to) => update({ to })}
-      bind:type={() => query.type, (type) => update({ type })}
+      bind:from={() => query.from, (from) => navigation.update({ from })}
+      bind:to={() => query.to, (to) => navigation.update({ to })}
+      bind:type={() => query.type, (type) => navigation.update({ type })}
     />
     <div
       class="flex min-h-14 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
@@ -194,7 +180,7 @@ function reset() {
             title={level
               ? `${label} view`
               : `${label} boundaries are not available in this release`}
-            onclick={() => level && look({ level })}
+            onclick={() => level && navigation.look({ level })}
             class="text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
@@ -213,6 +199,10 @@ function reset() {
       </button>
     </div>
   </div>
+
+  {#if navigation.notice}
+    <p role="status" class="bg-footer text-body px-5 py-3 text-sm">{navigation.notice}</p>
+  {/if}
 
   {#if data.error}
     <div
@@ -236,7 +226,7 @@ function reset() {
           bind:zoom={mapZoom}
           selected={selection.selected?.id ?? null}
           focus={query.at}
-          onpick={look}
+          onpick={(pick) => navigation.look(pick)}
           level={query.level}
           {yearWindow}
           {breaks}

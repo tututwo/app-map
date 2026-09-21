@@ -4,7 +4,9 @@ declare namespace App {
   // interface Error {}
   // interface Locals {}
   // interface PageData {}
-  // interface PageState {}
+  interface PageState {
+    exploreAddress?: import("./lib/explore/navigation.svelte").AddressText;
+  }
   interface Platform {
     env: Cloudflare.Env;
     ctx: ExecutionContext;

@@ -151,6 +151,8 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
 </svelte:head>
 
 <main
+  id="main-content"
+  tabindex="-1"
   class="bg-footer min-h-[calc(100vh_-_65px)] px-4 pt-5 pb-12 print:min-h-0 print:bg-white print:p-0"
 >
   <!-- The controls live here, outside the sheet: paper gets the sheet alone. -->

@@ -17,14 +17,8 @@ const chip =
 {/snippet}
 
 <footer class="border-rule bg-footer mt-24 border-t">
-  <div class="mx-auto max-w-[1400px] px-[60px] pt-[52px] pb-10">
+  <div class="mx-auto max-w-[1400px] px-5 pt-[52px] pb-10 lg:px-[60px]">
     <div class="flex flex-wrap items-start justify-between gap-x-[60px] gap-y-10">
-      <nav class="text-ink flex flex-col gap-3 text-[13px] font-semibold">
-        <a href="/methodology" class="hover:underline">Methodology</a>
-        <a href="/request-data" class="hover:underline">Get the data</a>
-        <a href="/contact" class="hover:underline">Contact</a>
-      </nav>
-
       <div class="flex flex-col gap-3">
         <span class="label-caps">Share</span>
         <div class="flex flex-wrap gap-2.5">
@@ -49,10 +43,6 @@ const chip =
             {@render dot()}{copy.copied ? "Copied" : "Copy link"}
           </button>
           <span class="sr-only" role="status">{copy.copied ? "Link copied" : ""}</span>
-          <!-- The research team's Substack replaces this once it exists. -->
-          <a class={chip} target="_blank" rel="noopener noreferrer" href="https://substack.com">
-            {@render dot()}Substack
-          </a>
         </div>
       </div>
 

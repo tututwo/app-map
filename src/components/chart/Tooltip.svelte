@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Snippet } from "svelte";
 import { fade } from "svelte/transition";
-import { Tween } from "svelte/motion";
+import { prefersReducedMotion, Tween } from "svelte/motion";
 import { cubicOut } from "svelte/easing";
 
 type Side = "top" | "bottom" | "left" | "right";
@@ -195,8 +195,8 @@ $effect(() => {
   }
 
   // Update tooltip position
-  tooltipPos.x.target = tooltipX;
-  tooltipPos.y.target = tooltipY;
+  void tooltipPos.x.set(tooltipX, { duration: prefersReducedMotion.current ? 0 : 75 });
+  void tooltipPos.y.set(tooltipY, { duration: prefersReducedMotion.current ? 0 : 75 });
 
   // Calculate arrow position
   const relCursorX = cursorX - tooltipX;
@@ -232,8 +232,8 @@ const arrowClass =
     data-slot="tooltip"
     class={tooltipClass}
     style="left: {tooltipPos.x.current}px; top: {tooltipPos.y.current}px;"
-    in:fade={{ duration: 150 }}
-    out:fade={{ duration: 100 }}
+    in:fade={{ duration: prefersReducedMotion.current ? 0 : 150 }}
+    out:fade={{ duration: prefersReducedMotion.current ? 0 : 100 }}
   >
     {@render children?.()}
     {#if showArrow}

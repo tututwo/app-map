@@ -4,14 +4,17 @@ import { page } from "$app/state";
 
 let { children } = $props();
 
-// Health Impacts / Download Data / About point at the handoff's planned routes;
-// those pages land in later tickets.
 const link =
-  "-mb-px flex items-center border-b-2 text-[14px] font-medium whitespace-nowrap text-ink";
+  "-mb-px flex items-center border-b-2 text-[14px] font-medium whitespace-nowrap text-ink hover:text-yale-blue";
 let exploreActive = $derived(page.url.pathname.startsWith("/explore"));
 </script>
 
 <div class="text-body bg-white font-sans text-[15px] leading-normal">
+  <a
+    href="#main-content"
+    class="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:rounded focus-visible:bg-white focus-visible:px-4 focus-visible:py-3 focus-visible:text-yale-blue focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yale-blue print:hidden"
+    >Skip to main content</a
+  >
   <!-- Paper carries the page alone: the Summary prints without the site's navigation. -->
   <header
     class="border-rule relative z-[5] flex h-16 items-center justify-between gap-6 border-b bg-white px-5 lg:px-[60px] print:hidden"
@@ -27,10 +30,7 @@ let exploreActive = $derived(page.url.pathname.startsWith("/explore"));
         href={resolve("/explore")}
         class="{link} {exploreActive ? 'border-yale-blue' : 'border-transparent'}">Explore</a
       >
-      <a href="/#stories" class="{link} border-transparent">Stories</a>
-      <a href="/health-impacts" class="{link} border-transparent">Health Impacts</a>
-      <a href="/request-data" class="{link} border-transparent">Download Data</a>
-      <a href="/about" class="{link} border-transparent">About</a>
+      <a href="{resolve('/')}#stories" class="{link} border-transparent">Stories</a>
     </nav>
   </header>
   {@render children()}
