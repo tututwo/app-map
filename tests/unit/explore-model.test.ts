@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
   DEFAULT_QUERY,
+  COLORS,
   FIXED_BREAKS,
   WINDOWS,
   breaksFor,
@@ -105,7 +106,7 @@ test("a GEOID is read at the Query's Level and never guessed from its shape", ()
   expect(unitFor("46113", "county")?.name).toBe("Shannon County, SD");
   // 06037 is Los Angeles County and also a ZIP in Connecticut: the Level decides, the digits never do.
   expect(unitFor("06037", "county")?.name).toBe("Los Angeles County, CA");
-  expect(unitFor("06037", "zcta")).toEqual({ level: "zcta", id: "06037", name: "ZIP 06037" });
+  expect(unitFor("06037", "zcta")).toEqual({ level: "zcta", id: "06037", name: "ZCTA 06037" });
   expect(unitFor("06037", "tract")).toBeUndefined();
   expect(unitFor("06510", "county")).toBeUndefined();
   expect(unitFor("09009", "state")).toBeUndefined();
@@ -135,20 +136,37 @@ test("breaks follow the data and classes always span the colour ramp", () => {
   expect(breaksFor([])).toEqual([]);
   expect(breaksFor([0, null, 3, 3, 3])).toEqual([3]);
   const breaks = breaksFor(Array.from({ length: 51 }, (_, index) => (index + 1) * 111));
-  expect(breaks).toHaveLength(4);
+  expect(COLORS).toHaveLength(10);
+  expect(new Set(COLORS).size).toBe(10);
+  expect(breaks).toHaveLength(9);
   expect(breaks).toEqual([...breaks].sort((a, b) => a - b));
   expect(colorIndexOf(null, breaks)).toBe(-1);
   expect(colorIndexOf(0, breaks)).toBe(0);
   expect(colorIndexOf(breaks[0] - 1, breaks)).toBe(0);
   expect(colorIndexOf(breaks[0], breaks)).toBe(1);
-  expect(colorIndexOf(1e9, breaks)).toBe(4);
-  expect(colorIndexOf(5, [3])).toBe(4);
+  expect(colorIndexOf(1e9, breaks)).toBe(9);
+  expect(colorIndexOf(5, [3])).toBe(9);
   expect(colorIndexOf(5, [])).toBe(0);
+  for (const fixed of Object.values(FIXED_BREAKS)) {
+    const classes = legendFor(fixed).classes;
+    expect(classes.map((cls) => cls.color)).toEqual(COLORS);
+    expect(classes).toHaveLength(10);
+    // Every threshold belongs to its upper class; zero and No data remain distinct.
+    for (const [index, threshold] of fixed.entries()) {
+      expect(colorIndexOf(threshold - 1, fixed)).toBe(index);
+      expect(colorIndexOf(threshold, fixed)).toBe(index + 1);
+    }
+  }
   expect(legendFor(FIXED_BREAKS.blockgroup).classes.map((cls) => cls.label)).toEqual([
     "0",
     "1",
-    "2–3",
-    "4–7",
-    "8+",
+    "2",
+    "3",
+    "4–5",
+    "6–7",
+    "8–11",
+    "12–15",
+    "16–19",
+    "20+",
   ]);
 });

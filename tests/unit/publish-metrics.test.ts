@@ -66,6 +66,20 @@ it("publishes eligible files, retries uploads and fails on invalid inputs or com
     writeFileSync(join(tiles, "metrics/rows.bin"), "row");
     expect(run(["sdoh", "metrics"]).status).toBe(0);
     expect(readFileSync(log, "utf8").trim().split("\n")).toHaveLength(4);
+    expect(run([]).status).toBe(1); // The default includes map slices, checked before any uploads.
+    expect(readFileSync(log, "utf8")).toBe("");
+    mkdirSync(join(tiles, "map/tract/release/all_religions"), { recursive: true });
+    writeFileSync(join(tiles, "map/tract/release/geoids.json.gz"), "map index");
+    writeFileSync(join(tiles, "map/tract/release/all_religions/0.bin.gz"), "map counts");
+    expect(run([]).status).toBe(0); // A map index has no rows.bin; only Metric cube shards need it.
+    expect(readFileSync(log, "utf8").trim().split("\n").sort()).toEqual([
+      "worship-closures-tiles/map/tract/release/all_religions/0.bin.gz",
+      "worship-closures-tiles/map/tract/release/geoids.json.gz",
+      "worship-closures-tiles/metrics/a file.gz",
+      "worship-closures-tiles/metrics/geoids.json.gz",
+      "worship-closures-tiles/metrics/rows.bin",
+      "worship-closures-tiles/sdoh/us.json.gz",
+    ]);
     rmSync(join(tiles, "metrics/geoids.json.gz"));
     rmSync(join(tiles, "metrics/a file.gz"));
     expect(run("metrics", "retry").status).toBe(0);

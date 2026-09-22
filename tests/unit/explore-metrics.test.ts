@@ -100,3 +100,94 @@ test("a truncated but valid compressed row fails instead of returning undefined 
     "Invalid row counts"
   );
 });
+
+test.each(
+  (["tract", "zcta", "blockgroup"] as const).flatMap((level) =>
+    [false, true].map((browser) => ({ level, browser }))
+  )
+)(
+  "$level map slices preserve values and browser-only caching ($browser)",
+  async ({ level, browser }) => {
+    environment.browser = browser;
+    vi.resetModules();
+    const { loadMapValues } = await import("$lib/explore/metrics");
+    const { places, dtype, release } = manifest.levels[level];
+    const digits = { tract: 11, zcta: 5, blockgroup: 12 }[level];
+    const geoids = Array.from({ length: places }, (_, row) => String(row).padStart(digits, "0"));
+    const missing = dtype === "u8" ? 255 : 65535;
+    const counts = dtype === "u8" ? new Uint8Array(places) : new Uint16Array(places);
+    counts.set([0, missing, missing - 1, 42]);
+    const fetcher = vi.fn<typeof fetch>(async (url) => {
+      expect(String(url)).toContain(`/map/${level}/${release}/`);
+      return String(url).endsWith("geoids.json.gz")
+        ? Response.json(geoids)
+        : new Response(new Uint8Array(gzipSync(new Uint8Array(counts.buffer))));
+    });
+    const first = await loadMapValues(level, "all_religions", 17, fetcher);
+    expect(first.shard.row.get(geoids[3])).toBe(3);
+    expect(first.values.slice(0, 4)).toEqual([0, null, missing - 1, 42]);
+    await loadMapValues(level, "all_religions", 17, fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(browser ? 2 : 4);
+    await loadMapValues(level, "christian_church", 18, fetcher);
+    expect(fetcher).toHaveBeenLastCalledWith(
+      expect.stringContaining("/christian_church/18.bin.gz"),
+      expect.anything()
+    );
+    expect(fetcher).toHaveBeenCalledTimes(browser ? 3 : 6);
+  }
+);
+
+test("map slice failures retry, invalid queries never fetch, and old windows leave the cache", async () => {
+  environment.browser = true;
+  vi.resetModules();
+  const { loadMapValues } = await import("$lib/explore/metrics");
+  const geoids = Array.from({ length: manifest.levels.tract.places }, (_, row) =>
+    String(20000000000 + row)
+  );
+  let truncated = true;
+  const fetcher = vi.fn<typeof fetch>(async (url) =>
+    String(url).endsWith("geoids.json.gz")
+      ? Response.json(geoids)
+      : new Response(new Uint8Array(truncated ? 2 : geoids.length * 2))
+  );
+  for (const window of [-1, 0.5, manifest.windows.length])
+    await expect(loadMapValues("tract", "all_religions", window, fetcher)).rejects.toThrow(
+      "Invalid map Year Window"
+    );
+  await expect(loadMapValues("tract", "../secret", 0, fetcher)).rejects.toThrow("Invalid map Type");
+  expect(fetcher).not.toHaveBeenCalled();
+  await expect(loadMapValues("tract", "all_religions", 0, fetcher)).rejects.toThrow(
+    "Invalid map slice"
+  );
+  truncated = false;
+  expect((await loadMapValues("tract", "all_religions", 0, fetcher)).values[0]).toBe(0);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  for (let window = 1; window <= 8; window++)
+    await loadMapValues("tract", "all_religions", window, fetcher);
+  await loadMapValues("tract", "all_religions", 0, fetcher);
+  expect(fetcher).toHaveBeenCalledTimes(12);
+});
+
+test.each(["state", "county"] as const)(
+  "%s still reads each window from its cached matrix",
+  async (level) => {
+    environment.browser = true;
+    vi.resetModules();
+    const { loadMapValues } = await import("$lib/explore/metrics");
+    const counts = new Uint16Array(3 * manifest.windows.length);
+    counts[manifest.windows.length + 17] = 65535;
+    counts[2 * manifest.windows.length + 17] = 42;
+    const fetcher = vi.fn<typeof fetch>(async (url) =>
+      String(url).endsWith("geoids.json.gz")
+        ? Response.json(["01", "02", "04"])
+        : new Response(new Uint8Array(counts.buffer))
+    );
+    expect((await loadMapValues(level, "all_religions", 17, fetcher)).values).toEqual([
+      0,
+      null,
+      42,
+    ]);
+    expect((await loadMapValues(level, "all_religions", 18, fetcher)).values).toEqual([0, 0, 0]);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  }
+);

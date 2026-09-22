@@ -164,7 +164,7 @@ function meta(hit: Hit) {
         start: prefersReducedMotion.current ? 1 : 0.98,
         duration: prefersReducedMotion.current ? 100 : 180,
       }}
-      class="place-suggestions border-rule absolute top-full -right-px -left-px z-20 origin-top-left rounded-b-lg border border-t-0 bg-white shadow-[0_16px_28px_-14px_rgba(0,0,0,.3)]"
+      class="place-suggestions border-rule absolute top-full -right-px -left-px z-20 origin-top-left border border-t-0 bg-white"
     >
       <div id="find-options" role="listbox" aria-label="Places" class={options ? "py-1.5" : ""}>
         {#each hits as hit, index (`${hit.label}|${hit.kind}|${hit.at}`)}

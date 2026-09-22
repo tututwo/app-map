@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Upload the data files built by scripts/build-metrics.py (metrics/) and scripts/build-sdoh.py (sdoh/) to
+# Upload files built by build-metrics.py (metrics/), build-sdoh.py (sdoh/) and build-map-slices.py (map/) to
 # the Cloudflare R2 bucket the site reads through PUBLIC_TILES_URL. Maintainer-side only: needs
 # `wrangler login` on the owning account.
 #
 # Usage: scripts/publish-metrics.sh [dir ...]     dirs under static/tiles, e.g. metrics/zcta or sdoh
-#                                                 (default: metrics sdoh)
+#                                                 (default: metrics sdoh map)
 #
 # Paths carry the release hash, so an upload never replaces a file a deployed site still reads, every
 # object may be cached for good, and running this again is harmless. Publish before deploying the
@@ -15,7 +15,7 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 export PATH="$root/node_modules/.bin:$PATH"
 cd "$root/static/tiles"
 dirs=("$@")
-[ ${#dirs[@]} -gt 0 ] || dirs=(metrics sdoh)
+[ ${#dirs[@]} -gt 0 ] || dirs=(metrics sdoh map)
 
 # IPv4 first: over IPv6, uploads beyond a few MB were reset mid-request (seen 2026-09-18). Even so a
 # few requests in a thousand fail on a home connection, hence the retries.
@@ -47,7 +47,7 @@ for dir in "${dirs[@]}"; do
     exit 1
   fi
   while IFS= read -r -d '' file; do
-    if [[ "$file" == */geoids.json.gz && ! -s "${file%/*}/rows.bin" ]]; then
+    if [[ "$file" == metrics/* && "$file" == */geoids.json.gz && ! -s "${file%/*}/rows.bin" ]]; then
       echo "Missing rows.bin beside $file; run scripts/build-rows.py first" >&2
       exit 1
     fi

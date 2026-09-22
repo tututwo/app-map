@@ -4,7 +4,9 @@ import type { RequestHandler } from "@sveltejs/kit";
 // read by byte range (scripts/build-rows.py), so it is stored as it is.
 const metricPath =
   /^(?:metrics\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\/(?:(?:geoids\.json|[a-z_]+\.bin)\.gz|rows\.bin)|sdoh\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\.json\.gz)$/;
-const archivePath = /^(?:county|zcta|tract|bg)-2010\.pmtiles$/;
+const archivePath = /^(?:county-2010|(?:zcta|tract|bg)-2010(?:-v2)?)\.pmtiles$/;
+const mapPath =
+  /^map\/(?:zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:geoids\.json|[a-z_]+\/\d{1,3}\.bin)\.gz$/;
 
 function hasBody(object: R2Object): object is R2ObjectBody {
   return "body" in object;
@@ -44,7 +46,7 @@ function byteRange(value: string | null): R2Range | undefined {
 
 export const GET: RequestHandler = async ({ params, request, url, platform }) => {
   const key = params.path ?? "";
-  const immutable = metricPath.test(key);
+  const immutable = metricPath.test(key) || mapPath.test(key);
   if (!immutable && !archivePath.test(key)) return new Response(null, { status: 404 });
   if (!platform?.env.TILES) return new Response(null, { status: 503 });
 

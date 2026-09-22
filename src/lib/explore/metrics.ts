@@ -3,8 +3,8 @@ import { env } from "$env/dynamic/public";
 import manifest from "$lib/generated/metrics-manifest.json";
 
 /**
- * The Metric cube (scripts/build-metrics.py): one Shard file per Level, Type and Shard holds reported
- * closures for every Year Window, so changing the window is an array lookup and never a request.
+ * The Metric cube (scripts/build-metrics.py): one file per Level, Type and Shard holds reported
+ * closures for every Year Window. Fine-level maps read derived single-window columns instead.
  */
 export type Level = keyof typeof manifest.levels;
 export type Counts = Uint8Array | Uint16Array;
@@ -19,7 +19,7 @@ const WINDOW_COUNT = manifest.windows.length;
 const windowIndex = new Map(manifest.windows.map(([from, to], index) => [`${from}_${to}`, index]));
 export const windowIndexOf = (from: number, to: number) => windowIndex.get(`${from}_${to}`) ?? -1;
 
-/** Tracts and block groups ship one state at a time; the other Levels are a single national Shard. */
+/** Cube shards: state/county are national, ZIPs use two-digit ZIP prefixes, tracts/block groups use states. */
 export const shardOf = (level: Level, geoid: string) =>
   manifest.levels[level].shards.length === 1 ? manifest.levels[level].shards[0] : geoid.slice(0, 2);
 export const shardsOf = (level: Level) => manifest.levels[level].shards;
@@ -41,14 +41,15 @@ const file = (level: Level, shard: string, name: string, fetcher: typeof fetch) 
   inflated(`metrics/${level}/${manifest.levels[level].release}/${shard}/${name}`, fetcher);
 
 const shards = new Map<string, Promise<Shard>>();
+function readShard(buffer: ArrayBuffer): Shard {
+  const geoids: string[] = JSON.parse(new TextDecoder().decode(buffer));
+  return { geoids, row: new Map(geoids.map((geoid, index) => [geoid, index])) };
+}
 export function loadShard(level: Level, shard: string, fetcher: typeof fetch = fetch) {
   const key = `${level}/${shard}`;
   let hit = browser ? shards.get(key) : undefined;
   if (!hit) {
-    hit = file(level, shard, "geoids.json", fetcher).then((buffer) => {
-      const geoids: string[] = JSON.parse(new TextDecoder().decode(buffer));
-      return { geoids, row: new Map(geoids.map((geoid, index) => [geoid, index])) };
-    });
+    hit = file(level, shard, "geoids.json", fetcher).then(readShard);
     if (browser) {
       hit.catch(() => shards.delete(key));
       shards.set(key, hit);
@@ -85,6 +86,66 @@ export async function loadCounts(
 export function valueAt(counts: Counts, row: number, yearWindow: number): number | null {
   const value = counts[row * WINDOW_COUNT + yearWindow];
   return value === (counts instanceof Uint8Array ? 255 : 65535) ? null : value;
+}
+
+export interface MapValues {
+  shard: Shard;
+  /** Only the selected Year Window; null still means no observation, not zero closures. */
+  values: (number | null)[];
+}
+const mapSlices = new Map<string, Promise<MapValues>>();
+
+/** Fine levels load one national column; state and county reuse their small cached matrices. */
+export async function loadMapValues(
+  level: Level,
+  religion: string,
+  yearWindow: number,
+  fetcher: typeof fetch = fetch
+): Promise<MapValues> {
+  if (!Number.isInteger(yearWindow) || yearWindow < 0 || yearWindow >= WINDOW_COUNT)
+    throw new Error("Invalid map Year Window");
+  if (!RELIGIONS.some((type) => type === religion)) throw new Error("Invalid map Type");
+  if (level === "state" || level === "county") {
+    const [rows, counts] = await Promise.all([
+      loadShard(level, "us", fetcher),
+      loadCounts(level, "us", religion, fetcher),
+    ]);
+    return { shard: rows, values: rows.geoids.map((_, row) => valueAt(counts, row, yearWindow)) };
+  }
+
+  const folder = `map/${level}/${manifest.levels[level].release}`;
+  let rows = browser ? shards.get(folder) : undefined;
+  if (!rows) {
+    rows = inflated(`${folder}/geoids.json`, fetcher).then(readShard);
+    if (browser) {
+      rows.catch(() => shards.delete(folder));
+      shards.set(folder, rows);
+    }
+  }
+  const key = `${folder}/${religion}/${yearWindow}`;
+  let hit = browser ? mapSlices.get(key) : undefined;
+  if (!hit) {
+    hit = Promise.all([rows, inflated(`${key}.bin`, fetcher)]).then(([shard, buffer]) => {
+      const { dtype, places } = manifest.levels[level];
+      if (shard.geoids.length !== places || buffer.byteLength !== places * (dtype === "u8" ? 1 : 2))
+        throw new Error(`Invalid map slice for ${key}`);
+      const counts = dtype === "u8" ? new Uint8Array(buffer) : new Uint16Array(buffer);
+      const missing = dtype === "u8" ? 255 : 65535;
+      return { shard, values: Array.from(counts, (value) => (value === missing ? null : value)) };
+    });
+    if (browser) {
+      hit.catch(() => {
+        if (mapSlices.get(key) === hit) mapSlices.delete(key);
+      });
+      mapSlices.set(key, hit);
+    }
+  } else {
+    mapSlices.delete(key);
+    mapSlices.set(key, hit);
+  }
+  // Keep recent filter choices without retaining all 253 windows for every Type.
+  if (mapSlices.size > 8) mapSlices.delete(mapSlices.keys().next().value!);
+  return hit;
 }
 
 // One place is a few kilobytes, and a new Year Window reads the same one again.

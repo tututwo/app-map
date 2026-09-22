@@ -67,8 +67,8 @@ export function plain(text: string) {
 export const looksLikeAddress = (text: string) => /^\s*\d+[a-z]?\s+\S*[a-z]/i.test(text);
 
 const zipHit = (code: string, at: LngLat): Hit => ({
-  label: `ZIP ${code}`,
-  kind: "ZIP code",
+  label: `ZCTA ${code}`,
+  kind: "ZCTA",
   at,
   unit: { level: "zcta", geoid: code },
 });

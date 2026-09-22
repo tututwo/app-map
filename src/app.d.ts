@@ -5,6 +5,7 @@ declare namespace App {
   // interface Locals {}
   // interface PageData {}
   interface PageState {
+    explorePalette?: string;
     exploreAddress?: import("./lib/explore/navigation.svelte").AddressText;
   }
   interface Platform {

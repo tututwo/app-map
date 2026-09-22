@@ -53,9 +53,25 @@ describe("R2 tile delivery", () => {
     metrics.cache.match.mockResolvedValue(new Response("cached"));
     expect(await (await metrics.request(metric)).text()).toBe("cached");
     expect(metrics.bucket.get).toHaveBeenCalledOnce();
+
+    for (const level of ["tract", "zcta", "blockgroup"]) {
+      const slice = setup();
+      const colors = await slice.request(`map/${level}/012345abcdef/all_religions/17.bin.gz`);
+      expect(colors.status).toBe(200);
+      expect(colors.headers.get("cache-control")).toContain("immutable");
+      expect(colors.headers.has("content-encoding")).toBe(false);
+      expect(slice.cache.put).toHaveBeenCalledOnce();
+      expect((await setup().request(`map/${level}/012345abcdef/geoids.json.gz`)).status).toBe(200);
+    }
   });
 
   it("returns normalized byte ranges and does not download a body for HEAD", async () => {
+    for (const name of ["tract", "zcta", "bg"]) {
+      const tiles = setup();
+      const key = `${name}-2010-v2.pmtiles`;
+      expect((await tiles.request(key, { range: "bytes=0-9" })).status).toBe(206);
+      expect(tiles.bucket.get.mock.calls[0][0]).toBe(key);
+    }
     for (const [range, contentRange, length] of [
       ["bytes=2-4", "bytes 2-4/10", "3"],
       ["bytes=7-100", "bytes 7-9/10", "3"],
@@ -134,6 +150,12 @@ describe("R2 tile delivery", () => {
       "sdoh/tract/latest/06.json.gz",
       "metrics/blockgroup/012345abcdef/06/rows.json",
       "metrics/blockgroup/012345abcdef/rows.bin",
+      "map/tract/latest/all_religions/17.bin.gz",
+      "map/tract/012345abcdef/../17.bin.gz",
+      "map/tract/012345abcdef/all_religions/-1.bin.gz",
+      "map/tract/012345abcdef/all_religions/17.bin",
+      "map/unknown/012345abcdef/all_religions/17.bin.gz",
+      "bg-2010-v3.pmtiles",
     ])
       expect((await server.request(key)).status).toBe(404);
     expect(server.bucket.get).not.toHaveBeenCalled();

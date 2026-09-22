@@ -28,25 +28,25 @@ export const TILES = {
     focusZoom: 7.5,
   },
   zcta: {
-    archive: "zcta-2010.pmtiles",
+    archive: "zcta-2010-v2.pmtiles",
     sourceLayer: "zctas",
-    revealZoom: 7,
+    revealZoom: 0,
     outlineZoom: 8,
     maxZoom: 13,
     focusZoom: 10.5,
   },
   tract: {
-    archive: "tract-2010.pmtiles",
+    archive: "tract-2010-v2.pmtiles",
     sourceLayer: "tracts",
-    revealZoom: 7,
+    revealZoom: 0,
     outlineZoom: 8,
     maxZoom: 13,
     focusZoom: 11,
   },
   blockgroup: {
-    archive: "bg-2010.pmtiles",
+    archive: "bg-2010-v2.pmtiles",
     sourceLayer: "blockgroups",
-    revealZoom: 8,
+    revealZoom: 0,
     outlineZoom: 9,
     maxZoom: 15,
     focusZoom: 13,
@@ -54,7 +54,7 @@ export const TILES = {
 };
 /** What a newcomer needs to know to read a number for a Fine level. */
 export const LEVEL_NOTES: Partial<Record<Level, string>> = {
-  zcta: "A ZIP here is a ZIP Code Tabulation Area, the Census Bureau's approximation of a postal ZIP code.",
+  zcta: "A ZCTA (ZIP Code Tabulation Area) is the Census Bureau's geographic approximation of postal ZIP codes.",
   tract:
     "A census tract is a small area drawn by the Census Bureau, home to about 4,000 residents.",
   blockgroup: "A block group is a part of a census tract, usually home to 600 to 3,000 residents.",
@@ -62,7 +62,7 @@ export const LEVEL_NOTES: Partial<Record<Level, string>> = {
 export const LEVEL_NOUNS: Record<Level, { one: string; many: string }> = {
   state: { one: "state", many: "states" },
   county: { one: "county", many: "counties" },
-  zcta: { one: "ZIP code", many: "ZIP codes" },
+  zcta: { one: "ZCTA", many: "ZCTAs" },
   tract: { one: "tract", many: "tracts" },
   blockgroup: { one: "block group", many: "block groups" },
 };
@@ -182,11 +182,22 @@ export const per10k = (value: number | null) =>
   value === null ? "—" : value > 0 && value < 0.1 ? value.toPrecision(2) : value.toFixed(2);
 
 export const NO_DATA_COLOR = "#d9dde2";
-export const COLORS = ["#dce5f1", "#a6bedf", "#6c93c7", "#3565a8", "#00356b"];
+export const COLORS = [
+  "#dce5f1",
+  "#c4d4e9",
+  "#acc2e1",
+  "#93b0d7",
+  "#799dcc",
+  "#6089c0",
+  "#4774b2",
+  "#2f60a1",
+  "#184a86",
+  "#00356b",
+];
 const whole = (value: number) => value.toLocaleString("en-US");
 
 /**
- * Quintile breaks of the positive counts, rounded to two significant digits. A five-year window and a
+ * Decile breaks of the positive counts, rounded to two significant digits. A five-year window and a
  * 26-year one differ twentyfold, as do Types, so no fixed break list can serve every selection.
  */
 export function breaksFor(values: (number | null)[]): number[] {
@@ -196,7 +207,11 @@ export function breaksFor(values: (number | null)[]): number[] {
     return Math.round(value / unit) * unit;
   };
   return [
-    ...new Set([0.2, 0.4, 0.6, 0.8].map((q) => nice(sorted[Math.floor(q * sorted.length)] ?? 0))),
+    ...new Set(
+      Array.from({ length: COLORS.length - 1 }, (_, index) =>
+        nice(sorted[Math.floor(((index + 1) / COLORS.length) * sorted.length)] ?? 0)
+      )
+    ),
   ].filter((value) => value > 0);
 }
 
@@ -208,12 +223,12 @@ export function colorIndexOf(value: number | null, breaks: number[]) {
   return Math.round((cls * (COLORS.length - 1)) / Math.max(1, breaks.length));
 }
 
-export const legendFor = (breaks: number[]) => ({
+export const legendFor = (breaks: number[], colors: readonly string[] = COLORS) => ({
   breaks,
   classes: [0, ...breaks].map((low, index) => {
     const high = breaks[index];
     return {
-      color: COLORS[colorIndexOf(low, breaks)],
+      color: colors[colorIndexOf(low, breaks)],
       label:
         high === undefined
           ? `${whole(low)}+`
@@ -224,10 +239,14 @@ export const legendFor = (breaks: number[]) => ({
   }),
 });
 /**
- * Fine levels arrive one Shard at a time, so their classes cannot follow "the data"; their counts are
- * small whole numbers in every window (99th percentile over 2000-2025: ZIP 131, tract 33, block group 17).
+ * Fine levels keep fixed classes across windows and Types; their counts are small whole numbers
+ * (99th percentile over 2000-2025: ZIP 131, tract 33, block group 17).
  */
-export const FIXED_BREAKS = { zcta: [1, 3, 8, 20], tract: [1, 3, 6, 12], blockgroup: [1, 2, 4, 8] };
+export const FIXED_BREAKS = {
+  zcta: [1, 2, 3, 5, 8, 12, 20, 50, 100],
+  tract: [1, 2, 3, 4, 6, 8, 12, 20, 30],
+  blockgroup: [1, 2, 3, 4, 6, 8, 12, 16, 20],
+};
 
 /** "Tract 101.01" from a tract or block-group GEOID. */
 function tractLabel(geoid: string) {
@@ -356,7 +375,7 @@ export function unitFor(where: string, level: Level): Unit | undefined {
   if (level === "county")
     return counties[where] ? { level, id: where, name: counties[where] } : undefined;
   if (level === "zcta")
-    return /^\d{5}$/.test(where) ? { level, id: where, name: `ZIP ${where}` } : undefined;
+    return /^\d{5}$/.test(where) ? { level, id: where, name: `ZCTA ${where}` } : undefined;
   if (level === "tract")
     return /^\d{11}$/.test(where)
       ? { level, id: where, name: `${tractLabel(where)}, ${within}` }
@@ -395,7 +414,7 @@ function reason({ near, via }: ExploreQuery, selected: Unit | undefined) {
   if (selected.level !== "state" && selected.level !== "county")
     return `The ${one} at the dot on the map, which marks ${what}. Click the map to see another ${one}.`;
   // Someone who named a city or an address is usually after something smaller than a state.
-  return `The ${one} that contains ${what}.${near ? " View by ZIP, Tract or Block group for a closer look." : ""}`;
+  return `The ${one} that contains ${what}.${near ? " View by ZCTA, Tract or Block group for a closer look." : ""}`;
 }
 
 export type Breakdown = Record<string, number | null>;

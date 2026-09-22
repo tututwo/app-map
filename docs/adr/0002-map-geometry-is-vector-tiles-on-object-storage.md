@@ -163,3 +163,93 @@ same bucket, with the same Shard rule (national for state and county, a state pe
 digits per ZIP file) and the same delivery route, whose allow-list names them. They are JSON rather
 than typed arrays because they are thirteen mixed-unit numbers per place with gaps, read for one
 selected place at a time and never painted on the map: 2.5 MB in all, 222 KB for California's tracts.
+
+## Amendment 2026-09-22: tract boundaries at the national view
+
+The tract Reveal zoom of 7 was a product restriction, inherited from the block-group experiment;
+the original tract archive also had no tiles below z7. Tracts now draw from z2. The tract build
+writes a separate `tract-2010-v2.pmtiles`, adding z2–z6 to the existing z7–z11 recipes, so publishing
+it does not replace bytes under an old client's archive URL. Publish it before deploying the map
+configuration that names it. County, ZIP and block-group archives are unchanged.
+
+The added zooms use `--no-tiny-polygon-reduction --no-simplification-of-shared-nodes` and the existing
+`--simplification=10`. They retain each visible tract's own GEOID and simplify shared borders
+consistently; they do not sample neighbours or assign one tract's count to a merged area. At tile
+resolution some subpixel polygons collapse: z2 retains 69,860 distinct tracts, z3 72,498, z4 72,881,
+z5 72,887 and z6 72,889 of 72,891 source tracts. All 50 states and DC represented by the source
+remain covered at every added zoom. Zooming in restores the more detailed boundaries.
+
+The local build took 66 seconds with the downloaded Census files and produced 44,631,278 bytes,
+7.47 MB larger than the previous archive. Across the country, z3 contains eight tiles, 1.33 MB
+compressed and 568,378 vertices; its largest tile is 517 KB compressed. Simplification 2 kept the
+same GEOIDs while adding vertices and transfer size, so it was not used. All added zooms were
+decoded and checked against the source GEOID list; 25 sampled tiles at z7–z11 across New York,
+Los Angeles, Chicago, Honolulu and Anchorage were byte-identical to the previous archive.
+
+A nationwide tract view previously loaded 51 Metric cube Shards: 3.53 MB compressed for
+all-religion counts, 165 KB for GEOID lists and 35.8 MB inflated counts. It now reads a derived
+national map slice from `map/tract/<release>/<religion>/<windowIndex>.bin.gz`, plus one national
+`geoids.json.gz` index. The release and dtype are the original matrix release and dtype; the row
+order is the sorted concatenation of its state Shards. No counts or no-observation sentinels change.
+
+`scripts/build-map-slices.py` uses the standard library to write all 2,530 combinations and checks
+every output cell by reconstructing the source matrices from the written slices. The index is
+165,812 bytes compressed; one all-religion slice is 12,002–51,289 bytes compressed and 141,410 bytes
+inflated. Selecting another uncached Year Window fetches one such slice. The existing matrices
+still serve other Levels, while place details continue to use the per-place `rows.bin` ranges.
+
+Hover outlines only change their tile filter once the outline zoom is reached. At national scale the
+tooltip still names the tract, but moving it no longer reparses the visible vector tiles. The inactive
+state-hover filter also stays empty for tract GEOIDs. National feature-state updates yield after
+4,000 changed features so one complete slice does not block input; a new refresh invalidates pending
+batches. Recent eight map slices are cached, and stale window, Type or source responses cannot paint.
+
+Local production comparison (2026-09-22): same 1440×1000 viewport, 2000–2025/all religions, new
+Chromium process and disabled cache each run, empty basemap to isolate our data. Across three runs
+with 4× CPU throttling, 10 Mbps and 80 ms latency, metric requests fell from 98 to 2, metric payload
+from 3,671,481 to 217,101 bytes, and geometry stayed at 1,338,005 bytes. Median time to verify correct
+hover counts at three national positions fell from 12.94 to 7.09 seconds; the first central count
+alone changed from 6.84 to 6.39 seconds. Median largest main-thread task fell from 342 to 181 ms,
+and pan p95 frame gap from 250.5 to 117.6 ms. Six hover moves triggered 48 tile reparses before and
+zero afterward. These are comparative headless measurements, not device or production latency
+guarantees. Unbatched slice painting finished sooner but made an 805 ms task; the shipped batches
+trade some completion speed for shorter interruptions.
+
+## Amendment 2026-09-22 (later): ZIP and block-group national views
+
+ZIP and block group now use the same national map-column reader as tract. State and county keep
+their small cached matrices; all three fine levels request one national GEOID index and one column
+for the selected Type and Year Window. The map no longer calculates which state or ZIP-prefix
+shards intersect its viewport, and the obsolete ZIP-prefix bounding-box artifact is removed.
+The original cube sharding and per-place detail reads remain unchanged. The common reader preserves
+ZIP/tract uint16 counts and block-group uint8 counts, including their distinct no-observation
+sentinels. The builder checks every column by reconstructing the original matrices byte for byte.
+
+The new `zcta-2010-v2.pmtiles` and `bg-2010-v2.pmtiles` archives add z2–z6 with the tract recipe,
+retaining each surviving polygon's own GEOID. Existing z7–z11 ZIP and z7–z12 block-group tiles are
+preserved. Both levels now draw from the map's minimum zoom, with their fixed legends and tooltips;
+small polygons regain detail on zoom. They share the hover-filter guard, batches of 4,000 changed
+feature states, stale-response cancellation and print readiness checks. Publish both new archives
+and the new `map/zcta` and `map/blockgroup` release directories before deploying this configuration.
+
+For 2000–2025/all religions, the national ZIP index plus column is 96,094 compressed bytes
+(68,374 + 27,720), versus 2,414,622 bytes for all original ZIP indexes and matrices. Block group
+is 508,233 bytes (421,989 + 86,244), versus 4,650,030 bytes for all original state shards. These
+compare nationwide metric payloads only: the previous national camera showed state proxies and
+did not request these fine-level metrics. All 5,060 new Type/window slices passed reconstruction;
+all ZIP slices occupy 16,937,163 bytes and all block-group slices 48,192,688 bytes.
+
+The ZIP archive is 73,026,684 bytes (+5,516,865); z2–z6 retain 32,599 / 32,841 / 32,938 /
+32,978 / 32,989 distinct IDs out of 32,989 source polygons. The block-group archive is
+166,938,704 bytes (+18,309,237); the same zooms retain 185,889 / 210,070 / 216,374 / 217,163 /
+217,182 of 217,182 source polygons, with all 50 states and DC represented at every zoom. All
+emitted low-zoom GEOIDs were checked against the source; 25 ZIP and 30 block-group detail tiles
+sampled across New York, Los Angeles, Chicago, Honolulu and Anchorage were byte-identical to the
+old archives. At z3 the whole-country geometry is 905,144 bytes for ZIP and 3,203,581 bytes for
+block group; these are tiled requests, not full-archive downloads.
+
+Production browser checks cover national polygons, source-matrix counts, fixed legends, clicks that
+preserve the camera, window/Type changes and rapid ZIP/block-group/tract/county switches. Each fine
+level makes two initial map-data requests and no full-matrix request. Six national pointer moves
+at ZIP and block-group levels each produced zero additional `reloadTile` or `updateLayers` worker
+messages. No load-time comparison is made against the old national view's lighter state proxies.

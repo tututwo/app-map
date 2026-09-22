@@ -25,10 +25,14 @@ done
 # No limit may drop a feature: a missing feature is a GEOID the metric join cannot colour.
 common=(--quiet --force -l blockgroups --no-feature-limit --no-tile-size-limit --simplification=10)
 
-# z7-z8, the metro views just past the Reveal zoom. The smallest city block groups are under a
+# z2-z6: retain each visible block group's own GEOID and simplify shared borders consistently.
+# Subpixel shapes can collapse at tile resolution; zooming restores their detailed boundaries.
+tippecanoe "${common[@]}" -o "$tmp/national.pmtiles" -Z2 -z6 \
+  --no-tiny-polygon-reduction --no-simplification-of-shared-nodes "$tmp"/*.geojsonl
+
+# z7-z8, unchanged metro tiles. The smallest city block groups are under a
 # pixel here, so tippecanoe's tiny-polygon reduction stands in for them with pixel squares that each
-# keep one member's geoid, which holds the densest tile under 300 KB. Drawing block groups at the
-# national view was tried and dropped: 130,000 polygons on screen made the map sluggish.
+# keep one member's geoid, which holds the densest tile under 300 KB.
 tippecanoe "${common[@]}" -o "$tmp/low.pmtiles" -Z7 -z8 "$tmp"/*.geojsonl
 
 # z9-z12, where block groups are several pixels wide: every one is kept with its own shape and
@@ -38,5 +42,6 @@ tippecanoe "${common[@]}" -o "$tmp/high.pmtiles" -Z9 -z12 \
   --simplification-at-maximum-zoom=1 "$tmp"/*.geojsonl
 
 mkdir -p "$root/static/tiles"
-# tile-join warns about mismatched maxzooms: the two parts cover disjoint zoom ranges on purpose.
-tile-join -f -pk -o "$root/static/tiles/bg-$vintage.pmtiles" "$tmp/low.pmtiles" "$tmp/high.pmtiles"
+# tile-join warns about mismatched maxzooms: the parts cover disjoint zoom ranges on purpose.
+tile-join -f -pk -o "$root/static/tiles/bg-$vintage-v2.pmtiles" \
+  "$tmp/national.pmtiles" "$tmp/low.pmtiles" "$tmp/high.pmtiles"

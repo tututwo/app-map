@@ -4,15 +4,16 @@ import { resolve } from "$app/paths";
 import { navigating, page } from "$app/state";
 import { onMount } from "svelte";
 import { prefersReducedMotion } from "svelte/motion";
-import { fade, scale } from "svelte/transition";
+import { fade } from "svelte/transition";
+import { ChevronDown, RotateCcw } from "lucide-svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import { countsIn, levelBreaks } from "$lib/explore/load";
 import { windowIndexOf } from "$lib/explore/metrics";
+import { PALETTES, paletteFor } from "$lib/explore/palettes";
 import { ExploreNavigation, type AddressText } from "$lib/explore/navigation.svelte";
 import {
-  FIXED_BREAKS,
   LEVEL_NOUNS,
   NO_DATA_COLOR,
   STATE_GEOMETRY_YEAR,
@@ -31,7 +32,7 @@ let { data }: { data: PageData } = $props();
 const VIEWS: { label: string; level?: Level }[] = [
   { label: "State", level: "state" },
   { label: "County", level: "county" },
-  { label: "ZIP", level: "zcta" },
+  { label: "ZCTA", level: "zcta" },
   { label: "Tract", level: "tract" },
   { label: "Block group", level: "blockgroup" },
 ];
@@ -41,14 +42,17 @@ let mapZoom = $state(3.5);
 let drawnLevel = $derived<Level>(
   query.level !== "state" && mapZoom < TILES[query.level].revealZoom ? "state" : query.level
 );
-// Every Year Window is already in memory, so a new window is a lookup into the same arrays.
+// The state summary holds every Year Window; fine-level map colours load the selected window only.
 let yearWindow = $derived(windowIndexOf(query.from, query.to));
 let stateCounts = $derived(countsIn(data.states, yearWindow));
 let breaks = $derived(levelBreaks(data.states, query.type, yearWindow));
 let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );
-let legend = $derived(legendFor(breaks[drawnLevel]));
+let palette = $derived(
+  paletteFor(page.state.explorePalette ?? page.url.searchParams.get("palette"))
+);
+let legend = $derived(legendFor(breaks[drawnLevel], palette.colors));
 let legendInfo = $state(false);
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
 let mapControls = $state<{ zoomIn: () => void; zoomOut: () => void; reset: () => void }>();
@@ -68,7 +72,7 @@ const navigation = new ExploreNavigation(
     } catch {
       // Storage can be unavailable; the current page still retains the address.
     }
-    const url = new URL(page.url);
+    const url = paletteUrl();
     writeQuery(url.searchParams, next);
     const state = { ...page.state, exploreAddress: address };
     if (url.search === page.url.search && !navigating.to) {
@@ -143,6 +147,19 @@ onMount(() => {
   };
 });
 
+// Shallow routing updates page.state; page.url stays at the last full navigation.
+function paletteUrl(id = palette.id) {
+  const url = new URL(page.url);
+  if (id === "yale") url.searchParams.delete("palette");
+  else url.searchParams.set("palette", id);
+  return url;
+}
+
+function changePalette(id: string) {
+  const chosen = paletteFor(id);
+  replaceState(paletteUrl(chosen.id), { ...page.state, explorePalette: chosen.id });
+}
+
 function reset() {
   void navigation.reset();
   mapControls?.reset();
@@ -170,7 +187,9 @@ function reset() {
   class="flex flex-col lg:h-[max(720px,calc(100vh_-_65px))]"
   aria-busy={!!navigating.to || navigation.locating === true}
 >
-  <div class="border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white">
+  <div
+    class="explore-toolbar border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white"
+  >
     <FindPlace value={searchValue} byId={closedByState} onpick={(pick) => navigation.look(pick)} />
     <QueryFields
       large
@@ -182,7 +201,7 @@ function reset() {
       class="flex min-h-14 min-w-0 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
     >
       <span class="text-muted text-[12.5px] whitespace-nowrap">View by</span>
-      <div class="bg-seg inline-flex max-w-full gap-0.5 overflow-x-auto rounded-[5px] p-[3px]">
+      <div class="bg-seg inline-flex max-w-full gap-0.5 overflow-x-auto p-1">
         {#each VIEWS as { label, level } (label)}
           <button
             type="button"
@@ -192,7 +211,7 @@ function reset() {
               ? `${label} view`
               : `${label} boundaries are not available in this release`}
             onclick={() => level && navigation.look({ level })}
-            class="motion-control text-ink rounded-[3px] px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
+            class="motion-control text-ink min-h-9 px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-40 {level ===
             query.level
               ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,.14)]'
               : ''}"
@@ -204,8 +223,9 @@ function reset() {
       <button
         type="button"
         onclick={reset}
-        class="motion-control border-field-border text-ink hover:border-ink h-[34px] rounded-[3px] border bg-white px-3.5 text-[11px] font-bold tracking-[.1em] uppercase"
+        class="motion-control text-body hover:bg-seg inline-flex min-h-11 items-center gap-1.5 px-3 text-[12px] font-medium"
       >
+        <RotateCcw size={13} strokeWidth={1.75} aria-hidden="true" />
         Reset
       </button>
     </div>
@@ -247,6 +267,7 @@ function reset() {
           {yearWindow}
           {breaks}
           religion={query.type}
+          colors={palette.colors}
         />
       {:else if mapError}
         <div
@@ -268,14 +289,14 @@ function reset() {
       {/if}
 
       <div
-        class="border-rule absolute top-5 right-[22px] flex flex-col overflow-hidden rounded-[3px] border bg-white shadow-[0_2px_6px_rgba(0,0,0,.06)]"
+        class="map-material absolute top-4 right-4 flex flex-col overflow-hidden border lg:top-5 lg:right-5"
       >
         <button
           type="button"
           aria-label="Zoom in"
           disabled={!mapControls}
           onclick={() => mapControls?.zoomIn()}
-          class="motion-control border-rule text-ink hover:bg-footer size-[42px] border-b text-[18px] disabled:opacity-40"
+          class="motion-control border-rule text-ink hover:bg-footer size-11 border-b text-[18px] disabled:opacity-40"
           >+</button
         >
         <button
@@ -283,88 +304,187 @@ function reset() {
           aria-label="Zoom out"
           disabled={!mapControls}
           onclick={() => mapControls?.zoomOut()}
-          class="motion-control text-ink hover:bg-footer size-[42px] text-[18px] disabled:opacity-40"
+          class="motion-control text-ink hover:bg-footer size-11 text-[18px] disabled:opacity-40"
           >−</button
         >
       </div>
 
-      <div
-        class="border-rule absolute right-2 bottom-7 left-2 flex flex-col gap-3 rounded border bg-white px-3 pt-2.5 pb-2 shadow-[0_6px_20px_-10px_rgba(0,0,0,.18)] lg:right-auto lg:bottom-8 lg:left-6 lg:w-[min(470px,calc(100%_-_48px))] lg:px-[22px] lg:pt-[18px] lg:pb-4"
-      >
-        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <span class="text-ink text-[13px] font-semibold lg:text-[15px]">Reported closures</span>
+      <div role="group" aria-label="Map legend" class="map-legend map-material">
+        <div class="flex shrink-0 items-start justify-between gap-3">
+          <div class="min-w-0 pt-1">
+            <h2 class="text-ink text-sm font-semibold tracking-[-.015em]">Reported closures</h2>
+            <p class="mt-1 text-xs text-body">
+              Per {LEVEL_NOUNS[drawnLevel].one} <span aria-hidden="true">·</span>
+              {selection.range}
+            </p>
+          </div>
+          <label class="flex w-32 shrink-0 flex-col gap-1">
+            <span class="text-body text-[11px]">Color palette</span>
+            <select
+              name="palette"
+              value={palette.id}
+              onchange={(event) => changePalette(event.currentTarget.value)}
+              class="palette-select border-field-border text-ink min-h-11 w-full cursor-pointer border bg-white px-2 text-xs"
+            >
+              {#each ["Original", "Single hue", "Multi hue"] as group (group)}
+                <optgroup label={group}>
+                  {#each PALETTES.filter((option) => option.group === group) as option (option.id)}
+                    <option value={option.id}>{option.label}</option>
+                  {/each}
+                </optgroup>
+              {/each}
+            </select>
+          </label>
+        </div>
+        <div class="shrink-0">
+          <div
+            class="legend-scale flex h-3 gap-px overflow-hidden"
+            aria-label="Closure color scale"
+          >
+            {#each legend.classes as cls (cls.label)}
+              <span
+                class="min-w-0 flex-1"
+                style:background={cls.color}
+                title={`${cls.label} reported closures`}
+              >
+                <span class="sr-only">{cls.label} reported closures</span>
+              </span>
+            {/each}
+          </div>
+          <div class="text-body mt-1.5 flex justify-between text-[11px] font-medium tabular-nums">
+            <span>{legend.classes[0].label}</span>
+            <span>{legend.classes[legend.classes.length - 1].label}</span>
+          </div>
+        </div>
+        <div class="order-2 flex shrink-0 items-center justify-between gap-3 text-[11px] text-body">
+          <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span class="size-2.5" style:background={NO_DATA_COLOR}></span>
+            No data
+          </span>
           <button
             id="legend-help-toggle"
             type="button"
             aria-expanded={legendInfo}
             aria-controls={legendInfo ? "legend-help" : undefined}
             onclick={() => (legendInfo = !legendInfo)}
-            class="motion-control text-medium-blue text-[13px] hover:underline"
-            >How are colors chosen?</button
+            class="motion-control legend-toggle text-yale-blue -my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-xs font-semibold"
           >
-        </div>
-        <p class="text-muted text-[12px] max-lg:hidden">
-          Preliminary source counts · {selection.range}
-        </p>
-        <div
-          class="grid grid-cols-6 gap-x-1.5 gap-y-3 lg:grid-cols-[repeat(auto-fit,minmax(64px,1fr))] lg:gap-x-2"
-        >
-          {#each legend.classes as cls (cls.label)}
-            <div class="flex min-w-0 flex-col gap-2">
-              <div class="h-2.5" style:background={cls.color}></div>
-              <span class="text-body text-[11.5px]">{cls.label}</span>
-            </div>
-          {/each}
-          <div class="flex min-w-0 flex-col gap-2">
-            <div class="h-2.5" style:background={NO_DATA_COLOR}></div>
-            <span class="text-body text-[11.5px]">No data</span>
-          </div>
+            Color key
+            <ChevronDown
+              size={14}
+              strokeWidth={1.75}
+              aria-hidden="true"
+              class={legendInfo ? "rotate-180" : ""}
+            />
+          </button>
         </div>
         {#if legendInfo}
-          <!-- The scrollable color guide must support keyboard scrolling. -->
+          <!-- The color guide is scrollable on short screens and keyboard accessible. -->
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <div
             id="legend-help"
             role="region"
             aria-label="Map color guide"
             tabindex="0"
-            transition:scale={{
-              start: prefersReducedMotion.current ? 1 : 0.98,
-              duration: prefersReducedMotion.current ? 100 : 180,
-            }}
-            class="legend-help border-rule text-body absolute right-0 bottom-[calc(100%_+_8px)] left-0 max-h-[min(30vh,11rem)] origin-bottom-right overflow-auto rounded-lg border bg-white p-4 text-[12.5px] leading-normal text-pretty shadow-[0_8px_28px_-8px_rgba(0,0,0,.2)] lg:max-h-80"
+            in:fade={{ duration: prefersReducedMotion.current ? 0 : 120 }}
+            class="legend-help border-rule order-1 min-h-0 overflow-auto border-t pt-3 text-xs leading-relaxed text-body"
           >
-            {#if drawnLevel !== "state" && drawnLevel !== "county"}
-              Fixed breaks at {FIXED_BREAKS[drawnLevel].join(", ")} reported closures apply to every
-              window and type. {LEVEL_NOUNS[drawnLevel].many.replace(/^./, (first) =>
-                first.toUpperCase()
-              )} use
-              {manifest.boundaryYear} census boundaries.
-            {:else}
-              Classes are quintiles of the {drawnLevel === "county" ? "counties'" : "states'"} counts
-              for this window and type, so a color does not mean the same count in another window.
-              {#if drawnLevel === "county"}
-                Counties use {manifest.boundaryYear} census boundaries.
+            <p class="mb-2 font-semibold text-ink">Closures per {LEVEL_NOUNS[drawnLevel].one}</p>
+            <ul
+              class="mb-3 grid grid-flow-col grid-rows-5 gap-x-5 gap-y-2"
+              aria-label="Color intervals"
+            >
+              {#each legend.classes as cls (cls.label)}
+                <li class="flex items-center gap-2 tabular-nums">
+                  <span class="h-2.5 w-5 shrink-0" style:background={cls.color}></span>
+                  {cls.label}
+                </li>
+              {/each}
+            </ul>
+            <p>
+              {#if drawnLevel !== "state" && drawnLevel !== "county"}
+                These ranges stay the same across all time windows and types.
               {:else}
-                Census data vintage: {manifest.boundaryYear}; generalized map boundaries:
-                {STATE_GEOMETRY_YEAR}. These vintages differ.
+                Ranges group {LEVEL_NOUNS[drawnLevel].many} by positive closure counts for this window
+                and type. They use deciles, with duplicate thresholds merged, so some selections have
+                fewer than ten colors. Ranges can change with your filters.
               {/if}
+            </p>
+            <p class="mt-2">
+              Gray means no place of worship of this type was active during the window. Zero
+              closures use the lightest shade. Moves are excluded.
+            </p>
+            <p class="mt-2">
+              Counts cover the full window; longer windows can contain more closures.
+              {#if drawnLevel === "state"}
+                Census data: {manifest.boundaryYear}. Generalized map boundaries: {STATE_GEOMETRY_YEAR}.
+              {:else}
+                Boundaries: {manifest.boundaryYear} Census.
+              {/if}
+            </p>
+            <p class="mt-2 text-[11px]">Preliminary source counts.</p>
+            {#if palette.id !== "yale"}
+              <p class="mt-2 text-[11px]">
+                <a
+                  href="https://colorbrewer2.org/"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="underline underline-offset-2">ColorBrewer</a
+                >
+                sequential palette, interpolated to 10 colors using D3.
+              </p>
             {/if}
-            Gray means no place of worship of this type was active there in the window; zero stays in
-            the lightest class. Moves are excluded. Counts cover the full window, so longer windows can
-            contain more closures.
           </div>
         {/if}
       </div>
     </div>
-    <SelectionPanel {selection} search={page.url.search} />
+    <SelectionPanel {selection} search={paletteUrl().search} />
   </div>
 </main>
 
 <style>
-@media (prefers-reduced-motion: reduce) {
-  .legend-help {
-    transform: none !important;
+.explore-toolbar {
+  box-shadow: 0 2px 8px rgb(22 41 66 / 3%);
+}
+.map-material {
+  background: white;
+  border-color: var(--color-rule);
+  box-shadow: 0 2px 8px rgb(22 41 66 / 8%);
+}
+.map-legend {
+  position: absolute;
+  left: 1rem;
+  bottom: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: min(22.75rem, calc(100% - 2rem));
+  max-height: calc(100% - 5rem);
+  padding: 1rem;
+  border: 1px solid var(--color-rule);
+}
+.legend-help {
+  max-height: 20rem;
+  scrollbar-gutter: stable;
+}
+.legend-toggle:hover,
+.legend-toggle[aria-expanded="true"] {
+  background: rgb(0 53 107 / 6%);
+}
+.palette-select:focus-visible,
+.legend-help:focus-visible {
+  outline: 2px solid var(--color-yale-blue);
+  outline-offset: -2px;
+}
+@media (min-width: 1024px) {
+  .map-legend {
+    left: 1.5rem;
+    bottom: 2rem;
+  }
+}
+@media (prefers-contrast: more) {
+  .map-material {
+    border-color: var(--color-body);
   }
 }
 </style>

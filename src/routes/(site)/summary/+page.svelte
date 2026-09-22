@@ -4,6 +4,7 @@ import { page } from "$app/state";
 import { onMount } from "svelte";
 import { countsIn, levelBreaks } from "$lib/explore/load";
 import { windowIndexOf } from "$lib/explore/metrics";
+import { paletteFor } from "$lib/explore/palettes";
 import {
   LEVEL_NOUNS,
   NO_DATA_COLOR,
@@ -35,7 +36,7 @@ let unit = $derived(selection.selected);
 let s = $derived(selection.stat);
 let yearWindow = $derived(windowIndexOf(query.from, query.to));
 
-// A ZIP nests in no state. The state at its Focus is read from the tiles, which only a browser can do,
+// A ZCTA nests in no state. The state at its Focus is read from the tiles, which only a browser can do,
 // so it arrives after the page and is kept here rather than derived.
 let zipState = $state<string>();
 $effect(() => {
@@ -112,10 +113,13 @@ let drawnLevel = $derived<Level>(
   query.level !== "state" && mapZoom < TILES[query.level].revealZoom ? "state" : query.level
 );
 let breaks = $derived(levelBreaks(data.states, query.type, yearWindow));
-let legend = $derived(legendFor(breaks[drawnLevel]));
+let palette = $derived(paletteFor(page.url.searchParams.get("palette")));
+let legend = $derived(legendFor(breaks[drawnLevel], palette.colors));
 
 // The link printed on the page. Paper shows it in full; the PDF keeps it clickable.
-let share = $derived(shareSearch(query));
+let share = $derived(
+  shareSearch(query) + (palette.id === "yale" ? "" : `&palette=${encodeURIComponent(palette.id)}`)
+);
 
 let MapComponent = $state<typeof import("$components/explore/StateMap.svelte").default>();
 let mapFailed = $state(false);
@@ -206,8 +210,8 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
             {selection.name} is not in the source data, so there is nothing to report for it. That is
             not the same as zero closures.
           {:else}
-            A summary describes one place. Choose a state, county, ZIP code, tract or block group on
-            the map, then open its summary from the panel.
+            A summary describes one place. Choose a state, county, ZCTA, tract or block group on the
+            map, then open its summary from the panel.
           {/if}
         </p>
         <a
@@ -274,6 +278,7 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
                   {yearWindow}
                   {breaks}
                   religion={query.type}
+                  colors={palette.colors}
                 />
               {:else}
                 <div
@@ -284,16 +289,29 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
                 </div>
               {/if}
             </div>
-            <div class="text-body flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11.5px]">
-              {#each [...legend.classes, { color: NO_DATA_COLOR, label: "No data" }] as cls (cls.label)}
-                <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <span
-                    class="size-2.5 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]"
-                    style:background={cls.color}
-                  ></span>
-                  {cls.label}
-                </span>
-              {/each}
+            <div
+              role="group"
+              aria-label="Map legend"
+              class="text-body flex flex-col gap-2 text-[11.5px]"
+            >
+              <div class="grid grid-cols-5 gap-x-2 gap-y-2">
+                {#each legend.classes as cls (cls.label)}
+                  <span class="flex min-w-0 flex-col gap-1.5">
+                    <span
+                      class="h-2.5 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]"
+                      style:background={cls.color}
+                    ></span>
+                    <span class="leading-snug break-words tabular-nums">{cls.label}</span>
+                  </span>
+                {/each}
+              </div>
+              <span class="inline-flex items-center gap-1.5 self-end">
+                <span
+                  class="h-2.5 w-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]"
+                  style:background={NO_DATA_COLOR}
+                ></span>
+                No data
+              </span>
             </div>
             <p class={small}>
               The dark outline is {place}. Colors count the reported closures of {selection.noun} in
@@ -371,7 +389,7 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
                 {#if tractLabel}
                   Not published for block groups, so {tractLabel} around it is shown.
                 {:else if unit?.level === "zcta"}
-                  Income, poverty, unemployment and education are not published for ZIP codes.
+                  Income, poverty, unemployment and education are not published for ZCTAs.
                 {/if}
                 {#if measures.length > 1}
                   These measures describe the community around 2010. They do not explain why places

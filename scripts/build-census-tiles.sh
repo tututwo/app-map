@@ -47,30 +47,23 @@ done
 common=(--quiet --force -l "$layer" -x name --no-feature-limit --no-tile-size-limit)
 mkdir -p "$root/static/tiles"
 out="$root/static/tiles/$level-2010.pmtiles"
+if [ "$level" != county ]; then out="$root/static/tiles/$level-2010-v2.pmtiles"; fi
 if [ "$level" = county ]; then
   # A Coarse level, drawn nationwide from the map's minimum zoom.
   tippecanoe "${common[@]}" -Z2 -z9 --no-tiny-polygon-reduction --no-simplification-of-shared-nodes \
     --simplification=6 -o "$out" "$tmp"/*.geojsonl
 else
-  # A Fine level, built like the block groups: z7-z8 just past the Reveal zoom lets tippecanoe stand in
+  # z7-z8 retains the existing fine-level tiles: tippecanoe stands in
   # for sub-pixel city polygons with pixel squares that keep one member's geoid; z9-z11 keeps every shape
   # and shared borders simplify identically. MapLibre overzooms past z11.
   tippecanoe "${common[@]}" -Z7 -z8 --simplification=10 -o "$tmp/low.pmtiles" "$tmp"/*.geojsonl
   tippecanoe "${common[@]}" -Z9 -z11 --no-tiny-polygon-reduction --no-simplification-of-shared-nodes \
     --simplification=10 --simplification-at-maximum-zoom=1 -o "$tmp/high.pmtiles" "$tmp"/*.geojsonl
-  tile-join -f -pk -o "$out" "$tmp/low.pmtiles" "$tmp/high.pmtiles"
-fi
-
-if [ "$level" = zcta ]; then
-  # ZIP counts shard by the first two digits; the map loads the Shards whose box meets the viewport.
-  ogr2ogr -f CSV /vsistdout/ "$src/${files[0]}.shp" -dialect sqlite -sql "
-    SELECT substr(ZCTA5, 1, 2) AS shard, min(ST_MinX(geometry)) AS west, min(ST_MinY(geometry)) AS south,
-           max(ST_MaxX(geometry)) AS east, max(ST_MaxY(geometry)) AS north
-    FROM ${files[0]} WHERE $keep GROUP BY 1 ORDER BY 1" | python3 -c '
-import csv, json, sys
-bounds = {r["shard"]: [round(float(r[k]), 3) for k in ("west", "south", "east", "north")] for r in csv.DictReader(sys.stdin)}
-json.dump(bounds, open(sys.argv[1], "w"), separators=(",", ":"))
-' "$root/src/lib/generated/zcta-shard-bounds.json"
+  # National tracts and ZIPs keep their own GEOIDs and shared borders, never a sampled neighbour's count.
+  # Subpixel shapes can collapse at tile resolution; zooming restores their detailed boundaries.
+  tippecanoe "${common[@]}" -Z2 -z6 --no-tiny-polygon-reduction --no-simplification-of-shared-nodes \
+    --simplification=10 -o "$tmp/national.pmtiles" "$tmp"/*.geojsonl
+  tile-join -f -pk -o "$out" "$tmp/national.pmtiles" "$tmp/low.pmtiles" "$tmp/high.pmtiles"
 fi
 
 # Ids with a boundary, for scripts/build-metrics.py to check the counts against.

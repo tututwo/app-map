@@ -3,7 +3,7 @@
 
     python3 scripts/build-county-breaks.py      after scripts/build-metrics.py
 
-The legend's breaks are quintiles of the counties' counts (breaksFor in src/lib/explore/model.ts) and depend
+The legend's breaks are deciles of the counties' counts (breaksFor in src/lib/explore/model.ts) and depend
 on nothing but the release, so they are worked out here once. The page used to fetch the counties' whole
 matrix for them, and a shared county link carried 823 KB of it, base64, inside its HTML.
 """
@@ -34,7 +34,7 @@ def breaks_for(values) -> list[int]:
     """breaksFor in src/lib/explore/model.ts, to the letter: zero and No observation are left out."""
     counts = sorted(int(v) for v in values if v and v != MISSING)
     breaks = []
-    for q in (0.2, 0.4, 0.6, 0.8):
+    for q in (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9):
         i = math.floor(q * len(counts))
         b = nice(counts[i]) if i < len(counts) else 0
         if b > 0 and b not in breaks:
