@@ -1,4 +1,5 @@
 <script lang="ts">
+import "maplibre-gl/dist/maplibre-gl.css";
 import { cubicOut } from "svelte/easing";
 import { onMount } from "svelte";
 import { scaleQuantize } from "d3-scale";

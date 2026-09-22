@@ -85,6 +85,17 @@ test("/explore server-renders source counts for a state, a window and every type
   expect(dom).toContain("withheld");
 });
 
+test("a shared county link stays below the HTML budget", async ({ request }) => {
+  const response = await request.get(
+    "/explore?where=06037&level=county&from=2010&to=2015&type=all"
+  );
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(domOf(html)).toContain("Los Angeles County");
+  // Before ranged rows, one place serialized ten entire matrices into 3.3 MB of HTML.
+  expect(Buffer.byteLength(html)).toBeLessThan(600_000);
+});
+
 test("concurrent block-group deep links render across three large states", async ({ request }) => {
   await Promise.all(
     ["060014001001", "480019501001", "360010001001"].map(async (where) => {
@@ -92,9 +103,12 @@ test("concurrent block-group deep links render across three large states", async
         `/explore?where=${where}&level=blockgroup&from=2010&to=2015&type=all`
       );
       expect(response.status()).toBe(200);
-      const dom = domOf(await response.text());
+      const html = await response.text();
+      const dom = domOf(html);
       expect(dom).toContain("Reported closures by type");
       expect(dom).not.toContain("Data could not be loaded");
+      // California previously serialized 1.5 MB; keep room for ordinary markup growth.
+      expect(Buffer.byteLength(html)).toBeLessThan(600_000);
     })
   );
 });

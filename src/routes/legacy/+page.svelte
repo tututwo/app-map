@@ -337,11 +337,6 @@ function dismissLoadingError() {
                   neutral: "hsla(0, 0%, 87%, .9)", // Light gray
                   positive: "hsla(162, 100%, 38%, .9)", // Green
                 }}
-                hoverColors={{
-                  negative: "hsla(211, 98%, 21%, 1)",
-                  neutral: "hsla(0, 0%, 75%, 1)",
-                  positive: "hsla(145, 63%, 32%, 1)",
-                }}
               />
 
               {#snippet figcaption()}

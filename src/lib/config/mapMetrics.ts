@@ -107,7 +107,7 @@ export function createLegendRows(presentation: MapMetricPresentation): LegendRow
   return presentation.legendText.map((label, index) => ({
     label,
     color: presentation.colorRange[index],
-    textColor: getAccessibleTextColor(presentation.colorRange[index], "normal"),
+    textColor: getAccessibleTextColor(presentation.colorRange[index]),
   }));
 }
 

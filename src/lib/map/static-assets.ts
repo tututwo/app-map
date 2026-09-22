@@ -1,5 +1,6 @@
 import countiesTopologyUrl from "$data/counties-10m.json?url";
 import countyCameraUrl from "$data/county-camera.json?url";
+import statesTopologyUrl from "$data/states-10m.json?url";
 
 export type CountyCamera = {
   longitude: number;
@@ -78,5 +79,5 @@ export const loadMapAssets = createMapAssetsLoader((assetUrl) => fetch(assetUrl)
 
 const loadJsonAsset = createJsonAssetLoader((assetUrl) => fetch(assetUrl));
 
-/** State maps share the topology without requesting county-only camera data. */
-export const loadTopology = () => loadJsonAsset<unknown>(countiesTopologyUrl);
+/** State maps read the states alone (scripts/build-states-topology.mjs): a fifth of the county file. */
+export const loadTopology = () => loadJsonAsset<unknown>(statesTopologyUrl);

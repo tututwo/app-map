@@ -20,13 +20,13 @@
       "port": 5183
     },
     {
-      "name": "dev-r2",
+      "name": "worker-local",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "export PATH=\"$HOME/.nvm/versions/node/v22.18.0/bin:$PATH\" && npx vite dev --port 5184 --strictPort"
+        "export PATH=\"$HOME/.nvm/versions/node/v22.18.0/bin:$PATH\" && npm run preview:worker -- --port 8787 --local"
       ],
-      "port": 5184
+      "port": 8787
     }
   ]
 }

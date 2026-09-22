@@ -1,4 +1,5 @@
 <script lang="ts" module>
+import "maplibre-gl/dist/maplibre-gl.css";
 import { addProtocol } from "maplibre-gl";
 import { protocol } from "$lib/explore/locate";
 
@@ -142,6 +143,10 @@ const focusData = $derived<GeoJSON.FeatureCollection>({
 });
 // Below its Reveal zoom a tiled Level keeps the state level on screen, never an empty map.
 const stateMaxZoom = $derived(tiles ? revealZoom : 24);
+// Spherical bounds of 56 detailed outlines cost milliseconds, and every map move asks for them.
+const stateBoxes = $derived<[string, number[]][]>(
+  geometry?.features.map((feature) => [String(feature.id), featureBounds(feature).flat()]) ?? []
+);
 
 async function loadGeometry() {
   try {
@@ -250,9 +255,7 @@ function refresh() {
       // alongside the boundaries they colour; MapLibre applies feature-state to tiles that load later.
       const view = target.getBounds();
       const boxes: [string, number[]][] =
-        level === "zcta"
-          ? Object.entries(zctaShardBounds)
-          : geometry.features.map((feature) => [String(feature.id), featureBounds(feature).flat()]);
+        level === "zcta" ? Object.entries(zctaShardBounds) : stateBoxes;
       for (const [shard, [west, south, east, north]] of boxes)
         if (
           west <= view.getEast() &&

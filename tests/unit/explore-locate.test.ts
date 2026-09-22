@@ -1,6 +1,17 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { inRings, tilePoint } from "$lib/explore/locate";
-import { plain, looksLikeAddress } from "$lib/explore/gazetteer";
+import { plain, looksLikeAddress, pointOf } from "$lib/explore/gazetteer";
+
+test("tract and block-group links do not download a gazetteer that cannot locate them", async () => {
+  const fetcher = vi.spyOn(globalThis, "fetch");
+  try {
+    expect(await pointOf({ level: "tract", id: "06037101110" })).toBeUndefined();
+    expect(await pointOf({ level: "blockgroup", id: "060371011101" })).toBeUndefined();
+    expect(fetcher).not.toHaveBeenCalled();
+  } finally {
+    fetcher.mockRestore();
+  }
+});
 
 test("a point lands in the right tile, at the right place inside it", () => {
   // The Focus used throughout the docs: downtown New Haven, in the block-group archive's top zoom.
@@ -34,6 +45,18 @@ test("search text is compared without punctuation, and a house number means an a
   expect(plain("Houston, Texas")).toBe("houston tx");
   expect(plain("  New   Haven, CT ")).toBe("new haven ct");
   expect(plain("St. Louis")).toBe("st louis");
+  // The longest state name wins ("... West Virginia" also ends with " Virginia"); a state alone stays.
+  expect(plain("Charleston, West Virginia")).toBe("charleston wv");
+  expect(plain("west virginia")).toBe("west virginia");
+  // The Census spellings: St., Fort, Mount, and no hyphen or apostrophe to get wrong.
+  expect(plain("Saint Louis MO")).toBe(plain("St. Louis, MO"));
+  expect(plain("Ft. Worth")).toBe("fort worth");
+  expect(plain("Mt Vernon NY")).toBe("mount vernon ny");
+  expect(plain("MT")).toBe("mt");
+  expect(plain("Billings, MT")).toBe(plain("Billings, Montana"));
+  expect(plain("Helena MT 59601")).toBe("helena mt 59601");
+  expect(plain("winston salem")).toBe(plain("Winston-Salem"));
+  expect(plain("lees summit")).toBe(plain("Lee's Summit"));
   expect(looksLikeAddress("60 College St, New Haven")).toBe(true);
   expect(looksLikeAddress("221B Baker Street")).toBe(true);
   expect(looksLikeAddress("06511")).toBe(false);

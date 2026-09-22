@@ -16,20 +16,16 @@ export type County = {
 // Define props using Svelte 5's $props pattern
 interface CountySearchProps {
   placeholder?: string;
-  onCountySelected?: (county: County) => void;
   class?: string;
   geoid?: string;
   displayName?: string | null;
-  onLocationSourceChange?: (fromGeolocator: boolean) => void;
 }
 
 let {
   placeholder = "All counties",
-  onCountySelected,
   class: className = "",
   geoid = $bindable(),
   displayName = $bindable(),
-  onLocationSourceChange,
 }: CountySearchProps = $props();
 
 // State management
@@ -71,12 +67,8 @@ function handleValueChange(value: string | undefined) {
   const selected = suggestions.find((s) => s.key === value);
 
   if (selected) {
-    // Notify that this change is NOT from geolocator
-    onLocationSourceChange?.(false);
-
     geoid = selected.geoid;
     displayName = selected.displayName;
-    onCountySelected?.(selected);
 
     searchValue = "";
   }

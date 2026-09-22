@@ -111,7 +111,7 @@ let mapZoom = $state(3.5);
 let drawnLevel = $derived<Level>(
   query.level !== "state" && mapZoom < TILES[query.level].revealZoom ? "state" : query.level
 );
-let breaks = $derived(levelBreaks(data, yearWindow));
+let breaks = $derived(levelBreaks(data.states, query.type, yearWindow));
 let legend = $derived(legendFor(breaks[drawnLevel]));
 
 // The link printed on the page. Paper shows it in full; the PDF keeps it clickable.

@@ -136,7 +136,6 @@ $effect(() => {
   }
 
   // Apply alignment adjustments
-  let effectiveAlign = align;
   if (actualSide === "top" || actualSide === "bottom") {
     // Horizontal alignment adjustments
     switch (align) {

@@ -1,0 +1,435 @@
+[
+  {
+    "text": "60 College St, New Haven",
+    "kind": "street_address",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 0.33,
+    "right": true
+  },
+  {
+    "text": "1600 Pennsylvania Ave NW Washington DC",
+    "kind": "street_address",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 0.05,
+    "right": true
+  },
+  {
+    "text": "221B Baker Street",
+    "kind": "street_address",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 0.01,
+    "right": true
+  },
+  {
+    "text": "350 5th Ave, New York, NY 10118",
+    "kind": "street_address",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 17.27,
+    "right": true
+  },
+  {
+    "text": "10001 Broadway, San Antonio TX",
+    "kind": "street_address",
+    "enter": "geocoder",
+    "offered": ["ZIP 10001"],
+    "ms": 0.05,
+    "right": true
+  },
+  {
+    "text": "One Microsoft Way, Redmond WA",
+    "kind": "street_address",
+    "enter": null,
+    "offered": [],
+    "ms": 27.33,
+    "right": false
+  },
+  {
+    "text": "Apt 4, 123 Main St, Springfield IL",
+    "kind": "street_address",
+    "enter": null,
+    "offered": [],
+    "ms": 0.24,
+    "right": false
+  },
+  {
+    "text": "N6W23001 Bluemound Rd, Waukesha WI",
+    "kind": "street_address",
+    "enter": null,
+    "offered": [],
+    "ms": 0.17,
+    "right": false
+  },
+  {
+    "text": "123-45 Queens Blvd, Queens NY",
+    "kind": "street_address",
+    "enter": null,
+    "offered": [],
+    "ms": 0.17,
+    "right": false
+  },
+  {
+    "text": "450 1/2 Main St, Los Angeles",
+    "kind": "street_address",
+    "enter": null,
+    "offered": [],
+    "ms": 0.2,
+    "right": false
+  },
+  {
+    "text": "06511",
+    "kind": "zip_code",
+    "want": "ZIP 06511",
+    "enter": "ZIP 06511",
+    "offered": ["ZIP 06511"],
+    "ms": 0.85,
+    "right": true
+  },
+  {
+    "text": "zip 06511",
+    "kind": "zip_code",
+    "want": "ZIP 06511",
+    "enter": "ZIP 06511",
+    "offered": ["ZIP 06511"],
+    "ms": 1.42,
+    "right": true
+  },
+  {
+    "text": "ZIP code 77002",
+    "kind": "zip_code",
+    "want": "ZIP 77002",
+    "enter": "ZIP 77002",
+    "offered": ["ZIP 77002"],
+    "ms": 0.58,
+    "right": true
+  },
+  {
+    "text": "06511 New Haven",
+    "kind": "zip_code",
+    "want": "ZIP 06511",
+    "enter": "geocoder",
+    "offered": ["ZIP 06511"],
+    "ms": 0.02,
+    "right": true
+  },
+  {
+    "text": "New Haven 06511",
+    "kind": "zip_code",
+    "want": "ZIP 06511",
+    "enter": "ZIP 06511",
+    "offered": ["ZIP 06511", "New Haven County, CT", "New Haven, CT"],
+    "ms": 1.05,
+    "right": true
+  },
+  {
+    "text": "90210 beverly hills",
+    "kind": "zip_code",
+    "want": "ZIP 90210",
+    "enter": "geocoder",
+    "offered": ["ZIP 90210"],
+    "ms": 0.03,
+    "right": true
+  },
+  {
+    "text": "06511-1234",
+    "kind": "zip_code",
+    "want": "ZIP 06511",
+    "enter": "ZIP 06511",
+    "offered": ["ZIP 06511"],
+    "ms": 0.02,
+    "right": true
+  },
+  {
+    "text": "New Haven",
+    "kind": "place_name",
+    "want": "New Haven, CT",
+    "enter": "New Haven County, CT",
+    "offered": ["New Haven County, CT", "New Haven, CT", "New Haven, IN"],
+    "ms": 1.23,
+    "right": true
+  },
+  {
+    "text": "Harris County, TX",
+    "kind": "place_name",
+    "want": "Harris County, TX",
+    "enter": "Harris County, TX",
+    "offered": ["Harris County, TX"],
+    "ms": 1.25,
+    "right": true
+  },
+  {
+    "text": "texas",
+    "kind": "place_name",
+    "want": "Texas",
+    "enter": "Texas",
+    "offered": ["Texas", "Texas City, TX", "Texas County, MO"],
+    "ms": 1.12,
+    "right": true
+  },
+  {
+    "text": "Houston, Texas",
+    "kind": "place_name",
+    "want": "Houston, TX",
+    "enter": "Houston, TX",
+    "offered": ["Houston, TX", "South Houston, TX"],
+    "ms": 1.68,
+    "right": true
+  },
+  {
+    "text": "St Louis",
+    "kind": "place_name",
+    "want": "St. Louis, MO",
+    "enter": "St. Louis County, MO",
+    "offered": ["St. Louis County, MO", "St. Louis city, MO", "St. Louis, MO"],
+    "ms": 1.72,
+    "right": true
+  },
+  {
+    "text": "Washington DC",
+    "kind": "place_name",
+    "want": "Washington, DC",
+    "enter": "Washington, DC",
+    "offered": ["Washington, DC"],
+    "ms": 0.93,
+    "right": true
+  },
+  {
+    "text": "Charleston, West Virginia",
+    "kind": "place_name",
+    "want": "Charleston, WV",
+    "enter": "Charleston, WV",
+    "offered": ["Charleston, WV", "South Charleston, WV"],
+    "ms": 1.92,
+    "right": true
+  },
+  {
+    "text": "west virginia",
+    "kind": "place_name",
+    "want": "West Virginia",
+    "enter": "West Virginia",
+    "offered": ["West Virginia"],
+    "ms": 1.65,
+    "right": true
+  },
+  {
+    "text": "miami dade",
+    "kind": "place_name",
+    "want": "Miami-Dade County, FL",
+    "enter": "Miami-Dade County, FL",
+    "offered": ["Miami-Dade County, FL"],
+    "ms": 1.75,
+    "right": true
+  },
+  {
+    "text": "winston salem",
+    "kind": "place_name",
+    "want": "Winston-Salem, NC",
+    "enter": "Winston-Salem, NC",
+    "offered": ["Winston-Salem, NC"],
+    "ms": 0.76,
+    "right": true
+  },
+  {
+    "text": "coeur d alene",
+    "kind": "place_name",
+    "want": "Coeur d'Alene, ID",
+    "enter": null,
+    "offered": [],
+    "ms": 0.58,
+    "right": false
+  },
+  {
+    "text": "lees summit",
+    "kind": "place_name",
+    "want": "Lee's Summit, MO",
+    "enter": "Lee's Summit, MO",
+    "offered": ["Lee's Summit, MO"],
+    "ms": 0.81,
+    "right": true
+  },
+  {
+    "text": "Saint Louis MO",
+    "kind": "place_name",
+    "want": "St. Louis, MO",
+    "enter": "St. Louis, MO",
+    "offered": ["St. Louis, MO", "Lake St. Louis, MO"],
+    "ms": 0.88,
+    "right": true
+  },
+  {
+    "text": "Ft Worth",
+    "kind": "place_name",
+    "want": "Fort Worth, TX",
+    "enter": "Fort Worth, TX",
+    "offered": ["Fort Worth, TX"],
+    "ms": 0.74,
+    "right": true
+  },
+  {
+    "text": "Mt Vernon NY",
+    "kind": "place_name",
+    "want": "Mount Vernon, NY",
+    "enter": "Mount Vernon, NY",
+    "offered": ["Mount Vernon, NY"],
+    "ms": 0.43,
+    "right": true
+  },
+  {
+    "text": "new havn ct",
+    "kind": "place_name",
+    "want": "New Haven, CT",
+    "enter": null,
+    "offered": [],
+    "ms": 0.93,
+    "right": false
+  },
+  {
+    "text": "los angles",
+    "kind": "place_name",
+    "want": "Los Angeles, CA",
+    "enter": null,
+    "offered": [],
+    "ms": 1.06,
+    "right": false
+  },
+  {
+    "text": "pittsburg pennsylvania",
+    "kind": "place_name",
+    "want": "Pittsburgh, PA",
+    "enter": "West Pittsburg, PA",
+    "offered": ["West Pittsburg, PA"],
+    "ms": 0.68,
+    "right": false
+  },
+  {
+    "text": "springfeild illinois",
+    "kind": "place_name",
+    "want": "Springfield, IL",
+    "enter": null,
+    "offered": [],
+    "ms": 0.6,
+    "right": false
+  },
+  {
+    "text": "Albequerque",
+    "kind": "place_name",
+    "want": "Albuquerque, NM",
+    "enter": null,
+    "offered": [],
+    "ms": 1.02,
+    "right": false
+  },
+  {
+    "text": "churches closed in harris county texas",
+    "kind": "place_name",
+    "want": "Harris County, TX",
+    "enter": null,
+    "offered": [],
+    "ms": 0.22,
+    "right": false
+  },
+  {
+    "text": "closures near Durham NC",
+    "kind": "place_name",
+    "want": "Durham, NC",
+    "enter": null,
+    "offered": [],
+    "ms": 0.19,
+    "right": false
+  },
+  {
+    "text": "Philly",
+    "kind": "place_name",
+    "want": "Philadelphia, PA",
+    "enter": null,
+    "offered": [],
+    "ms": 0.82,
+    "right": false
+  },
+  {
+    "text": "NYC",
+    "kind": "place_name",
+    "want": "New York, NY",
+    "enter": "Onycha, AL",
+    "offered": ["Onycha, AL"],
+    "ms": 1.11,
+    "right": false
+  },
+  {
+    "text": "29 Palms, CA",
+    "kind": "place_name",
+    "want": "Twentynine Palms, CA",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 0.02,
+    "right": false
+  },
+  {
+    "text": "96 SC",
+    "kind": "place_name",
+    "want": "Ninety Six, SC",
+    "enter": "geocoder",
+    "offered": [],
+    "ms": 0,
+    "right": false
+  },
+  {
+    "text": "Yale University",
+    "kind": "landmark",
+    "enter": null,
+    "offered": [],
+    "ms": 0.42,
+    "right": true
+  },
+  {
+    "text": "Trinity Church Wall Street",
+    "kind": "landmark",
+    "enter": null,
+    "offered": [],
+    "ms": 0.48,
+    "right": true
+  },
+  {
+    "text": "corner of Elm and Chapel, New Haven",
+    "kind": "landmark",
+    "enter": null,
+    "offered": [],
+    "ms": 0.17,
+    "right": true
+  },
+  {
+    "text": "baptist churches",
+    "kind": "not_a_place",
+    "enter": null,
+    "offered": [],
+    "ms": 0.34,
+    "right": true
+  },
+  {
+    "text": "how many churches closed",
+    "kind": "not_a_place",
+    "enter": null,
+    "offered": [],
+    "ms": 0.19,
+    "right": true
+  },
+  {
+    "text": "methodist",
+    "kind": "not_a_place",
+    "enter": null,
+    "offered": [],
+    "ms": 0.79,
+    "right": true
+  },
+  {
+    "text": "asdfgh",
+    "kind": "not_a_place",
+    "enter": null,
+    "offered": [],
+    "ms": 1.08,
+    "right": true
+  }
+]

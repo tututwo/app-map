@@ -59,11 +59,8 @@ let {
 const chartBackgroundColor = "hsla(206, 100%, 96%, 1)";
 const lineColor = "hsla(0, 0%, 53%, 1)";
 const circleColor = "hsla(211, 99%, 21%, 1)";
-const circleHoverColor = "hsla(211, 99%, 35%, 1)";
 const gridLineColor = "hsla(0, 0%, 80%, 1)";
 const circleRadius = 5;
-const circleHoverRadius = 8;
-const tickLength = 6;
 const tickOffset = 20;
 
 // Get responsive dimensions from Figure context

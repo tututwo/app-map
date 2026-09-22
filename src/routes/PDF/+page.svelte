@@ -314,7 +314,6 @@ let demographicStatistics = $derived(
           <div class="space-y-8 lg:col-span-2">
             <DataSection
               title="Total number of closed church"
-              mapBorderColor="border-blue-100"
               legendData={dataRanges[0]}
               description={introText}
               mapColorKey={mapMetricDefinitions[0].colorKey}

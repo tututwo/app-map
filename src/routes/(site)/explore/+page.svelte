@@ -44,7 +44,7 @@ let drawnLevel = $derived<Level>(
 // Every Year Window is already in memory, so a new window is a lookup into the same arrays.
 let yearWindow = $derived(windowIndexOf(query.from, query.to));
 let stateCounts = $derived(countsIn(data.states, yearWindow));
-let breaks = $derived(levelBreaks(data, yearWindow));
+let breaks = $derived(levelBreaks(data.states, query.type, yearWindow));
 let closedByState = $derived(
   new Map(data.states?.shard.geoids.map((geoid, row) => [geoid, stateCounts[row]]))
 );

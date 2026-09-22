@@ -1,0 +1,61 @@
+// What people type into "Find a place", labelled by hand BEFORE any run. `kind` is what the text is;
+// `want` is the Gazetteer label (or ZIP) a correct search would put first, where one exists.
+export const CASES = [
+  // street addresses
+  { text: "60 College St, New Haven", kind: "street_address" },
+  { text: "1600 Pennsylvania Ave NW Washington DC", kind: "street_address" },
+  { text: "221B Baker Street", kind: "street_address" },
+  { text: "350 5th Ave, New York, NY 10118", kind: "street_address" },
+  { text: "10001 Broadway, San Antonio TX", kind: "street_address" },
+  { text: "One Microsoft Way, Redmond WA", kind: "street_address" },
+  { text: "Apt 4, 123 Main St, Springfield IL", kind: "street_address" },
+  { text: "N6W23001 Bluemound Rd, Waukesha WI", kind: "street_address" },
+  { text: "123-45 Queens Blvd, Queens NY", kind: "street_address" },
+  { text: "450 1/2 Main St, Los Angeles", kind: "street_address" },
+  // ZIP codes
+  { text: "06511", kind: "zip_code", want: "ZIP 06511" },
+  { text: "zip 06511", kind: "zip_code", want: "ZIP 06511" },
+  { text: "ZIP code 77002", kind: "zip_code", want: "ZIP 77002" },
+  { text: "06511 New Haven", kind: "zip_code", want: "ZIP 06511" },
+  { text: "New Haven 06511", kind: "zip_code", want: "ZIP 06511" },
+  { text: "90210 beverly hills", kind: "zip_code", want: "ZIP 90210" },
+  { text: "06511-1234", kind: "zip_code", want: "ZIP 06511" },
+  // places the search already handles
+  { text: "New Haven", kind: "place_name", want: "New Haven, CT" },
+  { text: "Harris County, TX", kind: "place_name", want: "Harris County, TX" },
+  { text: "texas", kind: "place_name", want: "Texas" },
+  { text: "Houston, Texas", kind: "place_name", want: "Houston, TX" },
+  { text: "St Louis", kind: "place_name", want: "St. Louis, MO" },
+  { text: "Washington DC", kind: "place_name", want: "Washington, DC" },
+  // places written the way people write them
+  { text: "Charleston, West Virginia", kind: "place_name", want: "Charleston, WV" },
+  { text: "west virginia", kind: "place_name", want: "West Virginia" },
+  { text: "miami dade", kind: "place_name", want: "Miami-Dade County, FL" },
+  { text: "winston salem", kind: "place_name", want: "Winston-Salem, NC" },
+  { text: "coeur d alene", kind: "place_name", want: "Coeur d'Alene, ID" },
+  // added after the first run, when choosing how to fold apostrophes: the commoner way to drop one
+  { text: "lees summit", kind: "place_name", want: "Lee's Summit, MO" },
+  { text: "Saint Louis MO", kind: "place_name", want: "St. Louis, MO" },
+  { text: "Ft Worth", kind: "place_name", want: "Fort Worth, TX" },
+  { text: "Mt Vernon NY", kind: "place_name", want: "Mount Vernon, NY" },
+  { text: "new havn ct", kind: "place_name", want: "New Haven, CT" },
+  { text: "los angles", kind: "place_name", want: "Los Angeles, CA" },
+  { text: "pittsburg pennsylvania", kind: "place_name", want: "Pittsburgh, PA" },
+  { text: "springfeild illinois", kind: "place_name", want: "Springfield, IL" },
+  { text: "Albequerque", kind: "place_name", want: "Albuquerque, NM" },
+  { text: "churches closed in harris county texas", kind: "place_name", want: "Harris County, TX" },
+  { text: "closures near Durham NC", kind: "place_name", want: "Durham, NC" },
+  { text: "Philly", kind: "place_name", want: "Philadelphia, PA" },
+  { text: "NYC", kind: "place_name", want: "New York, NY" },
+  { text: "29 Palms, CA", kind: "place_name", want: "Twentynine Palms, CA" },
+  { text: "96 SC", kind: "place_name", want: "Ninety Six, SC" },
+  // a named building or an intersection: no table has it, and the Census geocoder wants a house number
+  { text: "Yale University", kind: "landmark" },
+  { text: "Trinity Church Wall Street", kind: "landmark" },
+  { text: "corner of Elm and Chapel, New Haven", kind: "landmark" },
+  // not a location at all
+  { text: "baptist churches", kind: "not_a_place" },
+  { text: "how many churches closed", kind: "not_a_place" },
+  { text: "methodist", kind: "not_a_place" },
+  { text: "asdfgh", kind: "not_a_place" },
+];

@@ -1,8 +1,9 @@
 import type { RequestHandler } from "@sveltejs/kit";
 
-// Release-hashed, immutable data files: Metric cube Shards and community-context Shards.
+// Release-hashed, immutable data files: Metric cube Shards and community-context Shards. rows.bin is
+// read by byte range (scripts/build-rows.py), so it is stored as it is.
 const metricPath =
-  /^(?:metrics\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\/(?:geoids\.json|[a-z_]+\.bin)|sdoh\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\.json)\.gz$/;
+  /^(?:metrics\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\/(?:(?:geoids\.json|[a-z_]+\.bin)\.gz|rows\.bin)|sdoh\/(?:state|county|zcta|tract|blockgroup)\/[a-f0-9]{12}\/(?:us|\d{2})\.json\.gz)$/;
 const archivePath = /^(?:county|zcta|tract|bg)-2010\.pmtiles$/;
 
 function hasBody(object: R2Object): object is R2ObjectBody {

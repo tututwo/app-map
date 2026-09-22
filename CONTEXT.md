@@ -87,7 +87,7 @@ cannot be summed. `scripts/build-metrics.py` builds it from the lab's chunk file
 and asserts that the window list has no gaps, that chunks never disagree, that
 every Level summed by state equals the state Level, and that every place with
 counts has a boundary on the map (2010 geography throughout: Census cartographic
-files for county, ZIP and tract, the lab's GeoPackages for block groups). `src/lib/explore/metrics.ts` is the only
+files for county, ZIP and tract, the lab's GeoPackages for block groups). Two files are derived from each release and rebuilt with it: `scripts/build-rows.py` writes `rows.bin` beside every Shard, one place's counts for every Type and Year Window, read by byte range so a page never downloads a Shard's matrices for one place; `scripts/build-county-breaks.py` writes the county legend's classes for every Type and window to `src/lib/generated/county-breaks.json`, so no page needs the counties' matrix. `src/lib/explore/metrics.ts` is the only
 reader; a Shard file holds all windows, so changing the window makes no request.
 
 ## Community context

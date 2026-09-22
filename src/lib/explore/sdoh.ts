@@ -1,3 +1,4 @@
+import { browser } from "$app/environment";
 import manifest from "$lib/generated/sdoh-manifest.json";
 import { inflated } from "./metrics";
 
@@ -9,6 +10,10 @@ import { inflated } from "./metrics";
 export type ContextField = (typeof manifest.fields)[number];
 export type Context = Record<ContextField, number | null>;
 
+// A Year Window change reuses the same community data. Cache the parsed Shard, not just its bytes.
+type Places = Record<string, (number | null)[]>;
+const shards = new Map<string, Promise<Places>>();
+
 /** Every place of the Shard file that holds `id`; null when that Shard was never published. */
 async function placesWith(level: string, id: string, fetcher: typeof fetch) {
   const published = (manifest.levels as Record<string, { release: string; shards: string[] }>)[
@@ -16,8 +21,18 @@ async function placesWith(level: string, id: string, fetcher: typeof fetch) {
   ];
   const shard = published?.shards.length === 1 ? published.shards[0] : id.slice(0, 2);
   if (!published?.shards.includes(shard)) return null;
-  const buffer = await inflated(`sdoh/${level}/${published.release}/${shard}.json`, fetcher);
-  return JSON.parse(new TextDecoder().decode(buffer)) as Record<string, (number | null)[]>;
+  const path = `sdoh/${level}/${published.release}/${shard}.json`;
+  let hit = browser ? shards.get(path) : undefined;
+  if (!hit) {
+    hit = inflated(path, fetcher).then(
+      (buffer) => JSON.parse(new TextDecoder().decode(buffer)) as Places
+    );
+    if (browser) {
+      hit.catch(() => shards.delete(path));
+      shards.set(path, hit);
+    }
+  }
+  return hit;
 }
 
 // Trailing gaps are cut from a place's list, so a missing index is a gap too.

@@ -2,7 +2,7 @@
 import { onDestroy } from "svelte";
 import { prefersReducedMotion } from "svelte/motion";
 import { scale } from "svelte/transition";
-import { geocode, looksLikeAddress, search, type Hit } from "$lib/explore/gazetteer";
+import { geocode, looksLikeAddress, search, warm, type Hit } from "$lib/explore/gazetteer";
 import { fmt, type Level, type LngLat } from "$lib/explore/model";
 
 let {
@@ -51,18 +51,21 @@ async function find(text: string) {
   busy = false;
   note = "";
   active = 0;
-  if (text.trim().length < 2 || looksLikeAddress(text)) return;
-  note = "Finding places…";
+  if (text.trim().length < 2) return;
+  // An address is searched too, for a ZIP inside it ("06511 New Haven"), but the lookup keeps Enter.
+  const street = looksLikeAddress(text);
+  if (!street) note = "Finding places…";
   try {
     const found = await search(text);
     if (mine !== ticket) return;
     hits = found;
+    active = street ? found.length : 0;
     note =
-      !found.length && text.trim().length > 2
+      !found.length && !street && text.trim().length > 2
         ? "No state, county, ZIP code or city matches. For a street address, start with the house number."
         : "";
   } catch {
-    if (mine === ticket)
+    if (mine === ticket && !street)
       note = "The list of places could not be loaded. Check your connection and type again.";
   }
 }
@@ -145,7 +148,10 @@ function meta(hit: Hit) {
         open = true;
         void find(event.currentTarget.value);
       }}
-      onfocus={() => (open = true)}
+      onfocus={() => {
+        open = true;
+        warm();
+      }}
       onblur={() => (open = false)}
       {onkeydown}
       placeholder="City, county, ZIP code, state or address"

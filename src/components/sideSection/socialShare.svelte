@@ -1,5 +1,4 @@
 <script lang="ts">
-import { onMount } from "svelte";
 import { Popover } from "bits-ui";
 import {
   ExternalLink,
@@ -12,27 +11,7 @@ import {
 } from "lucide-svelte";
 import type { ComponentType } from "svelte";
 
-interface Props {
-  url?: string;
-  title?: string;
-  className?: string;
-}
-
-let { url = "", title = "", className = "" }: Props = $props();
-
-let currentUrl = $state(url);
-let currentTitle = $state(title);
 let open = $state(false);
-
-onMount(() => {
-  currentUrl = url || window.location.href;
-  currentTitle = title || document.title;
-});
-
-$effect(() => {
-  if (url) currentUrl = url;
-  if (title) currentTitle = title;
-});
 
 function openShare(shareUrl: string) {
   window.open(shareUrl, "_blank", "noopener,noreferrer");
@@ -50,7 +29,7 @@ const shareOptions: ShareOption[] = [
     icon: Link,
     action: async () => {
       try {
-        await navigator.clipboard.writeText(currentUrl);
+        await navigator.clipboard.writeText(window.location.href);
         console.log("Link copied to clipboard!");
       } catch (err) {
         console.error("Failed to copy link:", err);
@@ -61,21 +40,23 @@ const shareOptions: ShareOption[] = [
     label: "Email",
     icon: Mail,
     action: () => {
-      window.location.href = `mailto:?subject=${encodeURIComponent(currentTitle)}&body=${encodeURIComponent(currentUrl)}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(document.title)}&body=${encodeURIComponent(window.location.href)}`;
     },
   },
   {
     label: "Facebook",
     icon: Facebook,
     action: () =>
-      openShare(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`),
+      openShare(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`
+      ),
   },
   {
     label: "Bluesky",
     icon: MessageSquare,
     action: () =>
       openShare(
-        `https://bsky.app/intent/compose?text=${encodeURIComponent(`${currentTitle} ${currentUrl}`)}`
+        `https://bsky.app/intent/compose?text=${encodeURIComponent(`${document.title} ${window.location.href}`)}`
       ),
   },
   {
@@ -83,7 +64,7 @@ const shareOptions: ShareOption[] = [
     icon: Twitter,
     action: () =>
       openShare(
-        `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(currentTitle)}`
+        `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(document.title)}`
       ),
   },
   {
@@ -91,7 +72,7 @@ const shareOptions: ShareOption[] = [
     icon: Linkedin,
     action: () =>
       openShare(
-        `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`
+        `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`
       ),
   },
 ];
@@ -104,7 +85,7 @@ function handleShareClick(option: ShareOption) {
 
 <Popover.Root bind:open>
   <Popover.Trigger
-    class="flex w-full cursor-pointer items-center gap-3 font-light text-white opacity-90 transition-opacity hover:opacity-100 {className}"
+    class="flex w-full cursor-pointer items-center gap-3 font-light text-white opacity-90 transition-opacity hover:opacity-100"
   >
     <i class="flex size-6 items-center justify-center">
       <ExternalLink color="white" strokeWidth={1.5} size={22} />

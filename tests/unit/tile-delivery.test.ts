@@ -132,10 +132,22 @@ describe("R2 tile delivery", () => {
       "metrics/blockgroup/012345abcdef/../secret.bin.gz",
       "sdoh/msa/012345abcdef/06.json.gz",
       "sdoh/tract/latest/06.json.gz",
+      "metrics/blockgroup/012345abcdef/06/rows.json",
+      "metrics/blockgroup/012345abcdef/rows.bin",
     ])
       expect((await server.request(key)).status).toBe(404);
     expect(server.bucket.get).not.toHaveBeenCalled();
     expect((await server.request("sdoh/tract/012345abcdef/06.json.gz")).status).toBe(200);
+    // One place is read out of rows.bin by byte range: immutable, and never through the whole-file cache.
+    const rows = setup();
+    const place = await rows.request("metrics/blockgroup/012345abcdef/06/rows.bin", {
+      range: "bytes=4-7",
+    });
+    expect(place.status).toBe(206);
+    expect(place.headers.get("content-range")).toBe("bytes 4-7/10");
+    expect(place.headers.get("cache-control")).toContain("immutable");
+    expect(rows.bucket.get.mock.calls[0][1].range).toEqual({ offset: 4, length: 4 });
+    expect(rows.cache.put).not.toHaveBeenCalled();
     server.bucket.get.mockResolvedValue(null);
     expect((await server.request()).status).toBe(404);
     server.bucket.get.mockRejectedValue(new Error("R2 GET failed: InvalidRange (10039)"));

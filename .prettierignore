@@ -4,3 +4,10 @@ pnpm-lock.yaml
 yarn.lock
 bun.lock
 bun.lockb
+
+# Minified on purpose: the browser downloads it as it is (scripts/build-states-topology.mjs)
+src/data/states-10m.json
+# Generated, minified (scripts/build-county-breaks.py)
+src/lib/generated/county-breaks.json
+# Rewritten as minified JSON by scripts/prebuild-data.mjs on every dev/build/check.
+src/lib/generated/year-window-bounds.json

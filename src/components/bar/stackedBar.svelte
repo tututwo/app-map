@@ -1,7 +1,7 @@
 <script>
 // @ts-nocheck
 import * as d3 from "d3";
-import { getContext, untrack } from "svelte";
+import { getContext } from "svelte";
 import { expoOut, cubicOut } from "svelte/easing";
 import { fade, fly } from "svelte/transition";
 import Tooltip from "$components/chart/Tooltip.svelte";
@@ -24,11 +24,6 @@ let {
     negative: "hsla(211, 99%, 45%, 1)",
     neutral: "hsla(0, 0%, 85%, 1)",
     positive: "hsla(145, 63%, 42%, 1)",
-  },
-  hoverColors = {
-    negative: "hsla(211, 99%, 35%, 1)",
-    neutral: "hsla(0, 0%, 75%, 1)",
-    positive: "hsla(145, 63%, 32%, 1)",
   },
 } = $props();
 
@@ -149,11 +144,6 @@ const stackBoundsByYear = $derived.by(() => {
   return bounds;
 });
 
-function getSegmentColor(seriesKey, isHovered) {
-  const colorMap = isHovered ? hoverColors : colors;
-  return colorMap[seriesKey] || colors.neutral;
-}
-
 // Single effect to manage D3 transitions for the visual layer
 $effect(() => {
   if (!svgElement || !stackedData().length) return;
@@ -235,7 +225,7 @@ $effect(() => {
       .attr("width", xScale.bandwidth())
       .attr("y", (d) => (d[1] >= d[0] ? yScale()(d[0]) : yScale()(d[1])))
       .attr("height", 0)
-      .attr("fill", getSegmentColor(series.key, false))
+      .attr("fill", colors[series.key] || colors.neutral)
       .style("pointer-events", "none");
 
     enterBars
