@@ -2,11 +2,16 @@
 import { resolve } from "$app/paths";
 import { prefersReducedMotion } from "svelte/motion";
 import { fade } from "svelte/transition";
+import TypeBars from "$components/explore/TypeBars.svelte";
 import { CopyLink } from "$lib/copy-link.svelte";
-import { fmt, per10k, type Selection } from "$lib/explore/model";
+import { fmt, per10k, type Selection, type TypeKey } from "$lib/explore/model";
 
 // The Summary reads the same Query, so its link carries this page's own search.
-let { selection, search }: { selection: Selection; search: string } = $props();
+let {
+  selection,
+  search,
+  ontype,
+}: { selection: Selection; search: string; ontype: (type: TypeKey) => void } = $props();
 
 const share = new CopyLink();
 
@@ -85,15 +90,18 @@ let title = $derived(
   <p class="text-body text-[14px] leading-[1.6] text-pretty" aria-live="polite">{sentence}</p>
   {#if selection.status === "ok"}
     <div in:fade={{ duration: prefersReducedMotion.current ? 100 : 180 }}>
-      <h3 class="text-ink text-[13px] font-semibold">Reported closures by type</h3>
-      <ul class="mt-3 flex flex-col gap-2">
-        {#each selection.types as type (type.key)}
-          <li class="flex items-baseline justify-between gap-4 text-[14px]">
-            <span class="text-body">{type.label}</span>
-            <span class="text-ink shrink-0 font-semibold tabular-nums">{fmt(type.closed)}</span>
-          </li>
-        {/each}
-      </ul>
+      <div class="flex items-baseline justify-between gap-4">
+        <h3 class="text-ink text-[13px] font-semibold">Reported closures by type</h3>
+        {#if selection.types.length > 1}
+          <span class="text-muted text-[12px]">Click a type to map it</span>
+        {/if}
+      </div>
+      <TypeBars
+        class="mt-2 text-[14px]"
+        types={selection.types}
+        type={selection.type}
+        onpick={ontype}
+      />
       <p class="text-muted mt-3 text-[12px] leading-relaxed text-pretty">
         {#if selection.inactive.length}
           Not active here in this window, so not counted: {selection.inactive.join(", ")}.

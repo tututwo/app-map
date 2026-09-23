@@ -438,7 +438,11 @@ function reset() {
         {/if}
       </div>
     </div>
-    <SelectionPanel {selection} search={paletteUrl().search} />
+    <SelectionPanel
+      {selection}
+      search={paletteUrl().search}
+      ontype={(type) => navigation.update({ type })}
+    />
   </div>
 </main>
 

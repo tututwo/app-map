@@ -2,6 +2,7 @@
 import { resolve } from "$app/paths";
 import { page } from "$app/state";
 import { onMount } from "svelte";
+import TypeBars from "$components/explore/TypeBars.svelte";
 import { countsIn, levelBreaks } from "$lib/explore/load";
 import { windowIndexOf } from "$lib/explore/metrics";
 import { paletteFor } from "$lib/explore/palettes";
@@ -103,10 +104,6 @@ let tract = $derived(
 let tractLabel = $derived(tract?.name.split(",")[0]);
 let measures = $derived(contextRows(tract ? data.tractContext : data.context, stateContext));
 
-// Paper has one page: Types that closed take a cell each, the rest share a sentence.
-let closedTypes = $derived(selection.types.filter((type) => type.closed));
-let noneClosed = $derived(selection.types.filter((type) => !type.closed).map((type) => type.label));
-
 let mapZoom = $state(3.5);
 // Below its Reveal zoom a tiled Level still draws states, and the legend follows the map.
 let drawnLevel = $derived<Level>(
@@ -139,6 +136,9 @@ const table = "w-full border-collapse text-[14px] @[720px]:text-[12.5px]";
 const columnHead = "pb-1.5 font-medium whitespace-nowrap";
 const cell = "py-1 ps-3 text-end tabular-nums";
 const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text-[10.5px]";
+// The legend gives each class one narrow cell, so its counts are short: 1.8K, 12K. Breaks have two
+// significant digits, so nothing is lost.
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 </script>
 
 <svelte:window onbeforeprint={stamp} />
@@ -289,33 +289,37 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
                 </div>
               {/if}
             </div>
+            <!-- One row on the sheet: each color is labelled with the count it starts at. -->
             <div
               role="group"
               aria-label="Map legend"
-              class="text-body flex flex-col gap-2 text-[11.5px]"
+              class="text-body flex items-start gap-3 text-[11.5px] [-webkit-print-color-adjust:exact] [print-color-adjust:exact] @[720px]:text-[10.5px]"
             >
-              <div class="grid grid-cols-5 gap-x-2 gap-y-2">
-                {#each legend.classes as cls (cls.label)}
-                  <span class="flex min-w-0 flex-col gap-1.5">
-                    <span
-                      class="h-2.5 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]"
-                      style:background={cls.color}
-                    ></span>
-                    <span class="leading-snug break-words tabular-nums">{cls.label}</span>
+              <div
+                class="grid flex-1 grid-cols-5 gap-x-px gap-y-2 @[720px]:auto-cols-fr @[720px]:grid-flow-col @[720px]:grid-cols-none"
+              >
+                {#each legend.classes as cls, index (cls.label)}
+                  <span class="flex min-w-0 flex-col gap-1">
+                    <span class="h-2.5" style:background={cls.color}></span>
+                    <span aria-hidden="true" class="whitespace-nowrap tabular-nums"
+                      >{compact.format(index ? legend.breaks[index - 1] : 0)}{index ===
+                      legend.classes.length - 1
+                        ? "+"
+                        : ""}</span
+                    >
+                    <span class="sr-only">{cls.label}</span>
                   </span>
                 {/each}
               </div>
-              <span class="inline-flex items-center gap-1.5 self-end">
-                <span
-                  class="h-2.5 w-4 [-webkit-print-color-adjust:exact] [print-color-adjust:exact]"
-                  style:background={NO_DATA_COLOR}
-                ></span>
+              <span class="flex shrink-0 flex-col gap-1">
+                <span class="h-2.5 w-7" style:background={NO_DATA_COLOR}></span>
                 No data
               </span>
             </div>
             <p class={small}>
               The dark outline is {place}. Colors count the reported closures of {selection.noun} in
-              each {LEVEL_NOUNS[drawnLevel].one}. Basemap © OpenStreetMap contributors, © CARTO.
+              each {LEVEL_NOUNS[drawnLevel].one}; each color starts at the number under it. Basemap
+              © OpenStreetMap contributors, © CARTO.
             </p>
           </section>
 
@@ -404,25 +408,15 @@ const small = "text-muted text-[12.5px] leading-[1.45] text-pretty @[720px]:text
 
         <section aria-labelledby="types" class="flex flex-col gap-2">
           <h2 id="types" class="label-caps">Reported closures by type</h2>
-          {#if closedTypes.length}
-            <ul
-              class="grid gap-x-8 text-[14px] @[440px]:grid-cols-2 @[720px]:grid-cols-3 @[720px]:text-[12.5px]"
-            >
-              {#each closedTypes as type (type.key)}
-                <li
-                  class="border-rule flex items-baseline justify-between gap-4 border-t py-1 {type.key ===
-                  query.type
-                    ? 'text-ink font-semibold'
-                    : 'text-body'}"
-                >
-                  <span>{type.label}</span>
-                  <span class="tabular-nums">{fmt(type.closed)}</span>
-                </li>
-              {/each}
-            </ul>
+          {#if selection.types.length}
+            <!-- Two columns on the sheet; their bar tracks share the leftover width equally, so one scale. -->
+            <TypeBars
+              class="text-[14px] @[720px]:grid-cols-[repeat(2,auto_minmax(3rem,1fr)_auto)] @[720px]:text-[12.5px] @[720px]:[&>li:nth-child(odd)]:pe-6"
+              types={selection.types}
+              type={query.type}
+            />
           {/if}
           <p class={small}>
-            {#if noneClosed.length}None reported for: {noneClosed.join(", ")}.{/if}
             {#if selection.inactive.length}
               Not active here in these years: {selection.inactive.join(", ")}.
             {/if}

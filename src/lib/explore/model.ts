@@ -463,6 +463,7 @@ export function selectionFor(
   return {
     selected,
     status,
+    type: query.type,
     stat: rated(counts?.[query.type] ?? null, context?.pop2010 ?? null),
     // Every Type with a count, largest first. Types with No observation are named together below them.
     types: types
