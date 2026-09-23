@@ -710,7 +710,7 @@ $effect(() => {
           : ""}</strong
       >
       <p>Reported closures: {fmt(hoveredCount)}</p>
-      <p class="text-xs text-gray-600">
+      <p class="text-muted text-xs">
         {hovered && hovered.length > 2 ? `GEOID ${hovered} · ` : ""}Preliminary source output
       </p>
       {#if zoomsIn}
@@ -729,6 +729,18 @@ $effect(() => {
 }
 .state-map :global(.maplibregl-ctrl-attrib) {
   border-radius: 0;
+  background: rgb(255 255 255 / 85%);
+  color: var(--color-muted);
+  font: 11px/18px var(--font-sans);
+}
+.state-map :global(.maplibregl-ctrl-attrib a) {
+  color: inherit;
+}
+.state-map :global(.maplibregl-ctrl-attrib a:hover) {
+  color: var(--color-yale-blue);
+}
+.state-map :global(.maplibregl-ctrl-attrib-button) {
+  opacity: 0.55;
 }
 .print-copy {
   display: none;
@@ -752,8 +764,8 @@ $effect(() => {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.5rem;
-  background: #f3f5f7ed;
-  color: #334155;
+  background: #f2f3f5ed;
+  color: var(--color-body);
   text-align: center;
   font-size: 0.875rem;
 }
@@ -763,10 +775,11 @@ $effect(() => {
   left: 50%;
   translate: -50%;
   margin: 0;
-  border: 1px solid #d9dde2;
+  border: 1px solid var(--color-rule);
   padding: 0.45rem 0.9rem;
   background: #ffffffed;
-  color: #334155;
+  box-shadow: 0 2px 8px rgb(22 41 66 / 8%);
+  color: var(--color-body);
   font-size: 0.8125rem;
   pointer-events: none;
 }

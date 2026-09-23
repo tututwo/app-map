@@ -8,6 +8,7 @@ import { fade } from "svelte/transition";
 import { ChevronDown, RotateCcw } from "lucide-svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import SelectionPanel from "$components/explore/SelectionPanel.svelte";
+import Dropdown from "$components/site/Dropdown.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
 import { countsIn, levelBreaks } from "$lib/explore/load";
 import { windowIndexOf } from "$lib/explore/metrics";
@@ -159,6 +160,10 @@ function changePalette(id: string) {
   const chosen = paletteFor(id);
   replaceState(paletteUrl(chosen.id), { ...page.state, explorePalette: chosen.id });
 }
+
+// A palette's classes as equal hard-edged steps, for its swatch in the list.
+const ramp = (colors: readonly string[]) =>
+  `linear-gradient(to right, ${colors.map((color, i) => `${color} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(", ")})`;
 
 function reset() {
   void navigation.reset();
@@ -318,23 +323,35 @@ function reset() {
               {selection.range}
             </p>
           </div>
-          <label class="flex w-32 shrink-0 flex-col gap-1">
-            <span class="text-body text-[11px]">Color palette</span>
-            <select
-              name="palette"
-              value={palette.id}
-              onchange={(event) => changePalette(event.currentTarget.value)}
-              class="palette-select border-field-border text-ink min-h-11 w-full cursor-pointer border bg-white px-2 text-xs"
-            >
-              {#each ["Original", "Single hue", "Multi hue"] as group (group)}
-                <optgroup label={group}>
-                  {#each PALETTES.filter((option) => option.group === group) as option (option.id)}
-                    <option value={option.id}>{option.label}</option>
-                  {/each}
-                </optgroup>
-              {/each}
-            </select>
-          </label>
+          <Dropdown
+            label="Color palette"
+            value={palette.id}
+            options={PALETTES.map(({ id, label, group }) => ({ value: id, label, group }))}
+            onchange={changePalette}
+            class="group flex w-32 shrink-0 cursor-pointer flex-col gap-1 text-left outline-none"
+          >
+            {#snippet trigger()}
+              <span class="text-body text-[11px]">Color palette</span>
+              <span
+                class="border-field-border text-ink group-hover:border-ink group-data-[state=open]:border-yale-blue group-focus-visible:outline-yale-blue flex min-h-9 items-center justify-between gap-2 border bg-white px-2.5 text-xs transition-colors group-focus-visible:outline-2 group-focus-visible:-outline-offset-2"
+              >
+                {palette.label}
+                <ChevronDown
+                  size={12}
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                  class="text-muted group-data-[state=open]:text-yale-blue transition-transform group-data-[state=open]:rotate-180"
+                />
+              </span>
+            {/snippet}
+            {#snippet option(item)}
+              <span
+                class="h-2 w-12 shrink-0 self-center"
+                style:background={ramp(paletteFor(item.value).colors)}
+              ></span>
+              <span>{item.label}</span>
+            {/snippet}
+          </Dropdown>
         </div>
         <div class="shrink-0">
           <div
@@ -475,7 +492,6 @@ function reset() {
 .legend-toggle[aria-expanded="true"] {
   background: rgb(0 53 107 / 6%);
 }
-.palette-select:focus-visible,
 .legend-help:focus-visible {
   outline: 2px solid var(--color-yale-blue);
   outline-offset: -2px;

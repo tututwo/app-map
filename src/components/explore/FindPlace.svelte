@@ -2,6 +2,7 @@
 import { onDestroy } from "svelte";
 import { prefersReducedMotion } from "svelte/motion";
 import { scale } from "svelte/transition";
+import { Search } from "lucide-svelte";
 import { geocode, looksLikeAddress, search, warm, type Hit } from "$lib/explore/gazetteer";
 import { fmt, type Level, type LngLat } from "$lib/explore/model";
 
@@ -10,7 +11,7 @@ let {
   byId,
   onpick,
   label = "Find a place",
-  class: wrapper = "h-14 min-w-60 flex-[0_1_340px] items-center",
+  class: wrapper = "min-h-14 min-w-60 flex-[0_1_340px] items-center",
 }: {
   /** Label of the Location that set the Focus, or "" when the map did. */
   value: string;
@@ -129,7 +130,8 @@ function meta(hit: Hit) {
 }
 </script>
 
-<div class="border-rule relative flex gap-3 border-r px-5 {wrapper}">
+<div class="field border-rule relative flex cursor-text gap-3 border-r px-5 {wrapper}">
+  <Search size={18} strokeWidth={1.75} aria-hidden="true" class="field-icon text-muted shrink-0" />
   <label class="flex min-w-0 flex-1 flex-col gap-1">
     <span class="label-caps">{label}</span>
     <input
@@ -155,7 +157,7 @@ function meta(hit: Hit) {
       onblur={() => (open = false)}
       {onkeydown}
       placeholder="City, county, ZIP code, state or address"
-      class="text-ink placeholder:text-faint focus-visible:outline-yale-blue w-full text-[16px] focus-visible:outline-2 focus-visible:outline-offset-4"
+      class="text-ink placeholder:text-faint w-full bg-transparent text-[16px] outline-none"
     />
   </label>
   {#if open && (options || note)}
@@ -164,9 +166,9 @@ function meta(hit: Hit) {
         start: prefersReducedMotion.current ? 1 : 0.98,
         duration: prefersReducedMotion.current ? 100 : 180,
       }}
-      class="place-suggestions border-rule absolute top-full -right-px -left-px z-20 origin-top-left border border-t-0 bg-white"
+      class="place-suggestions dropdown absolute top-full -right-px -left-px z-20 origin-top-left cursor-default"
     >
-      <div id="find-options" role="listbox" aria-label="Places" class={options ? "py-1.5" : ""}>
+      <div id="find-options" role="listbox" aria-label="Places">
         {#each hits as hit, index (`${hit.label}|${hit.kind}|${hit.at}`)}
           <button
             type="button"
@@ -174,16 +176,16 @@ function meta(hit: Hit) {
             tabindex="-1"
             id="find-option-{index}"
             aria-selected={index === active}
+            data-highlighted={index === active ? "" : undefined}
             onmousedown={(event) => event.preventDefault()}
             onmousemove={() => (active = index)}
             onclick={() => choose(index)}
-            class="motion-control text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] {index ===
-            active
-              ? 'bg-footer'
-              : ''}"
+            class="dropdown-option px-5"
           >
             <span>{hit.label}</span>
-            <span class="text-muted text-[12px] whitespace-nowrap">{meta(hit)}</span>
+            <span class="text-muted ml-auto pl-3 text-[12px] whitespace-nowrap tabular-nums"
+              >{meta(hit)}</span
+            >
           </button>
         {/each}
         {#if address}
@@ -193,24 +195,24 @@ function meta(hit: Hit) {
             tabindex="-1"
             id="find-option-{hits.length}"
             aria-selected={active === hits.length}
+            data-highlighted={active === hits.length ? "" : undefined}
             disabled={busy}
             onmousedown={(event) => event.preventDefault()}
             onmousemove={() => (active = hits.length)}
             onclick={() => choose(hits.length)}
-            class="motion-control text-ink flex w-full justify-between gap-3 px-5 py-[9px] text-left text-[14px] disabled:opacity-60 {active ===
-            hits.length
-              ? 'bg-footer'
-              : ''}"
+            class="dropdown-option px-5"
           >
             <span>Look up the address “{shown.trim()}”</span>
-            <span class="text-muted text-[12px] whitespace-nowrap">Street address · Enter</span>
+            <span class="text-muted ml-auto pl-3 text-[12px] whitespace-nowrap"
+              >Street address · Enter</span
+            >
           </button>
         {/if}
       </div>
       <p
         id="find-note"
         role="status"
-        class="text-muted px-5 text-[12.5px] leading-normal text-pretty {note ? 'py-2.5' : ''}"
+        class="text-muted px-5 text-[12.5px] leading-normal text-pretty {note ? 'py-2' : ''}"
       >
         {note}
       </p>
