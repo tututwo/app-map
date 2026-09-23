@@ -192,18 +192,48 @@ function reset() {
   class="flex flex-col lg:h-[max(720px,calc(100vh_-_65px))]"
   aria-busy={!!navigating.to || navigation.locating === true}
 >
-  <div
-    class="explore-toolbar border-rule relative z-[4] flex flex-wrap items-stretch border-b bg-white"
-  >
-    <FindPlace value={searchValue} byId={closedByState} onpick={(pick) => navigation.look(pick)} />
+  <div class="explore-toolbar search-bar border-rule relative z-[4] border-b">
+    <FindPlace
+      value={searchValue}
+      byId={closedByState}
+      onpick={(pick) => navigation.look(pick)}
+      class="search-where min-h-14 min-w-0 items-center bg-white px-5"
+    />
     <QueryFields
-      large
       bind:from={() => query.from, (from) => navigation.update({ from })}
       bind:to={() => query.to, (to) => navigation.update({ to })}
       bind:type={() => query.type, (type) => navigation.update({ type })}
     />
+    <!-- Phones: five segments do not fit, so View by is a field like the others. -->
+    <div class="search-level flex bg-white sm:hidden">
+      <Dropdown
+        label="View by"
+        value={query.level}
+        options={VIEWS.flatMap(({ label, level }) => (level ? [{ value: level, label }] : []))}
+        onchange={(level) => navigation.look({ level: level as Level })}
+        class="field flex min-h-14 w-full cursor-pointer flex-col justify-center gap-1 self-stretch px-5 text-left"
+      >
+        {#snippet trigger()}
+          <span class="label-caps">View by</span>
+          <span
+            class="text-ink flex items-center justify-between gap-2 text-[16px] leading-6 font-medium"
+          >
+            {VIEWS.find(({ level }) => level === query.level)?.label}
+            <ChevronDown
+              size={12}
+              strokeWidth={1.75}
+              aria-hidden="true"
+              class="field-icon field-caret text-muted shrink-0"
+            />
+          </span>
+        {/snippet}
+      </Dropdown>
+    </div>
+    <div class="search-reset flex items-center justify-center bg-white px-2 sm:hidden">
+      {@render resetButton()}
+    </div>
     <div
-      class="flex min-h-14 min-w-0 flex-auto flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2 lg:justify-end"
+      class="search-view flex min-h-14 min-w-0 items-center gap-3 bg-white px-5 py-2 max-sm:hidden"
     >
       <span class="text-muted text-[12.5px] whitespace-nowrap">View by</span>
       <div class="bg-seg inline-flex max-w-full gap-0.5 overflow-x-auto p-1">
@@ -225,16 +255,20 @@ function reset() {
           </button>
         {/each}
       </div>
-      <button
-        type="button"
-        onclick={reset}
-        class="motion-control text-body hover:bg-seg inline-flex min-h-11 items-center gap-1.5 px-3 text-[12px] font-medium"
-      >
-        <RotateCcw size={13} strokeWidth={1.75} aria-hidden="true" />
-        Reset
-      </button>
+      <span class="ml-auto">{@render resetButton()}</span>
     </div>
   </div>
+
+  {#snippet resetButton()}
+    <button
+      type="button"
+      onclick={reset}
+      class="motion-control text-body hover:bg-seg inline-flex min-h-11 items-center gap-1.5 px-3 text-[12px] font-medium"
+    >
+      <RotateCcw size={13} strokeWidth={1.75} aria-hidden="true" />
+      Reset
+    </button>
+  {/snippet}
 
   {#if navigation.notice}
     <p in:fade={{ duration: 140 }} role="status" class="bg-footer text-body px-5 py-3 text-sm">
@@ -464,8 +498,48 @@ function reset() {
 </main>
 
 <style>
+/* Toolbar layouts; the hairlines come from .search-bar (app.css). Phones: place, then the window
+   with Reset, then type with View by. From 640px View by is the segmented control; from 834px the
+   fields share a row; from 1280px everything does. */
 .explore-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "where where"
+    "dates reset"
+    "type level";
   box-shadow: 0 2px 8px rgb(22 41 66 / 3%);
+}
+.search-level {
+  grid-area: level;
+}
+.search-reset {
+  grid-area: reset;
+}
+.search-view {
+  grid-area: view;
+}
+@media (min-width: 640px) {
+  .explore-toolbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "where where"
+      "dates type"
+      "view view";
+  }
+}
+@media (min-width: 834px) {
+  .explore-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "where dates type"
+      "view view view";
+  }
+}
+@media (min-width: 1280px) {
+  .explore-toolbar {
+    grid-template-columns: minmax(15rem, 1fr) auto auto auto;
+    grid-template-areas: "where dates type view";
+  }
 }
 .map-material {
   background: white;

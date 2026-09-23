@@ -3,13 +3,13 @@ import { ChevronDown } from "lucide-svelte";
 import Dropdown from "$components/site/Dropdown.svelte";
 import { FROM_YEARS, WINDOWS, TYPES, type TypeKey } from "$lib/explore/model";
 
-// Both entry points expose only published windows.
+// Both entry points expose only published windows. The two cells (`search-dates`, `search-type`) are
+// placed by the bar around them, which draws the hairlines between cells.
 let {
   from = $bindable(),
   to = $bindable(),
   type = $bindable(),
-  large = false,
-}: { from: number; to: number; type: TypeKey; large?: boolean } = $props();
+}: { from: number; to: number; type: TypeKey } = $props();
 
 const fromOptions = FROM_YEARS.map((year) => ({ value: String(year), label: String(year) }));
 const typeOptions = Object.entries(TYPES).map(([key, t]) => ({ value: key, label: t.label }));
@@ -30,12 +30,10 @@ function changeFrom(value: string) {
   from = next;
 }
 
-let field = $derived(
-  `field flex cursor-pointer flex-col justify-center gap-1 self-stretch text-left ${large ? "min-h-14" : "pt-3.5 pb-[13px]"}`
-);
-let shown = $derived(
-  `text-ink flex items-center gap-2 ${large ? "text-[16px] font-medium" : "text-[14px] font-semibold"}`
-);
+// Every field is a caps label over a 16px value, so labels and values line up across the row.
+const field =
+  "field flex min-h-14 cursor-pointer flex-col justify-center gap-1 self-stretch text-left";
+const shown = "text-ink flex items-center gap-2 text-[16px] leading-6 font-medium";
 </script>
 
 {#snippet caret()}
@@ -47,7 +45,7 @@ let shown = $derived(
   />
 {/snippet}
 
-<div class="border-rule flex items-center border-r">
+<div class="search-dates flex items-center bg-white">
   <Dropdown
     label="From"
     name="from"
@@ -61,7 +59,11 @@ let shown = $derived(
       <span class={shown}>{from}{@render caret()}</span>
     {/snippet}
   </Dropdown>
-  <span class="text-faint {large ? 'mt-3.5' : 'mt-[18px]'}" aria-hidden="true">—</span>
+  <!-- Built like a field so the dash sits on the values' line. -->
+  <span class="flex flex-col gap-1" aria-hidden="true">
+    <span class="label-caps invisible">–</span>
+    <span class="text-faint text-[16px] leading-6">—</span>
+  </span>
   <Dropdown
     label="To, inclusive"
     name="to"
@@ -76,14 +78,14 @@ let shown = $derived(
     {/snippet}
   </Dropdown>
 </div>
-<div class={large ? "border-rule flex border-r" : "flex min-w-0 flex-[1_1_220px]"}>
+<div class="search-type flex min-w-0 bg-white">
   <Dropdown
     label="Type"
     name="type"
     value={type}
     options={typeOptions}
     onchange={(value) => (type = value as TypeKey)}
-    class="{field} min-w-0 px-5 {large ? '' : 'w-full'}"
+    class="{field} w-full min-w-0 px-5"
   >
     {#snippet trigger()}
       <span class="label-caps">Type</span>

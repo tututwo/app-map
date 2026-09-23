@@ -262,8 +262,8 @@
   }
 }
 
-/* Query fields (place search, From, To, Type): a tint on hover; while open or focused, a Yale Blue
-   rule underneath and a blue label, like the active nav link. */
+/* Query fields (place search, From, To, Type, View by): a tint on hover; while open or focused, a
+   Yale Blue rule underneath and a blue label, like the active nav link. */
 .site-shell .field {
   outline: none;
   transition:
@@ -290,6 +290,23 @@
   .site-shell .field:hover:not([data-state="open"], :has(:focus)) {
     background: var(--color-footer);
   }
+}
+
+/* Search bars (Home, Explore): the cells sit on a 1px gap of the rule colour, so every divider runs
+   the full row or column whatever the layout. Each page sets its grid template. */
+.site-shell .search-bar {
+  display: grid;
+  gap: 1px;
+  background: var(--color-rule);
+}
+.site-shell .search-where {
+  grid-area: where;
+}
+.site-shell .search-dates {
+  grid-area: dates;
+}
+.site-shell .search-type {
+  grid-area: type;
 }
 
 /* Dropdown lists. Not scoped: bits-ui portals its lists outside .site-shell. In the components

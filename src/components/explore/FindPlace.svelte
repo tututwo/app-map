@@ -11,7 +11,8 @@ let {
   byId,
   onpick,
   label = "Find a place",
-  class: wrapper = "min-h-14 min-w-60 flex-[0_1_340px] items-center",
+  class: wrapper = "min-h-14 items-center px-5",
+  icon = true,
 }: {
   /** Label of the Location that set the Focus, or "" when the map did. */
   value: string;
@@ -26,8 +27,10 @@ let {
     address?: string;
   }) => void;
   label?: string;
-  /** Size and alignment of the field inside its bar. */
+  /** Size, padding and alignment of the field inside its bar. */
   class?: string;
+  /** False where a search button next to the field carries the magnifier (Home). */
+  icon?: boolean;
 } = $props();
 
 // What the user has typed since the last pick; null shows the Focus's Location.
@@ -100,6 +103,17 @@ async function lookUp() {
   }
 }
 
+/** Acts on the typed text as Enter does; false when the field is empty, so a form can go on. */
+export function go() {
+  if (!shown.trim()) return false;
+  if (hits.length || address) choose(active);
+  else {
+    document.getElementById("find-input")?.focus();
+    void find(shown);
+  }
+  return true;
+}
+
 function close() {
   open = false;
   hits = [];
@@ -130,11 +144,19 @@ function meta(hit: Hit) {
 }
 </script>
 
-<div class="field border-rule relative flex cursor-text gap-3 border-r px-5 {wrapper}">
-  <Search size={18} strokeWidth={1.75} aria-hidden="true" class="field-icon text-muted shrink-0" />
+<div class="field relative z-10 flex cursor-text gap-3 {wrapper}">
+  {#if icon}
+    <Search
+      size={18}
+      strokeWidth={1.75}
+      aria-hidden="true"
+      class="field-icon text-muted shrink-0"
+    />
+  {/if}
   <label class="flex min-w-0 flex-1 flex-col gap-1">
     <span class="label-caps">{label}</span>
     <input
+      id="find-input"
       type="text"
       role="combobox"
       autocomplete="off"
@@ -157,7 +179,7 @@ function meta(hit: Hit) {
       onblur={() => (open = false)}
       {onkeydown}
       placeholder="City, county, ZIP code, state or address"
-      class="text-ink placeholder:text-faint w-full bg-transparent text-[16px] outline-none"
+      class="text-ink placeholder:text-faint w-full bg-transparent text-[16px] leading-6 text-ellipsis outline-none"
     />
   </label>
   {#if open && (options || note)}

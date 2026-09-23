@@ -2,6 +2,7 @@
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { prefersReducedMotion } from "svelte/motion";
+import { Search } from "lucide-svelte";
 import FindPlace from "$components/explore/FindPlace.svelte";
 import ImageSlot from "$components/site/ImageSlot.svelte";
 import QueryFields from "$components/site/QueryFields.svelte";
@@ -13,6 +14,7 @@ import { DEFAULT_QUERY, formatAt, whereOf, writeQuery, type TypeKey } from "$lib
 let from = $state(DEFAULT_QUERY.from);
 let to = $state(DEFAULT_QUERY.to);
 let type = $state<TypeKey>(DEFAULT_QUERY.type);
+let finder = $state<ReturnType<typeof FindPlace>>();
 
 // Copy is final (design handoff); photos are slots the content team fills.
 const pairs = [
@@ -123,17 +125,22 @@ function reveal(node: HTMLElement) {
     </div>
   </section>
 
-  <!-- Search bar -->
+  <!-- Search: the round button searches the typed place, or opens the whole U.S. when it is empty. -->
   <section class="{wrap} relative z-[2] -mt-9">
     <form
       method="get"
       action={resolve("/explore")}
-      class="home-search border-rule flex flex-wrap rounded border bg-white shadow-[0_1px_2px_rgba(0,0,0,.05),0_14px_34px_-18px_rgba(0,0,0,.22)]"
+      class="home-search search-bar"
+      onsubmit={(event) => {
+        if (finder?.go()) event.preventDefault();
+      }}
     >
       <FindPlace
+        bind:this={finder}
+        icon={false}
         value=""
         label="Where"
-        class="min-w-0 flex-[1_1_320px] items-center pt-3.5 pb-[13px]"
+        class="search-where min-h-14 min-w-0 items-center bg-white px-5"
         onpick={({ at, level = DEFAULT_QUERY.level, geoid, near, address }) =>
           goto(
             resolve("/explore") +
@@ -156,18 +163,17 @@ function reveal(node: HTMLElement) {
           )}
       />
       <QueryFields bind:from bind:to bind:type />
-      <div class="flex items-stretch p-2">
-        <button
-          type="submit"
-          class="motion-control bg-yale-blue min-h-12 rounded-[3px] px-6 text-[14px] font-semibold whitespace-nowrap text-white hover:brightness-[.92]"
-        >
-          Explore <span class="motion-arrow inline-block" aria-hidden="true">→</span>
-        </button>
-      </div>
+      <button
+        type="submit"
+        aria-label="Search"
+        class="search-go bg-yale-blue focus-visible:outline-offset-[-5px] flex min-h-14 w-14 items-center justify-center text-white transition-[filter] hover:brightness-[.92] focus-visible:outline-2 focus-visible:outline-white active:brightness-[.85]"
+      >
+        <Search size={20} strokeWidth={2.25} aria-hidden="true" />
+      </button>
     </form>
-    <div class="text-faint px-[18px] pt-2.5 text-[11.5px]">
+    <p class="text-faint px-[21px] pt-2.5 text-[11.5px] text-pretty">
       Preliminary reported closure counts · published windows include both endpoint years.
-    </div>
+    </p>
   </section>
 
   <!-- Then and now -->
@@ -248,23 +254,37 @@ function reveal(node: HTMLElement) {
 <SiteFooter />
 
 <style>
+/* Home search. Phones stack the fields with the search button beside Where; from 640px the dates
+   and type share a row; from 1024px it is one bar. Hairlines come from .search-bar (app.css). */
 .home-search {
-  transition:
-    box-shadow 200ms ease-out,
-    border-color 200ms ease-out;
-}
-.home-search:focus-within {
-  border-color: var(--color-yale-blue);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "where go"
+    "dates dates"
+    "type type";
+  border: 1px solid var(--color-rule);
   box-shadow:
-    0 0 0 3px rgb(0 53 107 / 8%),
+    0 1px 2px rgb(0 0 0 / 5%),
     0 14px 34px -18px rgb(0 0 0 / 22%);
+}
+.search-go {
+  grid-area: go;
+}
+@media (min-width: 640px) {
+  .home-search {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "where where go"
+      "dates type type";
+  }
+}
+@media (min-width: 1024px) {
+  .home-search {
+    grid-template-columns: minmax(0, 1fr) auto 16rem auto;
+    grid-template-areas: "where dates type go";
+  }
 }
 #stories {
   scroll-margin-top: 8rem;
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-search {
-    transition: none;
-  }
 }
 </style>
