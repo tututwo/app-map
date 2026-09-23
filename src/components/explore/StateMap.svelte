@@ -4,7 +4,43 @@ import { addProtocol } from "maplibre-gl";
 import { protocol } from "$lib/explore/locate";
 
 // One reader for the page: the map and the Focus lookup share each archive's header and directories.
-addProtocol("pmtiles", protocol.tile);
+// The coloured map and its outlines ask for the same tile in the same frame. One request serves both,
+// and it is cancelled only once neither wants the tile.
+type Tile = Awaited<ReturnType<typeof protocol.tilev4>>;
+const pending = new Map<
+  string,
+  { result: Promise<Tile>; controller: AbortController; users: number }
+>();
+addProtocol("pmtiles", (params, abort) => {
+  if (params.type === "json") return protocol.tilev4(params, abort);
+  let entry = pending.get(params.url);
+  if (!entry) {
+    const controller = new AbortController();
+    const result = protocol.tilev4(params, controller);
+    const forget = () => {
+      if (pending.get(params.url)?.result === result) pending.delete(params.url);
+    };
+    result.then(forget, forget);
+    pending.set(params.url, (entry = { result, controller, users: 0 }));
+  }
+  const shared = entry;
+  shared.users++;
+  abort.signal.addEventListener(
+    "abort",
+    () => {
+      if (--shared.users) return;
+      // A request that arrives from now on starts afresh instead of sharing a cancelled one.
+      if (pending.get(params.url) === shared) pending.delete(params.url);
+      shared.controller.abort();
+    },
+    { once: true }
+  );
+  // MapLibre moves the bytes to its worker, which leaves nothing for the next source: each gets a copy.
+  return shared.result.then((tile) => ({
+    ...tile,
+    data: tile.data instanceof Uint8Array ? tile.data.slice() : tile.data,
+  }));
+});
 </script>
 
 <script lang="ts">
@@ -25,12 +61,13 @@ import type {
   ErrorEvent,
   ExpressionSpecification,
   Map as MapInstance,
+  MapGeoJSONFeature,
   MapLayerMouseEvent,
   VectorTileSource as VectorSource,
 } from "maplibre-gl";
 import Tooltip from "$components/chart/Tooltip.svelte";
 import { loadMapValues, type MapValues } from "$lib/explore/metrics";
-import { archiveUrl, frameOf } from "$lib/explore/locate";
+import { archiveUrl, frameOf, type Bounds } from "$lib/explore/locate";
 import {
   COLORS,
   LEVEL_NOUNS,
@@ -88,12 +125,13 @@ let {
   still?: boolean;
 } = $props();
 
-const NATIONAL_BOUNDS: [[number, number], [number, number]] = [
+const NATIONAL_BOUNDS: Bounds = [
   [-125, 24],
   [-66, 50],
 ];
 // Counts never ride in tiles or GeoJSON properties (ADR-0002). Each feature's colour class arrives as
-// feature-state, so this one expression serves every Level, Year Window and Type.
+// feature-state, so this one expression serves every Level, Year Window and Type. (A global-state lookup
+// was measured and rejected: MapLibre 5.19 copies the whole global state into every tile's reply.)
 const fillColor = $derived([
   "match",
   ["coalesce", ["feature-state", "cls"], -1],
@@ -102,6 +140,10 @@ const fillColor = $derived([
 ] as unknown as ExpressionSpecification);
 const STATE_SOURCE = "explore-states";
 const TILE_SOURCE = "explore-tiles";
+// A filter change makes MapLibre rebuild every tile of its source. Hover and Selection outlines keep
+// their own copy of the archive, whose tiles hold only the one or two outlined Units, so moving the
+// pointer never rebuilds the coloured tiles.
+const OUTLINE_SOURCE = "explore-outlines";
 // Ids seen on the map belong to the states or to the chosen Level, which tells a ZIP from a county.
 const levelOf = (id: string): Level => (id.length === 2 ? "state" : level);
 let geometry = $state.raw<CountyFeatureCollection>();
@@ -109,6 +151,8 @@ let map = $state.raw<MapInstance>();
 let container = $state<HTMLElement>();
 let hovered = $state<string | null>(null);
 let hoveredCount = $state<number | null>(null);
+/** A click on the hovered Unit would zoom in to it. */
+let zoomsIn = $state(false);
 // States are GeoJSON; every other Level is a tile archive, mounted while it is the chosen Level.
 const tiles = $derived(level === "state" ? null : TILES[level]);
 const tileUrl = $derived(tiles && `pmtiles://${archiveUrl(tiles.archive)}`);
@@ -187,7 +231,7 @@ function handleMapError(event: ErrorEvent) {
     error = `State layer could not be loaded: ${event.error.message}`;
     return;
   }
-  if (details.sourceId === TILE_SOURCE && !details.tile) {
+  if ((details.sourceId === TILE_SOURCE || details.sourceId === OUTLINE_SOURCE) && !details.tile) {
     // The state view still works, so this stays a notice rather than the blocking error.
     notice = `${LEVEL_NOUNS[level].one} boundaries could not be loaded.`;
     return;
@@ -198,9 +242,17 @@ function handleMapError(event: ErrorEvent) {
 
 function hover(event: MapLayerMouseEvent) {
   const feature = event.features?.[0];
-  hovered = feature?.properties.geoid ?? null;
-  hoveredCount = hovered ? countOf(hovered) : null;
   pointer = { x: event.point.x, y: event.point.y };
+  const geoid = feature?.properties.geoid ?? null;
+  if (geoid === hovered) return;
+  hovered = geoid;
+  hoveredCount = hovered ? countOf(hovered) : null;
+  zoomsIn = !!feature && !!map && clickZooms(map, feature);
+}
+
+function unhover() {
+  hovered = null;
+  zoomsIn = false;
 }
 
 // Values on the map, for the current Type. Plain Maps on purpose: reactive ones would make the paint
@@ -303,63 +355,160 @@ function copyForPrint() {
   if (!loadingCounts && map?.areTilesLoaded()) printCopy = map.getCanvas().toDataURL("image/png");
 }
 
-// The point of the last click on the chosen Level's own Units.
-let clicked: LngLat | null = null;
-function pick(event: MapLayerMouseEvent) {
-  const geoid = event.features?.[0]?.properties.geoid;
-  const at: LngLat = [event.lngLat.lng, event.lngLat.lat];
-  // Below a Reveal zoom the states stand in for the Level: a click there only says where to look.
-  const own = typeof geoid === "string" && (geoid.length === 2) === (level === "state");
-  clicked = own ? at : null;
-  onpick({ at, geoid: own ? geoid : undefined });
+const moving = () => (still || prefersReducedMotion.current ? 0 : 1);
+// Explore's legend lies over the bottom of the map; whatever the camera frames must clear it.
+type Padding = { top: number; right: number; bottom: number; left: number };
+function paddingOf(target: MapInstance): Padding {
+  const room = Math.min(90, target.getContainer().clientWidth / 6);
+  return { top: room, right: room, left: room, bottom: room + (still ? 0 : 110) };
+}
+/** How far in the camera goes to frame a Unit: a state never past 8, a fine Unit one short of its tiles' end. */
+const capOf = (lvl: Level) => (lvl === "state" ? 8 : TILES[lvl].maxZoom - 1);
+
+/** Frame bounds, with a flight that takes longer the further it zooms (capped near 1.3 s). */
+function frame(target: MapInstance, bounds: Bounds, maxZoom: number, padding = paddingOf(target)) {
+  const fit = target.cameraForBounds(bounds, { padding, maxZoom })?.zoom;
+  const dz = fit === undefined ? 0 : Math.abs(fit - target.getZoom());
+  target.fitBounds(bounds, {
+    padding,
+    maxZoom,
+    bearing: 0,
+    pitch: 0,
+    duration: moving() * Math.min(1300, 450 + 90 * dz),
+  });
 }
 
-// The camera frames the Selection when a search, a Level change or a link chose it. A click on a Unit
-// never moves the camera: the user picked that view. A state is always framed whole.
+/** The bounds a state's own geometry gives, for framing it whole. */
+function stateBoundsOf(id: string | undefined): Bounds | null {
+  const feature = geometry?.features.find((candidate) => String(candidate.id) === id);
+  return feature ? featureBounds(feature) : null;
+}
+
+/**
+ * The rule a click follows (ADR-0003, amended): a Unit the map shows at less than half the size it
+ * could have is framed, so a click from the national view lands on it; nearer in, a click only brings
+ * a Unit the edge of the map cuts off into view, and a Unit bigger than the view leaves the camera be.
+ */
+function clickMove(target: MapInstance, lvl: Level, bounds: Bounds) {
+  const padding = paddingOf(target);
+  const fit = target.cameraForBounds(bounds, { padding, maxZoom: capOf(lvl) })?.zoom;
+  if (fit === undefined) return null;
+  const zoom = target.getZoom();
+  if (zoom < fit - 1) return "frame";
+  if (zoom > fit + 1e-6) return null;
+  const { clientWidth: width, clientHeight: height } = target.getContainer();
+  const [[west, south], [east, north]] = bounds;
+  const [a, b] = [target.project([west, north]), target.project([east, south])];
+  const seen =
+    a.x >= padding.left &&
+    a.y >= padding.top &&
+    b.x <= width - padding.right &&
+    b.y <= height - padding.bottom;
+  return seen ? null : "pan";
+}
+
+/** Whether a click on this hovered feature frames it; the tooltip says so. */
+function clickZooms(target: MapInstance, feature: MapGeoJSONFeature) {
+  const id = feature.properties.geoid;
+  if (level === "state") {
+    const bounds = stateBoundsOf(typeof id === "string" ? id : undefined);
+    return !!bounds && clickMove(target, "state", bounds) === "frame";
+  }
+  // The drawn shape is cut at its tile's edge, so for a Unit that spans tiles this errs toward "zoom in".
+  const { geometry: shape } = feature;
+  if (shape.type !== "Polygon" && shape.type !== "MultiPolygon") return false;
+  const rings = shape.type === "Polygon" ? shape.coordinates : shape.coordinates.flat();
+  const bounds: Bounds = [
+    [Infinity, Infinity],
+    [-Infinity, -Infinity],
+  ];
+  for (const ring of rings)
+    for (const [lng, lat] of ring) {
+      bounds[0] = [Math.min(bounds[0][0], lng), Math.min(bounds[0][1], lat)];
+      bounds[1] = [Math.max(bounds[1][0], lng), Math.max(bounds[1][1], lat)];
+    }
+  return Number.isFinite(bounds[0][0]) && clickMove(target, level, bounds) === "frame";
+}
+
+let clickId = 0;
+async function frameClick(target: MapInstance, lvl: Level, at: LngLat, geoid?: string) {
+  const mine = ++clickId;
+  const bounds =
+    lvl === "state" ? stateBoundsOf(geoid) : await frameOf(lvl, at, geoid).catch(() => null);
+  if (mine !== clickId || target !== map || lvl !== level || !bounds) return;
+  const move = clickMove(target, lvl, bounds);
+  if (move === "frame") frame(target, bounds, capOf(lvl));
+  else if (move === "pan") {
+    const padding = paddingOf(target);
+    const [[west, south], [east, north]] = bounds;
+    target.easeTo({
+      center: [(west + east) / 2, (south + north) / 2],
+      offset: [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2],
+      duration: moving() * 450,
+    });
+  }
+}
+
+// The point of the last click, whose camera frameClick has already taken care of.
+let clicked: LngLat | null = null;
+function pick(event: MapLayerMouseEvent) {
+  const target = map;
+  if (!target) return;
+  const geoid = event.features?.[0]?.properties.geoid;
+  const at: LngLat = [event.lngLat.lng, event.lngLat.lat];
+  const lvl = level;
+  // Below a Reveal zoom the states stand in for the Level: a click there only says where to look.
+  const own = typeof geoid === "string" && (geoid.length === 2) === (lvl === "state");
+  // Where a Level's Units are specks, the one drawn under the pointer is one guess among many. The Unit
+  // that contains the point is the answer (ADR-0003), and the Focus dot then sits inside its outline.
+  const sure = own && (lvl === "state" || target.getZoom() >= TILES[lvl].outlineZoom);
+  clicked = at;
+  onpick({ at, geoid: sure ? geoid : undefined });
+  void frameClick(target, lvl, at, sure ? geoid : undefined);
+}
+
+// The camera frames the Selection when a search, a Level change or a link chose it; a click moves it
+// itself (frameClick). A state is always framed whole.
 let settled: string | undefined;
-const cameraMotion = $derived({
-  duration: still || prefersReducedMotion.current ? 0 : 500,
-  bearing: 0,
-  pitch: 0,
-});
 $effect(() => {
   if (!mapLoaded || !map || !geometry) return;
   const key = `${level}|${focus}|${selected}`;
   if (key === settled) return;
   settled = key;
   const target = map;
+  // The URL keeps five decimals of the clicked point.
+  const byClick =
+    !!focus && !!clicked?.every((value, axis) => Math.abs(value - focus[axis]) < 1e-4);
+  clicked = null;
+  if (byClick) return;
   if (focus && level !== "state") {
-    const [at, lvl] = [focus, level];
-    // The URL keeps five decimals of the clicked point.
-    const byClick = clicked?.every((value, axis) => Math.abs(value - at[axis]) < 1e-4);
-    clicked = null;
-    if (byClick) return;
+    const [at, lvl, id] = [focus, level, selected ?? undefined];
     target.stop();
-    const room = Math.min(90, target.getContainer().clientWidth / 6);
-    void frameOf(lvl, at)
+    void frameOf(lvl, at, id)
       .catch(() => null)
       .then((bounds) => {
         if (settled !== key || target !== map) return;
-        if (bounds)
-          target.fitBounds(bounds, {
-            ...cameraMotion,
-            // Explore's legend lies over the bottom of the map; the Selection must clear it.
-            padding: { top: room, right: room, left: room, bottom: room + (still ? 0 : 110) },
-            maxZoom: TILES[lvl].maxZoom - 1,
+        if (bounds) frame(target, bounds, capOf(lvl));
+        else
+          target.easeTo({
+            center: at,
+            zoom: TILES[lvl].focusZoom,
+            bearing: 0,
+            pitch: 0,
+            duration: moving() * 500,
           });
-        else target.easeTo({ ...cameraMotion, center: at, zoom: TILES[lvl].focusZoom });
       });
     return;
   }
   // A link from before the Focus names a Unit only: frame its state, or the country for a ZIP.
-  const id = level === "zcta" ? null : selected?.slice(0, 2);
-  const feature = geometry.features.find((candidate) => String(candidate.id) === id);
+  const bounds = stateBoundsOf(level === "zcta" ? undefined : selected?.slice(0, 2));
   target.stop();
-  target.fitBounds(feature ? featureBounds(feature) : NATIONAL_BOUNDS, {
-    ...cameraMotion,
-    padding: 45,
-    maxZoom: 8,
-  });
+  frame(
+    target,
+    bounds ?? NATIONAL_BOUNDS,
+    8,
+    still || !bounds ? { top: 45, right: 45, bottom: 45, left: 45 } : undefined
+  );
 });
 </script>
 
@@ -392,9 +541,7 @@ $effect(() => {
         mapLoaded = true;
       }}
       onerror={handleMapError}
-      onmovestart={() => {
-        hovered = null;
-      }}
+      onmovestart={unhover}
       onmoveend={refresh}
       onwebglcontextlost={() => {
         error = "The map's graphics context was lost.";
@@ -425,9 +572,7 @@ $effect(() => {
           }}
           onclick={still ? undefined : pick}
           onmousemove={still ? undefined : hover}
-          onmouseleave={() => {
-            hovered = null;
-          }}
+          onmouseleave={unhover}
         />
         <LineLayer
           id="state-hover"
@@ -479,11 +624,12 @@ $effect(() => {
               }}
               onclick={still ? undefined : pick}
               onmousemove={still ? undefined : hover}
-              onmouseleave={() => {
-                hovered = null;
-              }}
+              onmouseleave={unhover}
             />
-            <!-- Changing a vector filter reparses visible tiles. Keep it fixed at national zoom. -->
+          </VectorTileSource>
+          <!-- Below selectZoom a fine Unit is a speck, and this copy loads no tiles at all. -->
+          <VectorTileSource id={OUTLINE_SOURCE} url={tileUrl}>
+            <!-- The filter stays fixed until outlines show, so zooming out rebuilds nothing. -->
             <LineLayer
               id="tile-hover"
               sourceLayer={tiles.sourceLayer}
@@ -496,7 +642,7 @@ $effect(() => {
               id="tile-selected-casing"
               sourceLayer={tiles.sourceLayer}
               beforeId="focus-dot"
-              minzoom={revealZoom}
+              minzoom={tiles.selectZoom}
               filter={["==", ["get", "geoid"], selected ?? ""]}
               paint={{ "line-color": "#ffffff", "line-width": 6 }}
             />
@@ -504,7 +650,7 @@ $effect(() => {
               id="tile-selected"
               sourceLayer={tiles.sourceLayer}
               beforeId="focus-dot"
-              minzoom={revealZoom}
+              minzoom={tiles.selectZoom}
               filter={["==", ["get", "geoid"], selected ?? ""]}
               paint={{ "line-color": "#111827", "line-width": 2.5 }}
             />
@@ -567,6 +713,9 @@ $effect(() => {
       <p class="text-xs text-gray-600">
         {hovered && hovered.length > 2 ? `GEOID ${hovered} · ` : ""}Preliminary source output
       </p>
+      {#if zoomsIn}
+        <p class="text-yale-blue mt-1 text-xs font-semibold">Click to zoom in</p>
+      {/if}
     </div>
   </Tooltip>
 </figure>

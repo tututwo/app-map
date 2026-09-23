@@ -12,13 +12,16 @@ const basemap = {
   ],
 };
 
-async function hoverMap(page: Page, horizontal = 0.5) {
+// A framed Unit sits in the middle of the map above the legend, whose padding lifts it (StateMap paddingOf).
+const FRAMED = 0.44;
+
+async function hoverMap(page: Page, horizontal = 0.5, vertical = 0.5) {
   const canvas = page.locator("canvas.maplibregl-canvas");
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Map canvas was not measurable");
   // Moving off first refreshes a tooltip whose counts may have arrived while the pointer was still.
   await page.mouse.move(box.x + 1, box.y + 1);
-  await canvas.hover({ position: { x: box.width * horizontal, y: box.height / 2 } });
+  await canvas.hover({ position: { x: box.width * horizontal, y: box.height * vertical } });
   return (await page.getByRole("tooltip").allTextContents()).join(" ");
 }
 
@@ -139,12 +142,18 @@ for (const { level, digits, labels } of [
     await expect.poll(() => hoverMap(page)).toContain(`Reported closures: ${allCount}`);
     expect(mapRequests).toHaveLength(2);
     await page.locator("canvas.maplibregl-canvas").click();
-    await expect.poll(() => new URL(page.url()).searchParams.get("where")).toBe(geoid);
+    // At the national camera a fine polygon is a speck, and the one drawn under the pointer is a guess:
+    // the Selection is the Unit at the point clicked (ADR-0003), and the camera frames it.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("where"))
+      .toMatch(new RegExp(`^\\d{${digits}}$`));
+    const picked = new URL(page.url()).searchParams.get("where")!;
+    const pickedCount = await publishedCount(picked, "all_religions", 2000, 2025, level);
     await expect(page.locator("aside")).toContainText(
-      new RegExp(`${allCount} closures? of places of worship`)
+      new RegExp(`${pickedCount} closures? of places of worship`)
     );
-    // Picking a polygon keeps the user's national camera.
-    await expect.poll(() => hoverMap(page, 0.3)).toContain(`GEOID ${geoids[0]}`);
+    await expect.poll(() => hoverMap(page, 0.5, FRAMED)).toContain(`GEOID ${picked}`);
+    await expect.poll(() => hoverMap(page, 0.3)).not.toContain(`GEOID ${geoids[0]}`);
 
     for (const [field, value, type, from] of [
       ["from", "2010", "all_religions", 2010],
@@ -152,8 +161,8 @@ for (const { level, digits, labels } of [
     ] as const) {
       await page.locator(`select[name="${field}"]`).selectOption(value);
       await expect.poll(() => new URL(page.url()).searchParams.get(field)).toBe(value);
-      const count = await publishedCount(geoid, type, from, 2025, level);
-      await expect.poll(() => hoverMap(page)).toContain(`Reported closures: ${count}`);
+      const count = await publishedCount(picked, type, from, 2025, level);
+      await expect.poll(() => hoverMap(page, 0.5, FRAMED)).toContain(`Reported closures: ${count}`);
       await expect(
         legend.getByTitle(`${labels[3]} reported closures`, { exact: true })
       ).toBeVisible();
@@ -331,15 +340,16 @@ test("a palette changes colors without reloading counts and survives navigation"
       metricRequests.push(request.url());
   });
   await page.goto("/explore?level=tract&from=2000&to=2025&type=all_religions");
-  let tooltip = "";
-  await expect.poll(async () => (tooltip = await hoverMap(page))).toMatch(/GEOID (\d{11}) ·/);
-  const geoid = tooltip.match(/GEOID (\d{11}) ·/)![1];
-  const count = await publishedCount(geoid, "all_religions", 2000, 2025);
-  await expect.poll(() => hoverMap(page)).toContain(`Reported closures: ${count}`);
+  await expect.poll(() => hoverMap(page)).toMatch(/GEOID (\d{11}) ·/);
+  // A click at the national camera selects the tract at that point and frames it.
   await page.locator("canvas.maplibregl-canvas").click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("where")).toMatch(/^\d{11}$/);
+  const geoid = new URL(page.url()).searchParams.get("where")!;
+  const count = await publishedCount(geoid, "all_religions", 2000, 2025);
   await expect(page.locator("aside")).toContainText(
     new RegExp(`${count} closures? of places of worship`)
   );
+  await expect.poll(() => hoverMap(page, 0.5, FRAMED)).toContain(`Reported closures: ${count}`);
   await page.waitForLoadState("networkidle");
   const beforeQuery = Object.fromEntries(new URL(page.url()).searchParams);
   const beforeRequests = metricRequests.length;
@@ -393,7 +403,7 @@ test("a palette changes colors without reloading counts and survives navigation"
       )
       .toEqual(expectedColors);
   await expectPalette();
-  await expect.poll(() => hoverMap(page)).toContain(`Reported closures: ${count}`);
+  await expect.poll(() => hoverMap(page, 0.5, FRAMED)).toContain(`Reported closures: ${count}`);
   await page.waitForLoadState("networkidle");
   expect(metricRequests).toHaveLength(beforeRequests);
   await page.mouse.move(0, 0);

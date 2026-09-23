@@ -82,3 +82,45 @@ request logs.
   is easy to swap; the Focus model is not.
 - A Focus on a boundary can land on either side: tile coordinates are exact to
   about two metres. Accepted; a click nearby moves it.
+
+## Amendment, 2026-09-22: a click frames a Unit it cannot see yet
+
+Gordon asked for a click on any state, county, ZCTA, tract or block group to zoom in to it. "A click on a
+Unit never moves the camera" is replaced by this rule (`clickMove` in `StateMap.svelte`):
+
+- A Unit the map shows at less than half the size a frame could give it (current zoom below its fit zoom
+  minus one) is framed, as a search would frame it. From the national view every click lands on its Unit.
+- Nearer in, a click moves nothing unless the edge of the map cuts the Unit off. A Unit that fits at the
+  current zoom is then centred without zooming, so walking from one neighbour to the next stays at one
+  scale. A Unit bigger than the view leaves the camera alone: the user zoomed in on purpose.
+- Below a Level's outline zoom (fine polygons are specks: at the national view a pixel holds hundreds of
+  city block groups), the polygon drawn under the pointer is a guess. The click is then treated like a
+  search for its point: the Selection is the Unit that contains the point, read from the archive, and
+  the Focus dot lands inside the framed outline. At and above the outline zoom the drawn Unit is trusted,
+  as before. The tooltip says "Click to zoom in" when a click would frame.
+
+Framing needs the Unit's whole bounds. A Unit that crosses a tile edge is now pieced together from its
+neighbouring tiles at the highest zoom where it spans at most four (`spanOf`), instead of being read again
+one zoom lower until one tile holds it. The old walk never ended for a Unit on an edge that exists at
+every zoom: Shelby County, Tennessee (Memphis) and Orleans Parish sit on 90°W, and a click there fell
+back to a fixed zoom.
+
+Measured in Chromium on the same machine (GPU, 1440×900), before and after this change:
+
+| Scenario                                     | main thread blocked, before |          after |
+| -------------------------------------------- | --------------------------: | -------------: |
+| Pointer across 28 block groups, zoomed in    |                    8,792 ms |           0 ms |
+| Three drags of the zoomed-in block-group map |                      977 ms |         100 ms |
+| National block-group view, click one         |            382 ms (no zoom) | 0 ms, flies in |
+
+The hover cost was not the outline: hover and Selection outlines were filter layers on the coloured
+source, and MapLibre rebuilds every tile of a source when a filter changes, then replays every
+feature-state (157,000 block groups) onto each rebuilt tile. The outlines now have their own source on
+the same archive, whose tiles hold one or two features, so a filter change rebuilds tiles in 2 ms and the
+coloured tiles never. Both sources share one request per tile.
+
+Rejected while doing this: colour classes as one MapLibre global-state object (MapLibre 5.19 copies the
+whole global state into every tile's reply: zooming out blocked the main thread 3.8 s); colouring only
+the states in view (MapLibre never forgets a feature-state id, so the per-tile cost stays after the
+national view has painted every block group). Loading a block-group tile still costs about 17 ms of main
+thread for that replay; a MapLibre that iterated a tile's features instead of every state would remove it.

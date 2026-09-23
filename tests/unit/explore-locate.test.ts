@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { inRings, tilePoint } from "$lib/explore/locate";
+import { inRings, spanOf, tilePoint, type Piece } from "$lib/explore/locate";
 import { plain, looksLikeAddress, pointOf } from "$lib/explore/gazetteer";
 
 test("tract and block-group links do not download a gazetteer that cannot locate them", async () => {
@@ -61,4 +61,70 @@ test("search text is compared without punctuation, and a house number means an a
   expect(looksLikeAddress("221B Baker Street")).toBe(true);
   expect(looksLikeAddress("06511")).toBe(false);
   expect(looksLikeAddress("New Haven")).toBe(false);
+});
+
+test("a Unit's bounds are pieced together from the tiles it runs into, up to four", async () => {
+  // A Unit covering these tiles; each piece reports the covered neighbours it runs into.
+  const unit = (covered: [number, number][]) => {
+    const has = (x: number, y: number) => covered.some(([cx, cy]) => cx === x && cy === y);
+    const reads: string[] = [];
+    const read = async (x: number, y: number): Promise<Piece | null> => {
+      reads.push(`${x}/${y}`);
+      if (!has(x, y)) return null;
+      const beyond = (
+        [
+          [-1, 0],
+          [1, 0],
+          [0, -1],
+          [0, 1],
+        ] as [number, number][]
+      ).filter(([dx, dy]) => has(x + dx, y + dy));
+      return {
+        geoid: "u",
+        bounds: [
+          [x, -y - 1],
+          [x + 1, -y],
+        ],
+        beyond,
+      };
+    };
+    return { read, reads };
+  };
+  const whole = unit([[5, 5]]);
+  expect(await spanOf(whole.read, 5, 5)).toEqual([
+    [5, -6],
+    [6, -5],
+  ]);
+  expect(whole.reads).toEqual(["5/5"]);
+  // Memphis on 90°W: two tiles side by side.
+  const pair = unit([
+    [5, 5],
+    [6, 5],
+  ]);
+  expect(await spanOf(pair.read, 6, 5)).toEqual([
+    [5, -6],
+    [7, -5],
+  ]);
+  // A corner: the diagonal tile is reached through either neighbour and read once.
+  const square = unit([
+    [5, 5],
+    [6, 5],
+    [5, 6],
+    [6, 6],
+  ]);
+  expect(await spanOf(square.read, 5, 5)).toEqual([
+    [5, -7],
+    [7, -5],
+  ]);
+  expect(square.reads.sort()).toEqual(["5/5", "5/6", "6/5", "6/6"]);
+  // Six tiles is past the budget: a lower zoom is the place to look.
+  const wide = unit([
+    [5, 5],
+    [6, 5],
+    [7, 5],
+    [5, 6],
+    [6, 6],
+    [7, 6],
+  ]);
+  expect(await spanOf(wide.read, 6, 5)).toBeNull();
 });

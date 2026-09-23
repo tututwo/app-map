@@ -16,7 +16,9 @@ export type Level = (typeof LEVELS)[number];
  * Tile geometry per Level (ADR-0002), all on 2010 boundaries: counties, ZIPs (ZCTAs) and tracts from the
  * Census cartographic files (scripts/build-census-tiles.sh), block groups from the lab's GeoPackages
  * (scripts/build-tiles.sh). Below its Reveal zoom a Level leaves the states on screen; outlines fade
- * in from `outlineZoom`. `focusZoom` is where the camera settles to show the Unit under a Focus.
+ * in from `outlineZoom`, which is also where hovering outlines a Unit. The Selection is outlined from
+ * `selectZoom`: below it a fine Unit is a speck and the Focus dot marks it. `focusZoom` is where the
+ * camera settles to show the Unit under a Focus; a click from further out frames the Unit.
  */
 export const TILES = {
   county: {
@@ -24,6 +26,7 @@ export const TILES = {
     sourceLayer: "counties",
     revealZoom: 0,
     outlineZoom: 3,
+    selectZoom: 0,
     maxZoom: 10,
     focusZoom: 7.5,
   },
@@ -32,6 +35,7 @@ export const TILES = {
     sourceLayer: "zctas",
     revealZoom: 0,
     outlineZoom: 8,
+    selectZoom: 7,
     maxZoom: 13,
     focusZoom: 10.5,
   },
@@ -40,6 +44,7 @@ export const TILES = {
     sourceLayer: "tracts",
     revealZoom: 0,
     outlineZoom: 8,
+    selectZoom: 7,
     maxZoom: 13,
     focusZoom: 11,
   },
@@ -48,6 +53,7 @@ export const TILES = {
     sourceLayer: "blockgroups",
     revealZoom: 0,
     outlineZoom: 9,
+    selectZoom: 7,
     maxZoom: 15,
     focusZoom: 13,
   },

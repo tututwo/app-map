@@ -1,4 +1,4 @@
-import { VectorTile, type VectorTileFeature } from "@mapbox/vector-tile";
+import { VectorTile, type VectorTileFeature, type VectorTileLayer } from "@mapbox/vector-tile";
 import Pbf from "pbf";
 import { PMTiles, Protocol } from "pmtiles";
 import { env } from "$env/dynamic/public";
@@ -23,6 +23,7 @@ function archiveAt(url: string) {
 }
 
 export type Bounds = [[west: number, south: number], [east: number, north: number]];
+type Fine = Exclude<Level, "state">;
 
 /** The slippy tile that holds a point, and the point's position inside it in tile units. */
 export function tilePoint([lng, lat]: LngLat, z: number, extent: number) {
@@ -61,50 +62,84 @@ export function inRings(rings: { x: number; y: number }[][], x: number, y: numbe
   return inside;
 }
 
-interface Reading {
+/** One tile's part of a Unit. */
+export interface Piece {
   geoid: string;
   bounds: Bounds;
-  /** The Unit runs past this tile, so `bounds` covers only part of it. */
-  clipped: boolean;
+  /** Neighbouring tiles, as offsets, that the Unit runs into past this tile's edges. */
+  beyond: [dx: number, dy: number][];
 }
 
-/** The feature of one tile that `match` accepts: the one under the point, or the one with a GEOID. */
-async function readTile(
-  level: Exclude<Level, "state">,
-  at: LngLat,
-  z: number,
-  match: (feature: VectorTileFeature, px: number, py: number) => boolean
-): Promise<Reading | null> {
+// A click reads the same tile for its Unit and for the camera, and the next click nearby reads it again.
+const layers = new Map<string, Promise<VectorTileLayer | null>>();
+function layerAt(level: Fine, z: number, x: number, y: number) {
   const { archive, sourceLayer } = TILES[level];
-  const { x, y } = tilePoint(at, z, 1);
-  const tile = await archiveAt(archiveUrl(archive)).getZxy(z, x, y);
-  const layer = tile && new VectorTile(new Pbf(new Uint8Array(tile.data))).layers[sourceLayer];
+  const key = `${archive}/${z}/${x}/${y}`;
+  let hit = layers.get(key);
+  if (!hit) {
+    const read = archiveAt(archiveUrl(archive))
+      .getZxy(z, x, y)
+      .then((tile) =>
+        tile
+          ? (new VectorTile(new Pbf(new Uint8Array(tile.data))).layers[sourceLayer] ?? null)
+          : null
+      );
+    read.catch(() => {
+      if (layers.get(key) === read) layers.delete(key); // a failed request may be retried
+    });
+    layers.set(key, (hit = read));
+    // ponytail: first in, first out; tiles near max zoom are a few dozen kilobytes each.
+    if (layers.size > 64) layers.delete(layers.keys().next().value!);
+  }
+  return hit;
+}
+
+type Match = (feature: VectorTileFeature, extent: number) => boolean;
+const named =
+  (geoid: string): Match =>
+  (feature) =>
+    String(feature.properties.geoid) === geoid;
+function containing(at: LngLat, z: number): Match {
+  let point: { px: number; py: number } | undefined;
+  return (feature, extent) => {
+    point ??= tilePoint(at, z, extent);
+    return inRings(feature.loadGeometry(), point.px, point.py);
+  };
+}
+
+async function pieceAt(level: Fine, z: number, x: number, y: number, match: Match) {
+  const layer = await layerAt(level, z, x, y);
   if (!layer) return null;
   const { extent } = layer;
-  const { px, py } = tilePoint(at, z, extent);
   for (let index = 0; index < layer.length; index++) {
     const feature = layer.feature(index);
-    if (!match(feature, px, py)) continue;
+    if (!match(feature, extent)) continue;
     const [west, north, east, south] = feature.bbox();
+    const beyond: Piece["beyond"] = [];
+    if (west <= 0) beyond.push([-1, 0]);
+    if (east >= extent) beyond.push([1, 0]);
+    if (north <= 0) beyond.push([0, -1]);
+    if (south >= extent) beyond.push([0, 1]);
     return {
       geoid: String(feature.properties.geoid),
       bounds: [tileLngLat(x, y, z, west, south, extent), tileLngLat(x, y, z, east, north, extent)],
-      clipped: west <= 0 || north <= 0 || east >= extent || south >= extent,
-    };
+      beyond,
+    } satisfies Piece;
   }
   return null;
 }
 
-const readings = new Map<string, Promise<Reading | null>>();
-function reading(level: Exclude<Level, "state">, at: LngLat) {
+const header = (level: Fine) => archiveAt(archiveUrl(TILES[level].archive)).getHeader();
+
+const readings = new Map<string, Promise<Piece | null>>();
+function reading(level: Fine, at: LngLat) {
   const key = `${level}@${at}`;
   let hit = readings.get(key);
   if (!hit) {
-    hit = archiveAt(archiveUrl(TILES[level].archive))
-      .getHeader()
-      .then(({ maxZoom }) =>
-        readTile(level, at, maxZoom, (feature, px, py) => inRings(feature.loadGeometry(), px, py))
-      );
+    hit = header(level).then(({ maxZoom }) => {
+      const { x, y } = tilePoint(at, maxZoom, 1);
+      return pieceAt(level, maxZoom, x, y, containing(at, maxZoom));
+    });
     hit.catch(() => readings.delete(key)); // a failed request may be retried
     readings.set(key, hit);
   }
@@ -119,17 +154,59 @@ export async function unitAt(level: Level, at: LngLat): Promise<string | null> {
 }
 
 /**
- * What the camera frames to show that Unit whole. A city block group fits in its tile; a Unit that runs
- * past the tile is read again one zoom lower until a tile holds all of it. Null leaves the camera to a
- * fixed zoom.
+ * A Unit's bounds over every tile it runs into, starting from the tile at (x, y). Tiles are read a ring
+ * at a time; past `budget` tiles the answer is null, and a lower zoom, where the Unit spans fewer, is
+ * the better place to look.
  */
-export async function frameOf(level: Level, at: LngLat): Promise<Bounds | null> {
+export async function spanOf(
+  read: (x: number, y: number) => Promise<Piece | null>,
+  x: number,
+  y: number,
+  budget = 4
+): Promise<Bounds | null> {
+  const seen = new Set<string>();
+  let ring: [number, number][] = [[x, y]];
+  let bounds: Bounds | null = null;
+  while (ring.length) {
+    for (const [tx, ty] of ring) seen.add(`${tx}/${ty}`);
+    if (seen.size > budget) return null;
+    const pieces = await Promise.all(ring.map(([tx, ty]) => read(tx, ty)));
+    const next = new Map<string, [number, number]>();
+    for (let index = 0; index < ring.length; index++) {
+      const piece = pieces[index];
+      if (!piece) continue;
+      const [[west, south], [east, north]] = piece.bounds;
+      bounds = bounds
+        ? [
+            [Math.min(bounds[0][0], west), Math.min(bounds[0][1], south)],
+            [Math.max(bounds[1][0], east), Math.max(bounds[1][1], north)],
+          ]
+        : piece.bounds;
+      const [tx, ty] = ring[index];
+      for (const [dx, dy] of piece.beyond)
+        if (!seen.has(`${tx + dx}/${ty + dy}`))
+          next.set(`${tx + dx}/${ty + dy}`, [tx + dx, ty + dy]);
+    }
+    ring = [...next.values()];
+  }
+  return bounds;
+}
+
+/**
+ * What the camera frames to show that Unit whole: its bounds at the highest zoom where it spans at most
+ * four tiles. A city block group usually fits its own tile; a county that crosses a tile edge (Memphis
+ * sits on 90°W, an edge at every zoom) is pieced together from its neighbours. `geoid` names the Unit
+ * when a click already did. Null leaves the camera to a fixed zoom.
+ */
+export async function frameOf(level: Level, at: LngLat, geoid?: string): Promise<Bounds | null> {
   if (level === "state") return null;
-  let found = await reading(level, at);
-  if (!found?.clipped) return found?.bounds ?? null;
-  const { geoid } = found;
-  const { minZoom, maxZoom } = await archiveAt(archiveUrl(TILES[level].archive)).getHeader();
-  for (let z = maxZoom - 1; z >= minZoom && found?.clipped; z--)
-    found = await readTile(level, at, z, (feature) => feature.properties.geoid === geoid);
-  return found && !found.clipped ? found.bounds : null;
+  const id = geoid ?? (await reading(level, at))?.geoid;
+  if (!id) return null;
+  const { minZoom, maxZoom } = await header(level);
+  for (let z = maxZoom; z >= minZoom; z--) {
+    const { x, y } = tilePoint(at, z, 1);
+    const bounds = await spanOf((tx, ty) => pieceAt(level, z, tx, ty, named(id)), x, y);
+    if (bounds) return bounds;
+  }
+  return null;
 }
